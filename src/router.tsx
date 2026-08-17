@@ -1,0 +1,45 @@
+import { createBrowserRouter } from 'react-router-dom'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { ProtectedRoute } from '@/components/layout/ProtectedRoute'
+import { RequireRole } from '@/components/layout/RequireRole'
+import { LoginPage } from '@/pages/auth/LoginPage'
+import { DashboardPage } from '@/pages/dashboard/DashboardPage'
+import { FacilitySettingsPage } from '@/pages/settings/FacilitySettingsPage'
+import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
+import { AdmissionsPage } from '@/pages/admissions/AdmissionsPage'
+import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
+import { OperationsPage } from '@/pages/operations/OperationsPage'
+import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
+import { ErrorPage } from '@/pages/errors/ErrorPage'
+
+export const router = createBrowserRouter([
+  {
+    errorElement: <ErrorPage />,
+    children: [
+      {
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        element: <ProtectedRoute />,
+        children: [
+          {
+            element: <AppLayout />,
+            children: [
+              { path: '/', element: <DashboardPage /> },
+              { path: '/admissions', element: <AdmissionsPage /> },
+              { path: '/facility-map', element: <FacilityMapPage /> },
+              { path: '/admissions/:admissionId', element: <AdmissionDetailPage /> },
+              { path: '/operations', element: <OperationsPage /> },
+              { path: '/statistics', element: <StatisticsPage /> },
+              {
+                element: <RequireRole roles={['admin']} />,
+                children: [{ path: '/settings/facility', element: <FacilitySettingsPage /> }],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+])

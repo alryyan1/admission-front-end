@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:ui.shadcn.com)",
+      "WebFetch(domain:ant.design)",
+      "Bash(claude mcp *)",
+      "Bash(npx shadcn@latest add dialog dropdown-menu select tabs --yes)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" --max-time 10 https://ui.shadcn.com/r/styles/new-york-v4/dialog.json)",
+      "Bash(npx shadcn@4.17.0 add dialog dropdown-menu select tabs --yes)",
+      "Bash(node -e \"console.log\\(require\\('fs'\\).realpathSync\\('.'\\)\\)\")",
+      "Bash(NO_COLOR=1 FORCE_COLOR=0 npx shadcn@latest add dialog dropdown-menu select tabs --yes)",
+      "Bash(npx shadcn@latest add --help)",
+      "mcp__shadcn__get_add_command_for_items",
+      "Bash(npx shadcn@latest add @shadcn/dialog @shadcn/select @shadcn/tabs @shadcn/table @shadcn/badge @shadcn/textarea @shadcn/separator @shadcn/accordion @shadcn/sheet --yes)",
+      "Bash(npx shadcn@4.17.0 add @shadcn/dialog @shadcn/select @shadcn/tabs @shadcn/table @shadcn/badge @shadcn/textarea @shadcn/separator @shadcn/accordion @shadcn/sheet --yes)",
+      "mcp__shadcn__view_items_in_registries",
+      "Bash(node \"C:\\\\Users\\\\ryyan\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-jawda-inpatient-frontend\\\\a4b37f94-e632-4234-ad69-e05ea58fd682\\\\scratchpad\\\\fetch-shadcn.mjs\" \"src/components/ui\")",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5183/ --max-time 2)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill //F //PID 31576)"
+    ]
+  }
+}
