@@ -1,31 +1,63 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
-import { Button } from '@/components/ui/button'
+import { Card, Button, Listy, Tag, Typography, Flex, Space } from 'antd'
 import { formatDateTime } from '@/lib/utils'
 import { getDoctors } from '@/services/patientService'
-import { getOperationRooms } from '@/services/facilityService'
-import type { Operation, OperationStatus } from '@/types/admission'
+import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
+import { OperationDetailModal } from '@/components/admissions/OperationDetailModal'
+import type { Operation, OperationPriority, OperationStatus, OperationTeamRole } from '@/types/admission'
+
+const { Text } = Typography
 
 interface OperationsTabProps {
   operations: Operation[]
   onSchedule: (payload: {
     surgeon_id: number
     operation_room_id?: number | null
-    procedure_name: string
+    procedure_id: number
+    priority?: OperationPriority
+    diagnosis?: string
+    expected_duration_minutes?: number
+    anesthesia_type?: string
+    requested_by_doctor_id?: number
     scheduled_at: string
     notes?: string
   }) => void
+  onPrepare: (
+    operationId: number,
+    payload: {
+      consent_obtained: boolean
+      fasting_confirmed: boolean
+      site_marked: boolean
+      preop_vitals_checked: boolean
+      preop_notes?: string
+    },
+  ) => void
   onStart: (operationId: number) => void
-  onComplete: (operationId: number) => void
+  onComplete: (
+    operationId: number,
+    payload: {
+      findings?: string
+      complications?: string
+      blood_loss_ml?: number
+      outcome?: string
+      report_notes?: string
+    },
+  ) => void
   onCancel: (operationId: number, cancellationReason: string) => void
+  onAddTeamMember: (
+    operationId: number,
+    payload: { doctor_id?: number | null; name?: string; role: OperationTeamRole; notes?: string },
+  ) => void
+  onRemoveTeamMember: (operationId: number, teamMemberId: number) => void
+  onAddSupply: (operationId: number, payload: { name: string; quantity?: number; unit?: string }) => void
+  onRemoveSupply: (operationId: number, supplyId: number) => void
   isSubmitting: boolean
+  isPreparing: boolean
+  isStarting: boolean
+  isCompleting: boolean
+  isAddingTeamMember: boolean
+  isAddingSupply: boolean
 }
 
 const STATUS_LABELS: Record<OperationStatus, string> = {
@@ -35,38 +67,49 @@ const STATUS_LABELS: Record<OperationStatus, string> = {
   cancelled: 'ملغاة',
 }
 
-const STATUS_VARIANTS: Record<OperationStatus, 'secondary' | 'warning' | 'success' | 'destructive'> = {
-  scheduled: 'secondary',
-  in_progress: 'warning',
+const STATUS_COLORS: Record<OperationStatus, string> = {
+  scheduled: 'default',
+  in_progress: 'gold',
   completed: 'success',
-  cancelled: 'destructive',
+  cancelled: 'error',
 }
 
-export function OperationsTab({ operations, onSchedule, onStart, onComplete, onCancel, isSubmitting }: OperationsTabProps) {
-  const [surgeonId, setSurgeonId] = useState('')
-  const [operationRoomId, setOperationRoomId] = useState('')
-  const [procedureName, setProcedureName] = useState('')
-  const [scheduledAt, setScheduledAt] = useState('')
-  const [notes, setNotes] = useState('')
+const PRIORITY_LABELS: Record<OperationPriority, string> = {
+  emergency: 'طارئة',
+  urgent: 'عاجلة',
+  scheduled: 'مجدولة',
+}
+
+const PRIORITY_COLORS: Record<OperationPriority, string> = {
+  emergency: 'error',
+  urgent: 'warning',
+  scheduled: 'default',
+}
+
+export function OperationsTab({
+  operations,
+  onSchedule,
+  onPrepare,
+  onStart,
+  onComplete,
+  onCancel,
+  onAddTeamMember,
+  onRemoveTeamMember,
+  onAddSupply,
+  onRemoveSupply,
+  isSubmitting,
+  isPreparing,
+  isStarting,
+  isCompleting,
+  isAddingTeamMember,
+  isAddingSupply,
+}: OperationsTabProps) {
+  const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [managingOperationId, setManagingOperationId] = useState<number | null>(null)
 
   const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
-  const operationRoomsQuery = useQuery({ queryKey: ['rooms', 'operation'], queryFn: getOperationRooms })
 
-  function handleSubmit() {
-    if (!surgeonId || !procedureName.trim() || !scheduledAt) return
-    onSchedule({
-      surgeon_id: Number(surgeonId),
-      operation_room_id: operationRoomId ? Number(operationRoomId) : undefined,
-      procedure_name: procedureName,
-      scheduled_at: scheduledAt,
-      notes: notes || undefined,
-    })
-    setSurgeonId('')
-    setOperationRoomId('')
-    setProcedureName('')
-    setScheduledAt('')
-    setNotes('')
-  }
+  const managingOperation = operations.find((o) => o.id === managingOperationId) ?? null
 
   function handleCancel(operation: Operation) {
     const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
@@ -76,120 +119,84 @@ export function OperationsTab({ operations, onSchedule, onStart, onComplete, onC
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <Card className="p-4">
-        <h2 className="mb-2 text-sm font-semibold">جدولة عملية جديدة</h2>
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="flex flex-col gap-1">
-            <Label>الجراح</Label>
-            <Select value={surgeonId} onValueChange={setSurgeonId}>
-              <SelectTrigger className="h-8 w-48">
-                <SelectValue placeholder="اختر الجراح" />
-              </SelectTrigger>
-              <SelectContent>
-                {(doctorsQuery.data ?? []).map((doctor) => (
-                  <SelectItem key={doctor.id} value={String(doctor.id)}>
-                    {doctor.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label>غرفة العمليات</Label>
-            <Select value={operationRoomId} onValueChange={setOperationRoomId}>
-              <SelectTrigger className="h-8 w-44">
-                <SelectValue placeholder="اختياري" />
-              </SelectTrigger>
-              <SelectContent>
-                {(operationRoomsQuery.data ?? []).map((room) => (
-                  <SelectItem key={room.id} value={String(room.id)}>
-                    غرفة {room.room_number} — {room.ward?.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="procedure-name">الإجراء</Label>
-            <Input
-              id="procedure-name"
-              className="h-8 w-48"
-              value={procedureName}
-              onChange={(e) => setProcedureName(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="scheduled-at">الموعد</Label>
-            <Input
-              id="scheduled-at"
-              type="datetime-local"
-              className="h-8 w-48"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-            />
-          </div>
-          <Button size="sm" onClick={handleSubmit} disabled={isSubmitting}>
-            جدولة
-          </Button>
-        </div>
-        <div className="mt-3 flex flex-col gap-1">
-          <Label htmlFor="operation-notes">ملاحظات</Label>
-          <Textarea
-            id="operation-notes"
-            className="max-w-md"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-        </div>
-      </Card>
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Flex justify="end">
+        <Button type="primary" onClick={() => setScheduleOpen(true)}>
+          + طلب عملية جديدة
+        </Button>
+      </Flex>
 
       <Card>
-        <div>
-          {operations.map((operation, idx) => (
-            <div key={operation.id}>
-              {idx > 0 && <Separator />}
-              <div className="flex items-center justify-between gap-4 p-4">
+        {operations.length === 0 ? (
+          <Text type="secondary">لا توجد عمليات مجدولة بعد</Text>
+        ) : (
+          <Listy
+            items={operations}
+            rowKey="id"
+            itemRender={(operation, index) => (
+              <Flex
+                justify="space-between"
+                align="center"
+                gap={16}
+                style={{
+                  padding: '12px 0',
+                  borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined,
+                }}
+              >
                 <div>
-                  <div className="flex items-center gap-2 text-sm font-medium">
-                    {operation.procedure_name}
-                    <Badge variant={STATUS_VARIANTS[operation.status]}>{STATUS_LABELS[operation.status]}</Badge>
+                  <Space size={8}>
+                    <Text strong>{operation.procedure?.name_ar ?? '—'}</Text>
+                    {operation.procedure?.category && <Tag>{operation.procedure.category.name}</Tag>}
+                    <Tag color={PRIORITY_COLORS[operation.priority]}>{PRIORITY_LABELS[operation.priority]}</Tag>
+                    <Tag color={STATUS_COLORS[operation.status]}>{STATUS_LABELS[operation.status]}</Tag>
+                  </Space>
+                  <div>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
+                      {operation.operation_number ?? '—'} · د. {operation.surgeon?.name ?? '—'}
+                      {operation.operation_room && ` · غرفة ${operation.operation_room.room_number}`}
+                      {' · '}
+                      {formatDateTime(operation.scheduled_at)}
+                    </Text>
                   </div>
-                  <p className="mt-0.5 text-sm text-muted-foreground">
-                    {operation.operation_number ?? '—'} · د. {operation.surgeon?.name ?? '—'}
-                    {operation.operation_room && ` · غرفة ${operation.operation_room.room_number}`}
-                    {' · '}
-                    {formatDateTime(operation.scheduled_at)}
-                  </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {operation.status === 'scheduled' && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => onStart(operation.id)}>
-                        بدء
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleCancel(operation)}>
-                        إلغاء
-                      </Button>
-                    </>
-                  )}
-                  {operation.status === 'in_progress' && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => onComplete(operation.id)}>
-                        إنهاء
-                      </Button>
-                      <Button size="sm" variant="outline" onClick={() => handleCancel(operation)}>
-                        إلغاء
-                      </Button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-          {operations.length === 0 && <p className="p-4 text-sm text-muted-foreground">لا توجد عمليات مجدولة بعد</p>}
-        </div>
+                <Button size="small" onClick={() => setManagingOperationId(operation.id)}>
+                  إدارة
+                </Button>
+              </Flex>
+            )}
+          />
+        )}
       </Card>
-    </div>
+
+      <ScheduleOperationModal
+        open={scheduleOpen}
+        onClose={() => setScheduleOpen(false)}
+        onSchedule={(payload) => {
+          onSchedule(payload)
+          setScheduleOpen(false)
+        }}
+        isSubmitting={isSubmitting}
+      />
+
+      <OperationDetailModal
+        operation={managingOperation}
+        open={managingOperationId !== null}
+        onClose={() => setManagingOperationId(null)}
+        doctors={doctorsQuery.data ?? []}
+        onPrepare={(payload) => managingOperation && onPrepare(managingOperation.id, payload)}
+        onStart={() => managingOperation && onStart(managingOperation.id)}
+        onComplete={(payload) => managingOperation && onComplete(managingOperation.id, payload)}
+        onCancel={() => managingOperation && handleCancel(managingOperation)}
+        onAddTeamMember={(payload) => managingOperation && onAddTeamMember(managingOperation.id, payload)}
+        onRemoveTeamMember={(teamMemberId) => managingOperation && onRemoveTeamMember(managingOperation.id, teamMemberId)}
+        onAddSupply={(payload) => managingOperation && onAddSupply(managingOperation.id, payload)}
+        onRemoveSupply={(supplyId) => managingOperation && onRemoveSupply(managingOperation.id, supplyId)}
+        isPreparing={isPreparing}
+        isStarting={isStarting}
+        isCompleting={isCompleting}
+        isAddingTeamMember={isAddingTeamMember}
+        isAddingSupply={isAddingSupply}
+      />
+    </Space>
   )
 }

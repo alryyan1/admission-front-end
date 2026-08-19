@@ -8,11 +8,12 @@ import type { FinancialStatistics } from '@/types/statistics'
 
 const METHOD_LABELS: Record<string, string> = {
   cash: 'نقدي',
-  card: 'بطاقة',
-  bank_transfer: 'تحويل بنكي',
+  bank: 'بنكي',
+  fawry: 'فوري',
+  ocash: 'أوكاش',
 }
 
-const CATEGORICAL_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)']
+const CATEGORICAL_COLORS = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)']
 
 interface FinancialsTabProps {
   data: FinancialStatistics

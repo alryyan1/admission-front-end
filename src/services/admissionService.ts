@@ -7,13 +7,19 @@ import type {
   DoctorOrder,
   Invoice,
   Operation,
+  OperationPriority,
+  OperationSupply,
+  OperationTeamMember,
+  OperationTeamRole,
   RequestedService,
   TreatmentDose,
   VitalSign,
 } from '@/types/admission'
 
-export async function getAdmissions(status?: AdmissionStatus): Promise<{ data: Admission[] }> {
-  const { data } = await apiClient.get('/admissions', { params: status ? { status } : {} })
+export async function getAdmissions(
+  filters?: { status?: AdmissionStatus; patient_id?: number },
+): Promise<{ data: Admission[] }> {
+  const { data } = await apiClient.get('/admissions', { params: filters ?? {} })
   return data
 }
 
@@ -126,7 +132,12 @@ export async function addOperation(
   payload: {
     surgeon_id: number
     operation_room_id?: number | null
-    procedure_name: string
+    procedure_id: number
+    priority?: OperationPriority
+    diagnosis?: string
+    expected_duration_minutes?: number
+    anesthesia_type?: string
+    requested_by_doctor_id?: number
     scheduled_at: string
     notes?: string
   },
@@ -140,7 +151,12 @@ export async function updateOperation(
   payload: Partial<{
     surgeon_id: number
     operation_room_id: number | null
-    procedure_name: string
+    procedure_id: number
+    priority: OperationPriority
+    diagnosis: string | null
+    expected_duration_minutes: number | null
+    anesthesia_type: string | null
+    requested_by_doctor_id: number | null
     scheduled_at: string
     notes: string
   }>,
@@ -149,12 +165,36 @@ export async function updateOperation(
   return data
 }
 
+export async function prepareOperation(
+  operationId: number,
+  payload: {
+    consent_obtained: boolean
+    fasting_confirmed: boolean
+    site_marked: boolean
+    preop_vitals_checked: boolean
+    preop_notes?: string | null
+  },
+): Promise<Operation> {
+  const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/prepare`, payload)
+  return data
+}
+
 export async function startOperation(operationId: number): Promise<Operation> {
   const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/start`)
   return data
 }
 
-export async function completeOperation(operationId: number, payload?: { notes?: string }): Promise<Operation> {
+export async function completeOperation(
+  operationId: number,
+  payload?: {
+    notes?: string
+    findings?: string
+    complications?: string
+    blood_loss_ml?: number
+    outcome?: string
+    report_notes?: string
+  },
+): Promise<Operation> {
   const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/complete`, payload)
   return data
 }
@@ -165,4 +205,28 @@ export async function cancelOperation(
 ): Promise<Operation> {
   const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/cancel`, payload)
   return data
+}
+
+export async function addOperationTeamMember(
+  operationId: number,
+  payload: { doctor_id?: number | null; name?: string; role: OperationTeamRole; notes?: string },
+): Promise<OperationTeamMember> {
+  const { data } = await apiClient.post<OperationTeamMember>(`/operations/${operationId}/team-members`, payload)
+  return data
+}
+
+export async function removeOperationTeamMember(operationId: number, teamMemberId: number): Promise<void> {
+  await apiClient.delete(`/operations/${operationId}/team-members/${teamMemberId}`)
+}
+
+export async function addOperationSupply(
+  operationId: number,
+  payload: { name: string; quantity?: number; unit?: string; notes?: string },
+): Promise<OperationSupply> {
+  const { data } = await apiClient.post<OperationSupply>(`/operations/${operationId}/supplies`, payload)
+  return data
+}
+
+export async function removeOperationSupply(operationId: number, supplyId: number): Promise<void> {
+  await apiClient.delete(`/operations/${operationId}/supplies/${supplyId}`)
 }

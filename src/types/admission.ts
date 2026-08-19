@@ -65,7 +65,7 @@ export interface AdmissionDeposit {
   id: number
   admission_id: number
   amount: string
-  method: 'cash' | 'card' | 'bank_transfer'
+  method: 'cash' | 'bank' | 'fawry' | 'ocash'
   paid_at: string
 }
 
@@ -80,23 +80,89 @@ export interface RequestedService {
 
 export type OperationStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
 
+export type OperationTeamRole =
+  | 'surgeon'
+  | 'assistant_surgeon'
+  | 'anesthesiologist'
+  | 'scrub_nurse'
+  | 'circulating_nurse'
+  | 'technician'
+  | 'other'
+
+export interface OperationTeamMember {
+  id: number
+  operation_id: number
+  doctor_id: number | null
+  name: string | null
+  role: OperationTeamRole
+  notes: string | null
+  doctor?: Doctor | null
+}
+
+export interface OperationSupply {
+  id: number
+  operation_id: number
+  name: string
+  quantity: number
+  unit: string | null
+  notes: string | null
+}
+
+export type OperationPriority = 'emergency' | 'urgent' | 'scheduled'
+
+export interface ProcedureCategory {
+  id: number
+  name: string
+}
+
+export interface Procedure {
+  id: number
+  category_id: number | null
+  name_ar: string
+  name_en: string | null
+  type: string | null
+  description: string | null
+  is_active: boolean
+  category?: ProcedureCategory | null
+}
+
 export interface Operation {
   id: number
   admission_id: number
   surgeon_id: number
   operation_room_id: number | null
   operation_number: string | null
-  procedure_name: string
+  procedure_id: number
+  priority: OperationPriority
+  diagnosis: string | null
+  expected_duration_minutes: number | null
+  anesthesia_type: string | null
+  requested_by_doctor_id: number | null
   scheduled_at: string
   started_at: string | null
   ended_at: string | null
   status: OperationStatus
   notes: string | null
+  consent_obtained: boolean
+  fasting_confirmed: boolean
+  site_marked: boolean
+  preop_vitals_checked: boolean
+  preop_notes: string | null
+  prepared_at: string | null
+  findings: string | null
+  complications: string | null
+  blood_loss_ml: number | null
+  outcome: string | null
+  report_notes: string | null
   cancellation_reason: string | null
   cancelled_at: string | null
   surgeon?: Doctor
+  requested_by_doctor?: Doctor | null
   operation_room?: Room
   admission?: Admission
+  team_members?: OperationTeamMember[]
+  supplies?: OperationSupply[]
+  procedure?: Procedure
 }
 
 export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'cancelled'

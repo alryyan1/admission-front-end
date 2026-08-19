@@ -1,9 +1,19 @@
 import apiClient from '@/services/api'
-import type { Doctor, JawdaPatientResult, Patient } from '@/types/patient'
+import type { Doctor, JawdaPatientResult, Patient, UpdatePatientPayload } from '@/types/patient'
 
 export async function searchLocalPatients(search: string): Promise<Patient[]> {
   const { data } = await apiClient.get('/patients', { params: { search } })
   return data.data
+}
+
+export async function getPatient(id: number): Promise<Patient> {
+  const { data } = await apiClient.get<Patient>(`/patients/${id}`)
+  return data
+}
+
+export async function updatePatient(id: number, payload: UpdatePatientPayload): Promise<Patient> {
+  const { data } = await apiClient.patch<Patient>(`/patients/${id}`, payload)
+  return data
 }
 
 export async function searchJawdaPatients(search: string): Promise<JawdaPatientResult[]> {
@@ -39,10 +49,5 @@ export async function createLocalPatient(payload: {
 
 export async function getDoctors(search?: string): Promise<Doctor[]> {
   const { data } = await apiClient.get<Doctor[]>('/doctors', { params: search ? { search } : undefined })
-  return data
-}
-
-export async function syncJawdaDoctors(): Promise<Doctor[]> {
-  const { data } = await apiClient.post<Doctor[]>('/doctors/sync-jawda')
   return data
 }

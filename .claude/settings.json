@@ -18,7 +18,22 @@
       "Bash(npm run *)",
       "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\\\\n\" http://localhost:5183/ --max-time 2)",
       "Bash(netstat -ano)",
-      "Bash(taskkill //F //PID 31576)"
+      "Bash(taskkill //F //PID 31576)",
+      "Bash(php -l app/Models/Patient.php)",
+      "Bash(php -l app/Http/Requests/UpdatePatientRequest.php)",
+      "Bash(php -l app/Http/Controllers/Api/PatientController.php)",
+      "Bash(php -l app/Http/Controllers/Api/AdmissionController.php)",
+      "Bash(php -l database/factories/PatientFactory.php)",
+      "PowerShell([Environment]::GetEnvironmentVariable\\(\"DB_DATABASE\",\"Machine\"\\); [Environment]::GetEnvironmentVariable\\(\"DB_DATABASE\",\"User\"\\); [Environment]::GetEnvironmentVariable\\(\"DB_DATABASE\",\"Process\"\\))",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://127.0.0.1/jawda-medical/public/api/all-doctors)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code} \" http://127.0.0.1/jawda-medical/public/api/all-doctors)",
+      "Bash(lsof -ti:5173 -sTCP:LISTEN)",
+      "Bash(xargs -r kill)",
+      "Bash(nohup npm run dev)",
+      "Bash(disown)",
+      "Bash(timeout 30 bash -c 'until curl -sf http://localhost:5173 >/dev/null; do sleep 1; done')",
+      "Bash(npx --yes playwright install chromium --with-deps)",
+      "Bash(npx --yes playwright install chromium)"
     ]
   }
 }

@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Button } from '@/components/ui/button'
+import { Card, Input, InputNumber, Select, Table, Button, Typography, Row, Col, Flex, Space } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
 import type { AdmissionDeposit, RequestedService } from '@/types/admission'
+
+const { Text } = Typography
 
 interface BillingTabProps {
   services: RequestedService[]
@@ -15,6 +13,24 @@ interface BillingTabProps {
   onAddDeposit: (payload: { amount: number; method?: string }) => void
   isSubmittingService: boolean
   isSubmittingDeposit: boolean
+}
+
+const DEPOSIT_METHOD_OPTIONS = [
+  { label: 'نقدي', value: 'cash' },
+  { label: 'بنكي', value: 'bank' },
+  { label: 'فوري', value: 'fawry' },
+  { label: 'أوكاش', value: 'ocash' },
+]
+
+function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <Space direction="vertical" size={4}>
+      <Text style={{ fontSize: 12 }} type="secondary">
+        {label}
+      </Text>
+      {children}
+    </Space>
+  )
 }
 
 export function BillingTab({
@@ -26,137 +42,95 @@ export function BillingTab({
   isSubmittingDeposit,
 }: BillingTabProps) {
   const [serviceName, setServiceName] = useState('')
-  const [quantity, setQuantity] = useState('1')
-  const [unitPrice, setUnitPrice] = useState('')
+  const [quantity, setQuantity] = useState<number | null>(1)
+  const [unitPrice, setUnitPrice] = useState<number | null>(null)
 
-  const [depositAmount, setDepositAmount] = useState('')
+  const [depositAmount, setDepositAmount] = useState<number | null>(null)
   const [depositMethod, setDepositMethod] = useState('cash')
 
   function handleAddService() {
     if (!serviceName.trim() || !unitPrice) return
-    onAddService({ name: serviceName, quantity: Number(quantity) || 1, unit_price: Number(unitPrice) })
+    onAddService({ name: serviceName, quantity: quantity ?? 1, unit_price: unitPrice })
     setServiceName('')
-    setQuantity('1')
-    setUnitPrice('')
+    setQuantity(1)
+    setUnitPrice(null)
   }
 
   function handleAddDeposit() {
     if (!depositAmount) return
-    onAddDeposit({ amount: Number(depositAmount), method: depositMethod })
-    setDepositAmount('')
+    onAddDeposit({ amount: depositAmount, method: depositMethod })
+    setDepositAmount(null)
   }
 
-  return (
-    <div className="grid grid-cols-12 gap-4">
-      <div className="col-span-12 md:col-span-6">
-        <Card className="p-4">
-          <h2 className="mb-2 text-sm font-semibold">الخدمات المطلوبة</h2>
-          <div className="mb-3 flex flex-wrap items-end gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="service-name">اسم الخدمة</Label>
-              <Input
-                id="service-name"
-                className="h-8 w-40"
-                value={serviceName}
-                onChange={(e) => setServiceName(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="service-qty">الكمية</Label>
-              <Input
-                id="service-qty"
-                type="number"
-                className="h-8 w-20"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="service-price">سعر الوحدة</Label>
-              <Input
-                id="service-price"
-                type="number"
-                className="h-8 w-28"
-                value={unitPrice}
-                onChange={(e) => setUnitPrice(e.target.value)}
-              />
-            </div>
-            <Button size="sm" onClick={handleAddService} disabled={isSubmittingService}>
-              إضافة
-            </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الخدمة</TableHead>
-                <TableHead>الكمية</TableHead>
-                <TableHead>الإجمالي</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {services.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell>{s.name}</TableCell>
-                  <TableCell>{s.quantity}</TableCell>
-                  <TableCell>{formatNumber(s.total_price)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      </div>
+  const serviceColumns: ColumnsType<RequestedService> = [
+    { title: 'الخدمة', dataIndex: 'name', key: 'name' },
+    { title: 'الكمية', dataIndex: 'quantity', key: 'quantity' },
+    { title: 'الإجمالي', key: 'total', render: (_, s) => formatNumber(s.total_price) },
+  ]
 
-      <div className="col-span-12 md:col-span-6">
-        <Card className="p-4">
-          <h2 className="mb-2 text-sm font-semibold">الدفعات</h2>
-          <div className="mb-3 flex flex-wrap items-end gap-2">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="deposit-amount">المبلغ</Label>
-              <Input
-                id="deposit-amount"
-                type="number"
-                className="h-8 w-28"
-                value={depositAmount}
-                onChange={(e) => setDepositAmount(e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <Label>طريقة الدفع</Label>
-              <Select value={depositMethod} onValueChange={setDepositMethod}>
-                <SelectTrigger className="h-8 w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="cash">نقدي</SelectItem>
-                  <SelectItem value="card">بطاقة</SelectItem>
-                  <SelectItem value="bank_transfer">تحويل بنكي</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button size="sm" onClick={handleAddDeposit} disabled={isSubmittingDeposit}>
+  const depositColumns: ColumnsType<AdmissionDeposit> = [
+    { title: 'التاريخ', key: 'paid_at', render: (_, d) => formatDate(d.paid_at) },
+    { title: 'المبلغ', key: 'amount', render: (_, d) => formatNumber(d.amount) },
+    { title: 'الطريقة', dataIndex: 'method', key: 'method' },
+  ]
+
+  return (
+    <Row gutter={[16, 16]}>
+      <Col xs={24} md={12}>
+        <Card title="الخدمات المطلوبة">
+          <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
+            <FieldLabel label="اسم الخدمة">
+              <Input style={{ width: 160 }} value={serviceName} onChange={(e) => setServiceName(e.target.value)} />
+            </FieldLabel>
+            <FieldLabel label="الكمية">
+              <InputNumber style={{ width: 80 }} value={quantity} onChange={(v) => setQuantity(v)} />
+            </FieldLabel>
+            <FieldLabel label="سعر الوحدة">
+              <InputNumber style={{ width: 112 }} value={unitPrice} onChange={(v) => setUnitPrice(v)} />
+            </FieldLabel>
+            <Button type="primary" onClick={handleAddService} loading={isSubmittingService}>
               إضافة
             </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>التاريخ</TableHead>
-                <TableHead>المبلغ</TableHead>
-                <TableHead>الطريقة</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {deposits.map((d) => (
-                <TableRow key={d.id}>
-                  <TableCell>{formatDate(d.paid_at)}</TableCell>
-                  <TableCell>{formatNumber(d.amount)}</TableCell>
-                  <TableCell>{d.method}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          </Flex>
+          <Table
+            rowKey="id"
+            columns={serviceColumns}
+            dataSource={services}
+            pagination={false}
+            size="small"
+            locale={{ emptyText: 'لا توجد خدمات بعد' }}
+          />
         </Card>
-      </div>
-    </div>
+      </Col>
+
+      <Col xs={24} md={12}>
+        <Card title="الدفعات">
+          <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
+            <FieldLabel label="المبلغ">
+              <InputNumber style={{ width: 112 }} value={depositAmount} onChange={(v) => setDepositAmount(v)} />
+            </FieldLabel>
+            <FieldLabel label="طريقة الدفع">
+              <Select
+                style={{ width: 144 }}
+                value={depositMethod}
+                onChange={setDepositMethod}
+                options={DEPOSIT_METHOD_OPTIONS}
+              />
+            </FieldLabel>
+            <Button type="primary" onClick={handleAddDeposit} loading={isSubmittingDeposit}>
+              إضافة
+            </Button>
+          </Flex>
+          <Table
+            rowKey="id"
+            columns={depositColumns}
+            dataSource={deposits}
+            pagination={false}
+            size="small"
+            locale={{ emptyText: 'لا توجد دفعات بعد' }}
+          />
+        </Card>
+      </Col>
+    </Row>
   )
 }

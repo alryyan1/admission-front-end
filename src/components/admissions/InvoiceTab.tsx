@@ -1,10 +1,9 @@
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { cn, formatDate, formatNumber } from '@/lib/utils'
-import type { AdmissionInvoice, Invoice, InvoiceStatus } from '@/types/admission'
+import { Card, Table, Tag, Button, Typography, Divider, Space, Flex, Spin } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { formatDate, formatNumber } from '@/lib/utils'
+import type { AdmissionInvoice, Invoice, InvoiceStatus, RequestedService } from '@/types/admission'
+
+const { Title, Text } = Typography
 
 interface InvoiceTabProps {
   invoice: AdmissionInvoice | undefined
@@ -22,6 +21,29 @@ const statusLabels: Record<InvoiceStatus, string> = {
   cancelled: 'ملغاة',
 }
 
+function SummaryRow({
+  label,
+  value,
+  bold,
+  valueColor,
+}: {
+  label: string
+  value: React.ReactNode
+  bold?: boolean
+  valueColor?: string
+}) {
+  return (
+    <Flex justify="space-between">
+      <Text type={bold ? undefined : 'secondary'} strong={bold}>
+        {label}
+      </Text>
+      <Text strong={bold} style={valueColor ? { color: valueColor } : undefined}>
+        {value}
+      </Text>
+    </Flex>
+  )
+}
+
 export function InvoiceTab({
   invoice,
   isLoading,
@@ -31,121 +53,111 @@ export function InvoiceTab({
   isGenerating,
 }: InvoiceTabProps) {
   if (isLoading || !invoice) {
-    return <p>جارٍ تحميل الفاتورة...</p>
+    return (
+      <Flex align="center" gap={8}>
+        <Spin size="small" />
+        <Text>جارٍ تحميل الفاتورة...</Text>
+      </Flex>
+    )
   }
 
+  const serviceColumns: ColumnsType<RequestedService> = [
+    { title: 'الخدمة', key: 'name', render: (_, s) => `${s.name} × ${s.quantity}` },
+    { title: 'الإجمالي', key: 'total', align: 'end', render: (_, s) => formatNumber(s.total_price) },
+  ]
+
+  const invoiceColumns: ColumnsType<Invoice> = [
+    { title: 'رقم الفاتورة', dataIndex: 'invoice_number', key: 'invoice_number' },
+    { title: 'التاريخ', key: 'issued_at', render: (_, i) => (i.issued_at ? formatDate(i.issued_at) : '—') },
+    { title: 'الإجمالي', key: 'total', render: (_, i) => formatNumber(i.total) },
+    {
+      title: 'الحالة',
+      key: 'status',
+      render: (_, i) => <Tag color={i.status === 'paid' ? 'success' : 'default'}>{statusLabels[i.status]}</Tag>,
+    },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, i) =>
+        i.status === 'issued' && (
+          <Button size="small" onClick={() => onMarkPaid(i.id)}>
+            تحصيل
+          </Button>
+        ),
+    },
+  ]
+
   return (
-    <div className="flex max-w-xl flex-col gap-4">
-      <Card className="p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">فاتورة التنويم — {invoice.patient.name}</h2>
-          <Button size="sm" onClick={onGenerateInvoice} disabled={isGenerating}>
+    <Space direction="vertical" size={16} style={{ maxWidth: 576, width: '100%' }}>
+      <Card>
+        <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
+          <Title level={4} style={{ margin: 0 }}>
+            فاتورة التنويم — {invoice.patient.name}
+          </Title>
+          <Button type="primary" onClick={onGenerateInvoice} loading={isGenerating}>
             إصدار فاتورة
           </Button>
+        </Flex>
+
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          {invoice.billing_mode === 'short_stay' ? (
+            <SummaryRow label="مدة الإقامة القصيرة" value={`${invoice.admission_duration_hours} ساعة`} />
+          ) : (
+            <>
+              <SummaryRow label="عدد الليالي" value={invoice.nights_stayed} />
+              <SummaryRow
+                label="سعر اليوم"
+                value={invoice.price_per_day != null ? formatNumber(invoice.price_per_day) : null}
+              />
+            </>
+          )}
+          <SummaryRow label="تكلفة الإقامة" value={formatNumber(invoice.bed_charges)} bold />
+        </Space>
+
+        <Divider style={{ margin: '12px 0' }} />
+
+        <Title level={5} style={{ marginBottom: 8 }}>
+          الخدمات
+        </Title>
+        <Table
+          rowKey="id"
+          columns={serviceColumns}
+          dataSource={invoice.requested_services}
+          pagination={false}
+          size="small"
+          locale={{ emptyText: 'لا توجد خدمات' }}
+        />
+
+        <div style={{ marginTop: 8 }}>
+          <SummaryRow label="إجمالي الخدمات" value={formatNumber(invoice.services_total)} bold />
         </div>
 
-        {invoice.billing_mode === 'short_stay' ? (
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">مدة الإقامة القصيرة</span>
-            <span>{invoice.admission_duration_hours} ساعة</span>
-          </div>
-        ) : (
-          <>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">عدد الليالي</span>
-              <span>{invoice.nights_stayed}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">سعر اليوم</span>
-              <span>{invoice.price_per_day != null ? formatNumber(invoice.price_per_day) : null}</span>
-            </div>
-          </>
-        )}
-        <div className="flex justify-between text-sm font-bold">
-          <span>تكلفة الإقامة</span>
-          <span>{formatNumber(invoice.bed_charges)}</span>
-        </div>
+        <Divider style={{ margin: '12px 0' }} />
 
-        <Separator className="my-3" />
-
-        <h3 className="mb-2 text-sm font-semibold">الخدمات</h3>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>الخدمة</TableHead>
-              <TableHead className="text-end">الإجمالي</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoice.requested_services.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell>
-                  {s.name} × {s.quantity}
-                </TableCell>
-                <TableCell className="text-end">{formatNumber(s.total_price)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <div className="mt-2 flex justify-between text-sm font-bold">
-          <span>إجمالي الخدمات</span>
-          <span>{formatNumber(invoice.services_total)}</span>
-        </div>
-
-        <Separator className="my-3" />
-
-        <div className="flex justify-between text-lg font-bold">
-          <span>الإجمالي الكلي</span>
-          <span>{formatNumber(invoice.total)}</span>
-        </div>
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">الدفعات المسددة</span>
-          <span className="text-emerald-600">{formatNumber(invoice.deposits_total)}</span>
-        </div>
-        <div className="flex justify-between text-sm font-bold">
-          <span>المبلغ المتبقي</span>
-          <span className={cn(invoice.balance_due > 0 ? 'text-destructive' : 'text-emerald-600')}>
-            {formatNumber(invoice.balance_due)}
-          </span>
-        </div>
+        <Space direction="vertical" size={4} style={{ width: '100%' }}>
+          <Flex justify="space-between">
+            <Text strong style={{ fontSize: 16 }}>
+              الإجمالي الكلي
+            </Text>
+            <Text strong style={{ fontSize: 16 }}>
+              {formatNumber(invoice.total)}
+            </Text>
+          </Flex>
+          <SummaryRow label="الدفعات المسددة" value={formatNumber(invoice.deposits_total)} valueColor="#16a34a" />
+          <SummaryRow
+            label="المبلغ المتبقي"
+            value={formatNumber(invoice.balance_due)}
+            bold
+            valueColor={invoice.balance_due > 0 ? '#dc2626' : '#16a34a'}
+          />
+        </Space>
       </Card>
 
       {persistedInvoices.length > 0 && (
-        <Card className="p-6">
-          <h3 className="mb-2 text-sm font-semibold">الفواتير الصادرة</h3>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم الفاتورة</TableHead>
-                <TableHead>التاريخ</TableHead>
-                <TableHead>الإجمالي</TableHead>
-                <TableHead>الحالة</TableHead>
-                <TableHead />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {persistedInvoices.map((i) => (
-                <TableRow key={i.id}>
-                  <TableCell>{i.invoice_number}</TableCell>
-                  <TableCell>{i.issued_at ? formatDate(i.issued_at) : '—'}</TableCell>
-                  <TableCell>{formatNumber(i.total)}</TableCell>
-                  <TableCell>
-                    <Badge variant={i.status === 'paid' ? 'success' : 'secondary'}>{statusLabels[i.status]}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    {i.status === 'issued' && (
-                      <Button size="sm" variant="outline" onClick={() => onMarkPaid(i.id)}>
-                        تحصيل
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <Card title="الفواتير الصادرة">
+          <Table rowKey="id" columns={invoiceColumns} dataSource={persistedInvoices} pagination={false} size="small" />
         </Card>
       )}
-    </div>
+    </Space>
   )
 }

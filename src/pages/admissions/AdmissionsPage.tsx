@@ -1,16 +1,27 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Card } from '@/components/ui/card'
-import { PageLoader } from '@/components/common/PageLoader'
+import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { antTheme } from '@/lib/antdTheme'
 import { getAdmissions } from '@/services/admissionService'
 import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
 import { formatDateTime } from '@/lib/utils'
-import type { AdmissionStatus } from '@/types/admission'
+import type { Admission, AdmissionStatus } from '@/types/admission'
+
+const { Title } = Typography
+
+const STATUS_LABEL: Record<AdmissionStatus, string> = {
+  admitted: 'نشطة',
+  discharged: 'مخرّجة',
+  cancelled: 'ملغاة',
+}
+
+const STATUS_TABS: { key: AdmissionStatus; label: string }[] = [
+  { key: 'admitted', label: 'نشطة' },
+  { key: 'discharged', label: 'مخرّجة' },
+  { key: 'cancelled', label: 'ملغاة' },
+]
 
 export function AdmissionsPage() {
   const navigate = useNavigate()
@@ -19,67 +30,71 @@ export function AdmissionsPage() {
 
   const admissionsQuery = useQuery({
     queryKey: ['admissions', status],
-    queryFn: () => getAdmissions(status),
+    queryFn: () => getAdmissions({ status }),
   })
 
+  const columns: ColumnsType<Admission> = [
+    { title: 'رقم التنويم', dataIndex: 'admission_number', key: 'admission_number', render: (v) => v ?? '—' },
+    { title: 'المريض', key: 'patient', render: (_, admission) => admission.patient?.name },
+    {
+      title: 'السرير',
+      key: 'bed',
+      render: (_, admission) =>
+        `${admission.bed?.room?.ward?.name ?? ''} — غرفة ${admission.bed?.room?.room_number ?? ''} — سرير ${admission.bed?.bed_number ?? ''}`,
+    },
+    {
+      title: 'الطبيب المعالج',
+      key: 'doctor',
+      render: (_, admission) => admission.admitting_doctor?.name ?? '—',
+    },
+    {
+      title: 'تاريخ الدخول',
+      key: 'admission_date',
+      render: (_, admission) => formatDateTime(admission.admission_date),
+    },
+    {
+      title: 'الحالة',
+      key: 'status',
+      render: (_, admission) => (
+        <Tag color={admission.status === 'admitted' ? 'success' : 'default'}>
+          {STATUS_LABEL[admission.status] ?? admission.status}
+        </Tag>
+      ),
+    },
+  ]
+
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">حالات التنويم</h1>
-        <Button onClick={() => setDialogOpen(true)}>+ تنويم جديد</Button>
-      </div>
+    <ConfigProvider direction="rtl" theme={antTheme}>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Title level={3} style={{ margin: 0 }}>
+          حالات التنويم
+        </Title>
+        <Button type="primary" onClick={() => setDialogOpen(true)}>
+          + تنويم جديد
+        </Button>
+      </Flex>
 
-      <Tabs value={status} onValueChange={(v) => setStatus(v as AdmissionStatus)} className="mb-4">
-        <TabsList>
-          <TabsTrigger value="admitted">نشطة</TabsTrigger>
-          <TabsTrigger value="discharged">مخرّجة</TabsTrigger>
-          <TabsTrigger value="cancelled">ملغاة</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <Tabs
+        activeKey={status}
+        onChange={(key) => setStatus(key as AdmissionStatus)}
+        items={STATUS_TABS.map((tab) => ({ key: tab.key, label: tab.label }))}
+      />
 
-      {admissionsQuery.isLoading ? (
-        <PageLoader />
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم التنويم</TableHead>
-                <TableHead>المريض</TableHead>
-                <TableHead>السرير</TableHead>
-                <TableHead>الطبيب المعالج</TableHead>
-                <TableHead>تاريخ الدخول</TableHead>
-                <TableHead>الحالة</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {admissionsQuery.data?.data.map((admission) => (
-                <TableRow
-                  key={admission.id}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/admissions/${admission.id}`)}
-                >
-                  <TableCell>{admission.admission_number ?? '—'}</TableCell>
-                  <TableCell>{admission.patient?.name}</TableCell>
-                  <TableCell>
-                    {admission.bed?.room?.ward?.name} — غرفة {admission.bed?.room?.room_number} — سرير{' '}
-                    {admission.bed?.bed_number}
-                  </TableCell>
-                  <TableCell>{admission.admitting_doctor?.name ?? '—'}</TableCell>
-                  <TableCell>{formatDateTime(admission.admission_date)}</TableCell>
-                  <TableCell>
-                    <Badge variant={admission.status === 'admitted' ? 'success' : 'secondary'}>
-                      {admission.status === 'admitted' ? 'نشطة' : admission.status === 'discharged' ? 'مخرّجة' : 'ملغاة'}
-                    </Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
+      <Card>
+        <Table
+          rowKey="id"
+          loading={admissionsQuery.isLoading}
+          columns={columns}
+          dataSource={admissionsQuery.data?.data ?? []}
+          pagination={false}
+          onRow={(admission) => ({
+            className: 'cursor-pointer',
+            onClick: () => navigate(`/admissions/${admission.id}`),
+          })}
+        />
+      </Card>
 
       <NewAdmissionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
-    </div>
+    </ConfigProvider>
   )
 }
