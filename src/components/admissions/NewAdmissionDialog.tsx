@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -58,6 +58,19 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [diagnosis, setDiagnosis] = useState('')
   const [notes, setNotes] = useState('')
 
+  const floorInputRef = useRef<HTMLInputElement>(null)
+  const wardInputRef = useRef<HTMLInputElement>(null)
+  const roomInputRef = useRef<HTMLInputElement>(null)
+  const bedInputRef = useRef<HTMLInputElement>(null)
+  const durationInputRef = useRef<HTMLInputElement>(null)
+  const doctorInputRef = useRef<HTMLInputElement>(null)
+  const diagnosisInputRef = useRef<HTMLInputElement>(null)
+  const notesInputRef = useRef<HTMLTextAreaElement>(null)
+
+  function focusField(ref: React.RefObject<HTMLElement | null>) {
+    setTimeout(() => ref.current?.focus(), 50)
+  }
+
   const localResultsQuery = useQuery({
     queryKey: ['patients', 'search-local', debouncedSearch],
     queryFn: () => searchLocalPatients(debouncedSearch),
@@ -97,6 +110,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     onSuccess: (patient) => {
       setSelectedPatient(patient)
       queryClient.invalidateQueries({ queryKey: ['patients'] })
+      focusField(floorInputRef)
     },
   })
 
@@ -128,7 +142,10 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
 
   function handleCreateWalkIn() {
     if (!search.trim()) return
-    createLocalPatient({ name: search.trim() }).then((patient) => setSelectedPatient(patient))
+    createLocalPatient({ name: search.trim() }).then((patient) => {
+      setSelectedPatient(patient)
+      focusField(floorInputRef)
+    })
   }
 
   const selectedBed = bedsQuery.data?.find((bed) => bed.id === bedId)
@@ -179,8 +196,10 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               onInputChange={(_, value) => setSearch(value)}
               onChange={(_, option) => {
                 if (!option) return
-                if (option.kind === 'local') setSelectedPatient(option.patient)
-                else if (option.kind === 'jawda') importMutation.mutate(option.patient)
+                if (option.kind === 'local') {
+                  setSelectedPatient(option.patient)
+                  focusField(floorInputRef)
+                } else if (option.kind === 'jawda') importMutation.mutate(option.patient)
                 else handleCreateWalkIn()
               }}
               getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.patient.name)}
@@ -260,8 +279,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setRoomId('')
                 setBedId('')
                 setDurationHours('')
+                if (floor) focusField(wardInputRef)
               }}
-              renderInput={(params) => <TextField {...params} label="الطابق" />}
+              renderInput={(params) => <TextField {...params} label="الطابق" inputRef={floorInputRef} />}
             />
 
             <Autocomplete
@@ -277,8 +297,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setRoomId('')
                 setBedId('')
                 setDurationHours('')
+                if (ward) focusField(roomInputRef)
               }}
-              renderInput={(params) => <TextField {...params} label="القسم" />}
+              renderInput={(params) => <TextField {...params} label="القسم" inputRef={wardInputRef} />}
             />
           </Box>
 
@@ -295,8 +316,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setRoomId(room ? room.id : '')
                 setBedId('')
                 setDurationHours('')
+                if (room) focusField(bedInputRef)
               }}
-              renderInput={(params) => <TextField {...params} label="الغرفة" />}
+              renderInput={(params) => <TextField {...params} label="الغرفة" inputRef={roomInputRef} />}
             />
 
             <Autocomplete
@@ -310,8 +332,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               onChange={(_, bed) => {
                 setBedId(bed ? bed.id : '')
                 setDurationHours('')
+                if (bed) focusField(bed.room?.is_short_stay ? durationInputRef : doctorInputRef)
               }}
-              renderInput={(params) => <TextField {...params} label="السرير" />}
+              renderInput={(params) => <TextField {...params} label="السرير" inputRef={bedInputRef} />}
             />
           </Box>
 
@@ -323,8 +346,11 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               getOptionLabel={(option) => option.label}
               isOptionEqualToValue={(option, value) => option.value === value.value}
               value={selectedDuration}
-              onChange={(_, option) => setDurationHours(option ? option.value : '')}
-              renderInput={(params) => <TextField {...params} label="مدة الإقامة القصيرة" />}
+              onChange={(_, option) => {
+                setDurationHours(option ? option.value : '')
+                if (option) focusField(doctorInputRef)
+              }}
+              renderInput={(params) => <TextField {...params} label="مدة الإقامة القصيرة" inputRef={durationInputRef} />}
             />
           )}
 
@@ -339,11 +365,15 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             value={selectedDoctor}
             inputValue={doctorSearch}
             onInputChange={(_, value) => setDoctorSearch(value)}
-            onChange={(_, doctor) => setSelectedDoctor(doctor)}
+            onChange={(_, doctor) => {
+              setSelectedDoctor(doctor)
+              if (doctor) focusField(diagnosisInputRef)
+            }}
             renderInput={(params) => (
               <TextField
                 {...params}
                 label="ابحث عن الطبيب المعالج"
+                inputRef={doctorInputRef}
                 slotProps={{
                   ...params.slotProps,
                   input: {
@@ -367,6 +397,13 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             size="small"
             value={diagnosis}
             onChange={(e) => setDiagnosis(e.target.value)}
+            inputRef={diagnosisInputRef}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                notesInputRef.current?.focus()
+              }
+            }}
           />
           <TextField
             id="admission-notes"
@@ -377,6 +414,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             size="small"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            inputRef={notesInputRef}
           />
         </Stack>
       </DialogContent>
