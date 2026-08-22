@@ -1,6 +1,6 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Card } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { StatTile } from '@/components/statistics/StatTile'
 import { DateRangeFilter } from '@/components/statistics/DateRangeFilter'
 import { formatDate, formatNumber } from '@/lib/utils'
@@ -20,8 +20,33 @@ interface AdmissionsTabProps {
   onToChange: (value: string) => void
 }
 
+interface TypeCountRow {
+  type: string
+  count: number
+}
+
+interface StatusCountRow {
+  status: string
+  count: number
+}
+
+const typeColumns: ColumnsType<TypeCountRow> = [
+  { title: 'النوع', dataIndex: 'type', key: 'type', render: (v) => v || '—' },
+  { title: 'العدد', dataIndex: 'count', key: 'count', render: (v) => formatNumber(v) },
+]
+
+const statusColumns: ColumnsType<StatusCountRow> = [
+  { title: 'الوضع', dataIndex: 'status', key: 'status', render: (v) => STATUS_LABELS[v] ?? v },
+  { title: 'العدد', dataIndex: 'count', key: 'count', render: (v) => formatNumber(v) },
+]
+
 export function AdmissionsTab({ data, from, to, onFromChange, onToChange }: AdmissionsTabProps) {
   const totalInRange = Object.values(data.status_counts).reduce((sum, count) => sum + count, 0)
+  const typeCountRows: TypeCountRow[] = Object.entries(data.type_counts).map(([type, count]) => ({ type, count }))
+  const statusCountRows: StatusCountRow[] = Object.entries(data.status_counts).map(([status, count]) => ({
+    status,
+    count,
+  }))
 
   return (
     <div className="flex flex-col gap-4">
@@ -37,7 +62,7 @@ export function AdmissionsTab({ data, from, to, onFromChange, onToChange }: Admi
         <StatTile label="حالات ملغاة" value={formatNumber(data.status_counts.cancelled ?? 0)} />
       </div>
 
-      <Card className="p-4">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold">حالات التنويم يومياً</h2>
         {data.daily_trend.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
@@ -60,45 +85,15 @@ export function AdmissionsTab({ data, from, to, onFromChange, onToChange }: Admi
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 md:col-span-6">
-          <Card className="p-4">
+          <Card>
             <h2 className="mb-3 text-sm font-semibold">الحالات حسب النوع</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>النوع</TableHead>
-                  <TableHead>العدد</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(data.type_counts).map(([type, count]) => (
-                  <TableRow key={type}>
-                    <TableCell>{type || '—'}</TableCell>
-                    <TableCell>{formatNumber(count)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Table rowKey="type" columns={typeColumns} dataSource={typeCountRows} pagination={false} />
           </Card>
         </div>
         <div className="col-span-12 md:col-span-6">
-          <Card className="p-4">
+          <Card>
             <h2 className="mb-3 text-sm font-semibold">الحالات حسب الوضع</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الوضع</TableHead>
-                  <TableHead>العدد</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(data.status_counts).map(([status, count]) => (
-                  <TableRow key={status}>
-                    <TableCell>{STATUS_LABELS[status] ?? status}</TableCell>
-                    <TableCell>{formatNumber(count)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Table rowKey="status" columns={statusColumns} dataSource={statusCountRows} pagination={false} />
           </Card>
         </div>
       </div>

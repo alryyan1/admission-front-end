@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { ConfigProvider, Card, Select, Input, Table, Tag, Typography, Flex, Space } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { antTheme } from '@/lib/antdTheme'
+import { useAntTheme } from '@/lib/antdTheme'
 import { formatDateTime } from '@/lib/utils'
 import { getAllOperations } from '@/services/operationService'
 import type { Operation, OperationPriority, OperationStatus } from '@/types/admission'
@@ -56,6 +56,7 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 }
 
 export function OperationsPage() {
+  const antTheme = useAntTheme()
   const navigate = useNavigate()
   const [status, setStatus] = useState<OperationStatus | 'all'>('all')
   const [date, setDate] = useState('')

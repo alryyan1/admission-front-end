@@ -1,6 +1,6 @@
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Card } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { StatTile } from '@/components/statistics/StatTile'
 import { DateRangeFilter } from '@/components/statistics/DateRangeFilter'
 import { formatDate, formatNumber } from '@/lib/utils'
@@ -23,8 +23,19 @@ interface FinancialsTabProps {
   onToChange: (value: string) => void
 }
 
+interface DepositRow {
+  method: string
+  label: string
+  total: number
+}
+
+const depositColumns: ColumnsType<DepositRow> = [
+  { title: 'الطريقة', dataIndex: 'label', key: 'label' },
+  { title: 'المبلغ', dataIndex: 'total', key: 'total', render: (v) => formatNumber(v) },
+]
+
 export function FinancialsTab({ data, from, to, onFromChange, onToChange }: FinancialsTabProps) {
-  const depositsByMethod = Object.entries(data.deposits_by_method).map(([method, total]) => ({
+  const depositsByMethod: DepositRow[] = Object.entries(data.deposits_by_method).map(([method, total]) => ({
     method,
     label: METHOD_LABELS[method] ?? method,
     total,
@@ -41,7 +52,7 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
         <StatTile label="إجمالي الخدمات" value={formatNumber(data.services_total)} />
       </div>
 
-      <Card className="p-4">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold">التحصيل اليومي</h2>
         {data.daily_revenue.length > 0 ? (
           <ResponsiveContainer width="100%" height={260}>
@@ -64,7 +75,7 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
 
       <div className="grid grid-cols-12 gap-4">
         <div className="col-span-12 md:col-span-6">
-          <Card className="p-4">
+          <Card>
             <h2 className="mb-3 text-sm font-semibold">الودائع حسب طريقة الدفع</h2>
             {depositsByMethod.length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
@@ -89,24 +100,9 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
           </Card>
         </div>
         <div className="col-span-12 md:col-span-6">
-          <Card className="p-4">
+          <Card>
             <h2 className="mb-3 text-sm font-semibold">تفاصيل الودائع</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>الطريقة</TableHead>
-                  <TableHead>المبلغ</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {depositsByMethod.map((row) => (
-                  <TableRow key={row.method}>
-                    <TableCell>{row.label}</TableCell>
-                    <TableCell>{formatNumber(row.total)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Table rowKey="method" columns={depositColumns} dataSource={depositsByMethod} pagination={false} />
           </Card>
         </div>
       </div>

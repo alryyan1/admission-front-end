@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ConfigProvider, Card, Input, Button, Table, Tag, Switch, Popconfirm, Typography, Row, Col, Space } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { antTheme } from '@/lib/antdTheme'
+import { useAntTheme } from '@/lib/antdTheme'
 import {
   getProcedureCategories,
   createProcedureCategory,
@@ -21,6 +21,7 @@ import type { Procedure } from '@/types/admission'
 const { Title, Text } = Typography
 
 export function ProcedureCatalogSettingsPage() {
+  const antTheme = useAntTheme()
   const queryClient = useQueryClient()
   const [newCategoryName, setNewCategoryName] = useState('')
   const [procedureModal, setProcedureModal] = useState<{ open: boolean; procedure: Procedure | null }>({

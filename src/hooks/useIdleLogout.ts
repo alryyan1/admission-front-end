@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 
-const DEFAULT_TIMEOUT_MINUTES = 15
+const DEFAULT_TIMEOUT_MINUTES = 60
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'wheel', 'scroll'] as const
 const THROTTLE_MS = 1000
 
@@ -25,6 +25,7 @@ export function useIdleLogout(enabled: boolean, onIdle: () => void): void {
 
     const resetTimer = () => {
       const now = Date.now()
+      console.log('Resetting idle timer at', new Date(now).toISOString())
       if (now - lastReset < THROTTLE_MS) {
         return
       }
@@ -33,7 +34,7 @@ export function useIdleLogout(enabled: boolean, onIdle: () => void): void {
       timeoutId = setTimeout(() => onIdleRef.current(), timeoutMs)
     }
 
-    timeoutId = setTimeout(() => onIdleRef.current(), timeoutMs)
+    // timeoutId = setTimeout(() => onIdleRef.current(), timeoutMs)
     ACTIVITY_EVENTS.forEach((event) => window.addEventListener(event, resetTimer))
 
     return () => {

@@ -1,11 +1,6 @@
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Modal, Form, Input, Select, Checkbox, Button } from 'antd'
 import { createRoom, updateRoom } from '@/services/facilityService'
 import type { Room } from '@/types/facility'
 
@@ -16,11 +11,21 @@ interface RoomFormDialogProps {
   room?: Room | null
 }
 
+interface RoomFormValues {
+  room_number: string
+  room_type: 'normal' | 'vip' | 'operation'
+  capacity: number | string
+  is_short_stay: boolean
+  price_per_day?: number | string
+  price_12_hours?: number | string
+  price_24_hours?: number | string
+}
+
 export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!room
-  const [roomType, setRoomType] = useState<'normal' | 'vip' | 'operation'>(room?.room_type ?? 'normal')
-  const [isShortStay, setIsShortStay] = useState(room?.is_short_stay ?? false)
+  const [form] = Form.useForm<RoomFormValues>()
+  const isShortStay = Form.useWatch('is_short_stay', form) ?? room?.is_short_stay ?? false
 
   const mutation = useMutation({
     mutationFn: (payload: {
@@ -39,108 +44,84 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
     },
   })
 
+  function handleFinish(values: RoomFormValues) {
+    mutation.mutate({
+      room_number: values.room_number,
+      room_type: values.room_type,
+      capacity: Number(values.capacity),
+      price_per_day: values.price_per_day ? Number(values.price_per_day) : null,
+      is_short_stay: !!values.is_short_stay,
+      price_12_hours: values.price_12_hours ? Number(values.price_12_hours) : null,
+      price_24_hours: values.price_24_hours ? Number(values.price_24_hours) : null,
+    })
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? `تعديل غرفة ${room.room_number}` : 'إضافة غرفة جديدة'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            const priceDaily = form.get('price_per_day')
-            const price12 = form.get('price_12_hours')
-            const price24 = form.get('price_24_hours')
-            mutation.mutate({
-              room_number: String(form.get('room_number')),
-              room_type: roomType,
-              capacity: Number(form.get('capacity')),
-              price_per_day: priceDaily ? Number(priceDaily) : null,
-              is_short_stay: isShortStay,
-              price_12_hours: price12 ? Number(price12) : null,
-              price_24_hours: price24 ? Number(price24) : null,
-            })
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="room-number">رقم الغرفة</Label>
-            <Input id="room-number" name="room_number" defaultValue={room?.room_number} required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>نوع الغرفة</Label>
-            <Select value={roomType} onValueChange={(v) => setRoomType(v as 'normal' | 'vip' | 'operation')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="normal">عادية</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="operation">غرفة عمليات</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="room-capacity">السعة</Label>
-            <Input id="room-capacity" name="capacity" type="number" min={0} defaultValue={room?.capacity ?? 1} required />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={isShortStay}
-              onChange={(e) => setIsShortStay(e.target.checked)}
-            />
-            غرفة إقامات قصيرة (12 أو 24 ساعة فقط)
-          </label>
-          {isShortStay ? (
-            <>
-              <p className="text-xs text-muted-foreground">
-                هذه الغرفة مخصصة للإقامات القصيرة. جميع الأسرة داخلها تسمح بإقامة 12 أو 24 ساعة فقط.
-              </p>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="price-12">السعر لـ 12 ساعة</Label>
-                <Input
-                  id="price-12"
-                  name="price_12_hours"
-                  type="number"
-                  defaultValue={room?.price_12_hours ?? ''}
-                  placeholder="غير محدد بعد"
-                />
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label htmlFor="price-24">السعر لـ 24 ساعة</Label>
-                <Input
-                  id="price-24"
-                  name="price_24_hours"
-                  type="number"
-                  defaultValue={room?.price_24_hours ?? ''}
-                  placeholder="غير محدد بعد"
-                />
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="room-price">السعر لليوم</Label>
-              <Input
-                id="room-price"
-                name="price_per_day"
-                type="number"
-                defaultValue={room?.price_per_day ?? ''}
-                placeholder="غير محدد بعد"
-              />
-            </div>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              حفظ
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      open={open}
+      onCancel={() => onOpenChange(false)}
+      title={isEditing ? `تعديل غرفة ${room.room_number}` : 'إضافة غرفة جديدة'}
+      width={340}
+      footer={[
+        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
+          إلغاء
+        </Button>,
+        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
+          حفظ
+        </Button>,
+      ]}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          room_number: room?.room_number,
+          room_type: room?.room_type ?? 'normal',
+          capacity: room?.capacity ?? 1,
+          is_short_stay: room?.is_short_stay ?? false,
+          price_per_day: room?.price_per_day ?? '',
+          price_12_hours: room?.price_12_hours ?? '',
+          price_24_hours: room?.price_24_hours ?? '',
+        }}
+        onFinish={handleFinish}
+      >
+        <Form.Item name="room_number" label="رقم الغرفة" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="room_type" label="نوع الغرفة">
+          <Select
+            style={{ width: '100%' }}
+            options={[
+              { value: 'normal', label: 'عادية' },
+              { value: 'vip', label: 'VIP' },
+              { value: 'operation', label: 'غرفة عمليات' },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="capacity" label="السعة" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
+          <Input type="number" min={0} />
+        </Form.Item>
+        <Form.Item name="is_short_stay" valuePropName="checked">
+          <Checkbox>غرفة إقامات قصيرة (12 أو 24 ساعة فقط)</Checkbox>
+        </Form.Item>
+        {isShortStay ? (
+          <>
+            <p className="text-xs text-muted-foreground">
+              هذه الغرفة مخصصة للإقامات القصيرة. جميع الأسرة داخلها تسمح بإقامة 12 أو 24 ساعة فقط.
+            </p>
+            <Form.Item name="price_12_hours" label="السعر لـ 12 ساعة">
+              <Input type="number" placeholder="غير محدد بعد" />
+            </Form.Item>
+            <Form.Item name="price_24_hours" label="السعر لـ 24 ساعة">
+              <Input type="number" placeholder="غير محدد بعد" />
+            </Form.Item>
+          </>
+        ) : (
+          <Form.Item name="price_per_day" label="السعر لليوم">
+            <Input type="number" placeholder="غير محدد بعد" />
+          </Form.Item>
+        )}
+      </Form>
+    </Modal>
   )
 }

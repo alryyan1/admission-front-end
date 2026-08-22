@@ -1,5 +1,5 @@
 import { Moon, Sun } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from 'antd'
 import { useTheme } from '@/contexts/ThemeContext'
 
 export function ModeToggle({ className }: { className?: string }) {
@@ -7,9 +7,8 @@ export function ModeToggle({ className }: { className?: string }) {
 
   return (
     <Button
-      type="button"
-      variant="ghost"
-      size="icon"
+      type="text"
+      shape="circle"
       className={className}
       onClick={toggleTheme}
       aria-label={theme === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}

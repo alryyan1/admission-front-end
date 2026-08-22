@@ -3,7 +3,7 @@ import { ThemeProvider as MuiThemeProvider, createTheme } from '@mui/material'
 
 /**
  * Keeps MUI components (e.g. NewAdmissionDialog) in sync with the app's
- * Tailwind/shadcn light-dark mode. Intentionally skips CssBaseline so it
+ * Tailwind light-dark mode. Intentionally skips CssBaseline so it
  * doesn't fight the Tailwind base styles that already own body/global resets.
  */
 export function MuiThemeBridge({ mode, children }: { mode: 'light' | 'dark'; children: ReactNode }) {

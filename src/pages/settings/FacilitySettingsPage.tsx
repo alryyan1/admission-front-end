@@ -2,10 +2,9 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Pencil, Trash2, X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion'
+import { ConfigProvider, Button, Card, Tag, Collapse } from 'antd'
+import type { CollapseProps } from 'antd'
+import { useAntTheme } from '@/lib/antdTheme'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { PageLoader } from '@/components/common/PageLoader'
 import { FloorFormDialog } from '@/components/settings/FloorFormDialog'
@@ -16,9 +15,9 @@ import { getFloors, getFloor, deleteFloor, deleteWard, deleteRoom, deleteBed } f
 import { formatNumber } from '@/lib/utils'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
 
-const BED_STATUS_VARIANT: Record<BedStatus, 'success' | 'destructive' | 'warning'> = {
+const BED_STATUS_VARIANT: Record<BedStatus, 'success' | 'error' | 'warning'> = {
   available: 'success',
-  occupied: 'destructive',
+  occupied: 'error',
   maintenance: 'warning',
 }
 
@@ -31,6 +30,7 @@ const BED_STATUS_LABEL: Record<BedStatus, string> = {
 type DeleteTarget = { type: 'floor' | 'ward' | 'room' | 'bed'; id: number; label: string }
 
 export function FacilitySettingsPage() {
+  const antTheme = useAntTheme()
   const queryClient = useQueryClient()
 
   const [floorDialog, setFloorDialog] = useState<{ open: boolean; floor?: Floor | null }>({ open: false })
@@ -97,228 +97,226 @@ export function FacilitySettingsPage() {
     bed: deleteBedMutation,
   }
 
-  return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">الإعدادات — الهيكل العام للمستشفى</h1>
-        <Button onClick={() => setFloorDialog({ open: true })}>+ طابق جديد</Button>
-      </div>
-
-      {(floorsQuery.isLoading || floorDetailsQuery.isLoading) && <PageLoader />}
-
-      <Accordion type="multiple" defaultValue={floorDetailsQuery.data?.map((f) => String(f.id))}>
-        {floorDetailsQuery.data?.map((floor) => (
-          <AccordionItem key={floor.id} value={String(floor.id)}>
-            <div className="flex items-center">
-              <AccordionTrigger className="flex-1">
-                <div className="flex w-full items-center gap-2 pe-2">
-                  <span className="flex-1 font-bold">{floor.name}</span>
-                  <span className="text-sm text-muted-foreground">{floor.wards?.length ?? 0} جناح</span>
+  const floorItems: CollapseProps['items'] = floorDetailsQuery.data?.map((floor) => {
+    const wardItems: CollapseProps['items'] = floor.wards?.map((ward) => ({
+      key: String(ward.id),
+      label: (
+        <div className="flex w-full items-center gap-2 pe-2">
+          <span className="flex-1 font-semibold">{ward.name}</span>
+          {ward.gender && (
+            <Tag>{ward.gender === 'male' ? 'رجالي' : ward.gender === 'female' ? 'نسائي' : 'أطفال'}</Tag>
+          )}
+          <span className="text-sm text-muted-foreground">{ward.rooms?.length ?? 0} غرفة</span>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="text"
+              shape="circle"
+              size="small"
+              icon={<Pencil className="h-4 w-4" />}
+              onClick={() => setWardDialog({ open: true, floorId: floor.id, ward })}
+            />
+            <Button
+              type="text"
+              shape="circle"
+              size="small"
+              icon={<Trash2 className="h-4 w-4" />}
+              onClick={() => setDeleteTarget({ type: 'ward', id: ward.id, label: ward.name })}
+            />
+          </div>
+        </div>
+      ),
+      children: (
+        <div className="flex flex-wrap gap-4">
+          {ward.rooms?.map((room) => (
+            <Card key={room.id} size="small" className="min-w-[240px] p-3">
+              <div className="flex items-center justify-between">
+                <span className="font-bold">
+                  غرفة {room.room_number} {room.room_type === 'vip' && '(VIP)'}
+                </span>
+                <div className="flex items-center gap-1">
+                  <Button
+                    type="text"
+                    shape="circle"
+                    size="small"
+                    className="h-6 w-6"
+                    icon={<Pencil className="h-3.5 w-3.5" />}
+                    onClick={() => setRoomDialog({ open: true, wardId: ward.id, room })}
+                  />
+                  <Button
+                    type="text"
+                    shape="circle"
+                    size="small"
+                    className="h-6 w-6"
+                    icon={<Trash2 className="h-3.5 w-3.5" />}
+                    onClick={() =>
+                      setDeleteTarget({ type: 'room', id: room.id, label: `غرفة ${room.room_number}` })
+                    }
+                  />
                 </div>
-              </AccordionTrigger>
-              <div className="flex items-center gap-1 pe-2">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setFloorDialog({ open: true, floor })}
-                >
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setDeleteTarget({ type: 'floor', id: floor.id, label: floor.name })}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
-            <AccordionContent>
-              <div className="mb-2 flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setWardDialog({ open: true, floorId: floor.id })}
-                >
-                  + جناح جديد
-                </Button>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {room.is_short_stay ? (
+                  <>
+                    إقامة قصيرة — 12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
+                    24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
+                  </>
+                ) : (
+                  <>{room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}</>
+                )}
               </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {room.beds?.map((bed) => {
+                  const label =
+                    bed.status === 'occupied' && bed.current_admission
+                      ? `${bed.bed_number} — ${bed.current_admission.patient.name}`
+                      : `${bed.unit_type === 'chair' ? 'كرسي' : 'سرير'} ${bed.bed_number} — ${BED_STATUS_LABEL[bed.status]}`
+                  return (
+                    <Tag
+                      key={bed.id}
+                      color={BED_STATUS_VARIANT[bed.status]}
+                      className="flex items-center gap-1 p-0 ps-2 pe-1"
+                      style={{ display: 'inline-flex', alignItems: 'center' }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setBedDialog({ open: true, roomId: room.id, bed })}
+                      >
+                        {label}
+                      </button>
+                      <button
+                        type="button"
+                        className="opacity-70 hover:opacity-100"
+                        onClick={() =>
+                          setDeleteTarget({ type: 'bed', id: bed.id, label: `سرير ${bed.bed_number}` })
+                        }
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Tag>
+                  )
+                })}
+                <button type="button" onClick={() => setBedDialog({ open: true, roomId: room.id })}>
+                  <Tag>+ سرير</Tag>
+                </button>
+              </div>
+            </Card>
+          ))}
+          <Card
+            size="small"
+            className="flex min-w-[160px] cursor-pointer items-center justify-center p-3"
+            onClick={() => setRoomDialog({ open: true, wardId: ward.id })}
+          >
+            <span className="text-muted-foreground">+ غرفة جديدة</span>
+          </Card>
+        </div>
+      ),
+    }))
 
-              <Accordion type="multiple" defaultValue={floor.wards?.map((w) => String(w.id))} className="ps-4">
-                {floor.wards?.map((ward) => (
-                  <AccordionItem key={ward.id} value={String(ward.id)}>
-                    <div className="flex items-center">
-                      <AccordionTrigger className="flex-1">
-                        <div className="flex w-full items-center gap-2 pe-2">
-                          <span className="flex-1 font-semibold">{ward.name}</span>
-                          {ward.gender && (
-                            <Badge variant="secondary">
-                              {ward.gender === 'male' ? 'رجالي' : ward.gender === 'female' ? 'نسائي' : 'أطفال'}
-                            </Badge>
-                          )}
-                          <span className="text-sm text-muted-foreground">{ward.rooms?.length ?? 0} غرفة</span>
-                        </div>
-                      </AccordionTrigger>
-                      <div className="flex items-center gap-1 pe-2">
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setWardDialog({ open: true, floorId: floor.id, ward })}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setDeleteTarget({ type: 'ward', id: ward.id, label: ward.name })}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <AccordionContent>
-                      <div className="flex flex-wrap gap-4">
-                        {ward.rooms?.map((room) => (
-                          <Card key={room.id} className="min-w-[240px] p-3">
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold">
-                                غرفة {room.room_number} {room.room_type === 'vip' && '(VIP)'}
-                              </span>
-                              <div className="flex items-center gap-1">
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6"
-                                  onClick={() => setRoomDialog({ open: true, wardId: ward.id, room })}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="ghost"
-                                  className="h-6 w-6"
-                                  onClick={() =>
-                                    setDeleteTarget({ type: 'room', id: room.id, label: `غرفة ${room.room_number}` })
-                                  }
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </div>
-                            <div className="mt-1 text-xs text-muted-foreground">
-                              {room.is_short_stay ? (
-                                <>
-                                  إقامة قصيرة — 12س:{' '}
-                                  {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
-                                  24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
-                                </>
-                              ) : (
-                                <>{room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}</>
-                              )}
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {room.beds?.map((bed) => {
-                                const label =
-                                  bed.status === 'occupied' && bed.current_admission
-                                    ? `${bed.bed_number} — ${bed.current_admission.patient.name}`
-                                    : `${bed.unit_type === 'chair' ? 'كرسي' : 'سرير'} ${bed.bed_number} — ${BED_STATUS_LABEL[bed.status]}`
-                                return (
-                                  <Badge
-                                    key={bed.id}
-                                    variant={BED_STATUS_VARIANT[bed.status]}
-                                    className="flex items-center gap-1 p-0 ps-2 pe-1"
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() => setBedDialog({ open: true, roomId: room.id, bed })}
-                                    >
-                                      {label}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      className="opacity-70 hover:opacity-100"
-                                      onClick={() =>
-                                        setDeleteTarget({ type: 'bed', id: bed.id, label: `سرير ${bed.bed_number}` })
-                                      }
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </Badge>
-                                )
-                              })}
-                              <button
-                                type="button"
-                                onClick={() => setBedDialog({ open: true, roomId: room.id })}
-                              >
-                                <Badge variant="outline">+ سرير</Badge>
-                              </button>
-                            </div>
-                          </Card>
-                        ))}
-                        <Card
-                          className="flex min-w-[160px] cursor-pointer items-center justify-center p-3"
-                          onClick={() => setRoomDialog({ open: true, wardId: ward.id })}
-                        >
-                          <span className="text-muted-foreground">+ غرفة جديدة</span>
-                        </Card>
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+    return {
+      key: String(floor.id),
+      label: (
+        <div className="flex w-full items-center gap-2 pe-2">
+          <span className="flex-1 font-bold">{floor.name}</span>
+          <span className="text-sm text-muted-foreground">{floor.wards?.length ?? 0} جناح</span>
+          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+            <Button
+              type="text"
+              shape="circle"
+              size="small"
+              icon={<Pencil className="h-4 w-4" />}
+              onClick={() => setFloorDialog({ open: true, floor })}
+            />
+            <Button
+              type="text"
+              shape="circle"
+              size="small"
+              icon={<Trash2 className="h-4 w-4" />}
+              onClick={() => setDeleteTarget({ type: 'floor', id: floor.id, label: floor.name })}
+            />
+          </div>
+        </div>
+      ),
+      children: (
+        <>
+          <div className="mb-2 flex justify-end">
+            <Button
+              type="default"
+              size="small"
+              onClick={() => setWardDialog({ open: true, floorId: floor.id })}
+            >
+              + جناح جديد
+            </Button>
+          </div>
 
-      <FloorFormDialog
-        open={floorDialog.open}
-        onOpenChange={(open) => setFloorDialog((s) => ({ ...s, open }))}
-        floor={floorDialog.floor}
-      />
+          <Collapse
+            className="ps-4"
+            defaultActiveKey={floor.wards?.map((w) => String(w.id))}
+            items={wardItems}
+          />
+        </>
+      ),
+    }
+  })
 
-      {wardDialog && (
-        <WardFormDialog
-          open={wardDialog.open}
-          onOpenChange={(open) => setWardDialog((s) => (s ? { ...s, open } : s))}
-          floorId={wardDialog.floorId}
-          ward={wardDialog.ward}
+  return (
+    <ConfigProvider direction="rtl" theme={antTheme}>
+      <div>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">الإعدادات — الهيكل العام للمستشفى</h1>
+          <Button type="primary" onClick={() => setFloorDialog({ open: true })}>
+            + طابق جديد
+          </Button>
+        </div>
+
+        {(floorsQuery.isLoading || floorDetailsQuery.isLoading) && <PageLoader />}
+
+        <Collapse
+          defaultActiveKey={floorDetailsQuery.data?.map((f) => String(f.id))}
+          items={floorItems}
         />
-      )}
 
-      {roomDialog && (
-        <RoomFormDialog
-          open={roomDialog.open}
-          onOpenChange={(open) => setRoomDialog((s) => (s ? { ...s, open } : s))}
-          wardId={roomDialog.wardId}
-          room={roomDialog.room}
+        <FloorFormDialog
+          open={floorDialog.open}
+          onOpenChange={(open) => setFloorDialog((s) => ({ ...s, open }))}
+          floor={floorDialog.floor}
         />
-      )}
 
-      {bedDialog && (
-        <BedFormDialog
-          open={bedDialog.open}
-          onOpenChange={(open) => setBedDialog((s) => (s ? { ...s, open } : s))}
-          roomId={bedDialog.roomId}
-          bed={bedDialog.bed}
+        {wardDialog && (
+          <WardFormDialog
+            open={wardDialog.open}
+            onOpenChange={(open) => setWardDialog((s) => (s ? { ...s, open } : s))}
+            floorId={wardDialog.floorId}
+            ward={wardDialog.ward}
+          />
+        )}
+
+        {roomDialog && (
+          <RoomFormDialog
+            open={roomDialog.open}
+            onOpenChange={(open) => setRoomDialog((s) => (s ? { ...s, open } : s))}
+            wardId={roomDialog.wardId}
+            room={roomDialog.room}
+          />
+        )}
+
+        {bedDialog && (
+          <BedFormDialog
+            open={bedDialog.open}
+            onOpenChange={(open) => setBedDialog((s) => (s ? { ...s, open } : s))}
+            roomId={bedDialog.roomId}
+            bed={bedDialog.bed}
+          />
+        )}
+
+        <ConfirmDialog
+          open={!!deleteTarget}
+          onOpenChange={(open) => !open && setDeleteTarget(null)}
+          title={deleteTarget ? `حذف ${deleteTarget.label}؟` : ''}
+          description="لا يمكن التراجع عن هذا الإجراء."
+          isPending={deleteTarget ? deleteMutationByType[deleteTarget.type].isPending : false}
+          onConfirm={() => deleteTarget && deleteMutationByType[deleteTarget.type].mutate(deleteTarget.id)}
         />
-      )}
-
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title={deleteTarget ? `حذف ${deleteTarget.label}؟` : ''}
-        description="لا يمكن التراجع عن هذا الإجراء."
-        isPending={deleteTarget ? deleteMutationByType[deleteTarget.type].isPending : false}
-        onConfirm={() => deleteTarget && deleteMutationByType[deleteTarget.type].mutate(deleteTarget.id)}
-      />
-    </div>
+      </div>
+    </ConfigProvider>
   )
 }

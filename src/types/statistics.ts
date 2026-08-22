@@ -70,3 +70,23 @@ export interface DoctorsServicesStatistics {
   top_doctors: TopDoctor[]
   top_services: TopService[]
 }
+
+export interface TopSurgeon {
+  id: number
+  name: string | null
+  specialist: string | null
+  total: number
+  completed_count: number
+  cancelled_count: number
+}
+
+export interface OperationsStatistics {
+  range: DateRange
+  today: {
+    scheduled: number
+    completed: number
+    cancelled: number
+  }
+  status_counts: Record<string, number>
+  by_surgeon: TopSurgeon[]
+}

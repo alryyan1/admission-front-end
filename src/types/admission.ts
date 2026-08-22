@@ -29,6 +29,7 @@ export interface Admission {
   requested_services?: RequestedService[]
   invoices?: Invoice[]
   operations?: Operation[]
+  operations_count?: number
 }
 
 export interface VitalSign {

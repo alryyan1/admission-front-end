@@ -1,11 +1,6 @@
-import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Modal, Form, Input, Select, Checkbox, Button } from 'antd'
 import { createWard, updateWard } from '@/services/facilityService'
 import type { Ward, WardGender } from '@/types/facility'
 
@@ -22,10 +17,17 @@ const GENDER_LABEL: Record<WardGender, string> = {
   children: 'أطفال',
 }
 
+interface WardFormValues {
+  name: string
+  description?: string
+  gender: WardGender | 'none'
+  status: boolean
+}
+
 export function WardFormDialog({ open, onOpenChange, floorId, ward }: WardFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!ward
-  const [gender, setGender] = useState<WardGender | 'none'>(ward?.gender ?? 'none')
+  const [form] = Form.useForm<WardFormValues>()
 
   const mutation = useMutation({
     mutationFn: (payload: { name: string; description?: string; gender: WardGender | null; status: boolean }) =>
@@ -39,63 +41,60 @@ export function WardFormDialog({ open, onOpenChange, floorId, ward }: WardFormDi
     },
   })
 
+  function handleFinish(values: WardFormValues) {
+    mutation.mutate({
+      name: values.name,
+      description: values.description || '',
+      gender: values.gender === 'none' ? null : values.gender,
+      status: values.status,
+    })
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? `تعديل ${ward.name}` : 'إضافة جناح جديد'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            mutation.mutate({
-              name: String(form.get('name')),
-              description: String(form.get('description') || ''),
-              gender: gender === 'none' ? null : gender,
-              status: form.get('status') === 'on',
-            })
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ward-name">اسم الجناح</Label>
-            <Input id="ward-name" name="name" defaultValue={ward?.name} required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="ward-description">الوصف</Label>
-            <Input id="ward-description" name="description" defaultValue={ward?.description ?? ''} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label>الجنس</Label>
-            <Select value={gender} onValueChange={(v) => setGender(v as WardGender | 'none')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">عام (بدون تحديد)</SelectItem>
-                {(Object.keys(GENDER_LABEL) as WardGender[]).map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {GENDER_LABEL[g]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="status" defaultChecked={ward?.status ?? true} />
-            نشط
-          </label>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              حفظ
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      open={open}
+      onCancel={() => onOpenChange(false)}
+      title={isEditing ? `تعديل ${ward.name}` : 'إضافة جناح جديد'}
+      width={340}
+      footer={[
+        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
+          إلغاء
+        </Button>,
+        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
+          حفظ
+        </Button>,
+      ]}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          name: ward?.name,
+          description: ward?.description ?? '',
+          gender: ward?.gender ?? 'none',
+          status: ward?.status ?? true,
+        }}
+        onFinish={handleFinish}
+      >
+        <Form.Item name="name" label="اسم الجناح" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="description" label="الوصف">
+          <Input />
+        </Form.Item>
+        <Form.Item name="gender" label="الجنس">
+          <Select
+            style={{ width: '100%' }}
+            options={[
+              { value: 'none', label: 'عام (بدون تحديد)' },
+              ...(Object.keys(GENDER_LABEL) as WardGender[]).map((g) => ({ value: g, label: GENDER_LABEL[g] })),
+            ]}
+          />
+        </Form.Item>
+        <Form.Item name="status" valuePropName="checked">
+          <Checkbox>نشط</Checkbox>
+        </Form.Item>
+      </Form>
+    </Modal>
   )
 }

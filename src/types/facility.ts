@@ -49,6 +49,7 @@ export interface Bed {
   room?: Room
   current_admission?: {
     id: number
+    admission_date: string
     patient: { id: number; name: string }
   } | null
 }

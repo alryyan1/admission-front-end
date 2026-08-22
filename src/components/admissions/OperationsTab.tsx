@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useNavigate } from 'react-router-dom'
 import { Card, Button, Listy, Tag, Typography, Flex, Space } from 'antd'
 import { formatDateTime } from '@/lib/utils'
-import { getDoctors } from '@/services/patientService'
 import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
-import { OperationDetailModal } from '@/components/admissions/OperationDetailModal'
-import type { Operation, OperationPriority, OperationStatus, OperationTeamRole } from '@/types/admission'
+import type { Operation, OperationPriority, OperationStatus } from '@/types/admission'
 
 const { Text } = Typography
 
@@ -23,41 +21,7 @@ interface OperationsTabProps {
     scheduled_at: string
     notes?: string
   }) => void
-  onPrepare: (
-    operationId: number,
-    payload: {
-      consent_obtained: boolean
-      fasting_confirmed: boolean
-      site_marked: boolean
-      preop_vitals_checked: boolean
-      preop_notes?: string
-    },
-  ) => void
-  onStart: (operationId: number) => void
-  onComplete: (
-    operationId: number,
-    payload: {
-      findings?: string
-      complications?: string
-      blood_loss_ml?: number
-      outcome?: string
-      report_notes?: string
-    },
-  ) => void
-  onCancel: (operationId: number, cancellationReason: string) => void
-  onAddTeamMember: (
-    operationId: number,
-    payload: { doctor_id?: number | null; name?: string; role: OperationTeamRole; notes?: string },
-  ) => void
-  onRemoveTeamMember: (operationId: number, teamMemberId: number) => void
-  onAddSupply: (operationId: number, payload: { name: string; quantity?: number; unit?: string }) => void
-  onRemoveSupply: (operationId: number, supplyId: number) => void
   isSubmitting: boolean
-  isPreparing: boolean
-  isStarting: boolean
-  isCompleting: boolean
-  isAddingTeamMember: boolean
-  isAddingSupply: boolean
 }
 
 const STATUS_LABELS: Record<OperationStatus, string> = {
@@ -86,37 +50,9 @@ const PRIORITY_COLORS: Record<OperationPriority, string> = {
   scheduled: 'default',
 }
 
-export function OperationsTab({
-  operations,
-  onSchedule,
-  onPrepare,
-  onStart,
-  onComplete,
-  onCancel,
-  onAddTeamMember,
-  onRemoveTeamMember,
-  onAddSupply,
-  onRemoveSupply,
-  isSubmitting,
-  isPreparing,
-  isStarting,
-  isCompleting,
-  isAddingTeamMember,
-  isAddingSupply,
-}: OperationsTabProps) {
+export function OperationsTab({ operations, onSchedule, isSubmitting }: OperationsTabProps) {
+  const navigate = useNavigate()
   const [scheduleOpen, setScheduleOpen] = useState(false)
-  const [managingOperationId, setManagingOperationId] = useState<number | null>(null)
-
-  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
-
-  const managingOperation = operations.find((o) => o.id === managingOperationId) ?? null
-
-  function handleCancel(operation: Operation) {
-    const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
-    if (window.confirm('هل أنت متأكد من إلغاء هذه العملية؟')) {
-      onCancel(operation.id, reason)
-    }
-  }
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -159,7 +95,7 @@ export function OperationsTab({
                     </Text>
                   </div>
                 </div>
-                <Button size="small" onClick={() => setManagingOperationId(operation.id)}>
+                <Button size="small" onClick={() => navigate(`/operations/${operation.id}`)}>
                   إدارة
                 </Button>
               </Flex>
@@ -176,26 +112,6 @@ export function OperationsTab({
           setScheduleOpen(false)
         }}
         isSubmitting={isSubmitting}
-      />
-
-      <OperationDetailModal
-        operation={managingOperation}
-        open={managingOperationId !== null}
-        onClose={() => setManagingOperationId(null)}
-        doctors={doctorsQuery.data ?? []}
-        onPrepare={(payload) => managingOperation && onPrepare(managingOperation.id, payload)}
-        onStart={() => managingOperation && onStart(managingOperation.id)}
-        onComplete={(payload) => managingOperation && onComplete(managingOperation.id, payload)}
-        onCancel={() => managingOperation && handleCancel(managingOperation)}
-        onAddTeamMember={(payload) => managingOperation && onAddTeamMember(managingOperation.id, payload)}
-        onRemoveTeamMember={(teamMemberId) => managingOperation && onRemoveTeamMember(managingOperation.id, teamMemberId)}
-        onAddSupply={(payload) => managingOperation && onAddSupply(managingOperation.id, payload)}
-        onRemoveSupply={(supplyId) => managingOperation && onRemoveSupply(managingOperation.id, supplyId)}
-        isPreparing={isPreparing}
-        isStarting={isStarting}
-        isCompleting={isCompleting}
-        isAddingTeamMember={isAddingTeamMember}
-        isAddingSupply={isAddingSupply}
       />
     </Space>
   )

@@ -17,7 +17,15 @@ import type {
 } from '@/types/admission'
 
 export async function getAdmissions(
-  filters?: { status?: AdmissionStatus; patient_id?: number },
+  filters?: {
+    status?: AdmissionStatus
+    patient_id?: number
+    from?: string
+    to?: string
+    search?: string
+    room_id?: number
+    bed_id?: number
+  },
 ): Promise<{ data: Admission[] }> {
   const { data } = await apiClient.get('/admissions', { params: filters ?? {} })
   return data

@@ -1,5 +1,6 @@
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Input, Typography } from 'antd'
+
+const { Text } = Typography
 
 interface DateRangeFilterProps {
   from: string
@@ -12,7 +13,9 @@ export function DateRangeFilter({ from, to, onFromChange, onToChange }: DateRang
   return (
     <div className="mb-4 flex flex-wrap items-end gap-3">
       <div className="flex flex-col gap-1">
-        <Label htmlFor="range-from">من تاريخ</Label>
+        <label htmlFor="range-from">
+          <Text className="text-sm">من تاريخ</Text>
+        </label>
         <Input
           id="range-from"
           type="date"
@@ -23,7 +26,9 @@ export function DateRangeFilter({ from, to, onFromChange, onToChange }: DateRang
         />
       </div>
       <div className="flex flex-col gap-1">
-        <Label htmlFor="range-to">إلى تاريخ</Label>
+        <label htmlFor="range-to">
+          <Text className="text-sm">إلى تاريخ</Text>
+        </label>
         <Input
           id="range-to"
           type="date"

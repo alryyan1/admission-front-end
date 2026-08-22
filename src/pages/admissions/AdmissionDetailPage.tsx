@@ -1,9 +1,9 @@
-import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex } from 'antd'
-import { antTheme } from '@/lib/antdTheme'
+import { FileTextOutlined, BankOutlined, ApartmentOutlined, HomeOutlined } from '@ant-design/icons'
+import { useAntTheme } from '@/lib/antdTheme'
 import {
   getAdmission,
   dischargeAdmission,
@@ -18,14 +18,6 @@ import {
   generateInvoice,
   markInvoicePaid,
   addOperation,
-  prepareOperation,
-  startOperation,
-  completeOperation,
-  cancelOperation,
-  addOperationTeamMember,
-  removeOperationTeamMember,
-  addOperationSupply,
-  removeOperationSupply,
 } from '@/services/admissionService'
 import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
@@ -54,10 +46,13 @@ const TAB_ITEMS = [
 ]
 
 export function AdmissionDetailPage() {
+  const antTheme = useAntTheme()
   const { admissionId } = useParams<{ admissionId: string }>()
   const id = Number(admissionId)
   const queryClient = useQueryClient()
-  const [tab, setTab] = useState('overview')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const tab = searchParams.get('tab') ?? 'overview'
+  const setTab = (key: string) => setSearchParams(key === 'overview' ? {} : { tab: key }, { replace: true })
 
   const admissionQuery = useQuery({
     queryKey: ['admissions', id],
@@ -148,53 +143,6 @@ export function AdmissionDetailPage() {
     onSuccess: invalidateAdmission,
   })
 
-  const prepareOperationMutation = useMutation({
-    mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof prepareOperation>[1]) =>
-      prepareOperation(operationId, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const startOperationMutation = useMutation({
-    mutationFn: (operationId: number) => startOperation(operationId),
-    onSuccess: invalidateAdmission,
-  })
-
-  const completeOperationMutation = useMutation({
-    mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof completeOperation>[1]) =>
-      completeOperation(operationId, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const cancelOperationMutation = useMutation({
-    mutationFn: ({ operationId, cancellation_reason }: { operationId: number; cancellation_reason: string }) =>
-      cancelOperation(operationId, { cancellation_reason }),
-    onSuccess: invalidateAdmission,
-  })
-
-  const addTeamMemberMutation = useMutation({
-    mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof addOperationTeamMember>[1]) =>
-      addOperationTeamMember(operationId, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const removeTeamMemberMutation = useMutation({
-    mutationFn: ({ operationId, teamMemberId }: { operationId: number; teamMemberId: number }) =>
-      removeOperationTeamMember(operationId, teamMemberId),
-    onSuccess: invalidateAdmission,
-  })
-
-  const addSupplyMutation = useMutation({
-    mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof addOperationSupply>[1]) =>
-      addOperationSupply(operationId, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const removeSupplyMutation = useMutation({
-    mutationFn: ({ operationId, supplyId }: { operationId: number; supplyId: number }) =>
-      removeOperationSupply(operationId, supplyId),
-    onSuccess: invalidateAdmission,
-  })
-
   const admission = admissionQuery.data
 
   if (!admission) {
@@ -207,19 +155,47 @@ export function AdmissionDetailPage() {
         <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
           <div>
             <Title level={3} style={{ margin: 0 }}>
-              <Link to={`/patients/${admission.patient_id}`}>{admission.patient?.name}</Link>
+              <Link  to={`/patients/${admission.patient_id}`}>{admission.patient?.name}</Link>
             </Title>
-            <Text type="secondary">
-              {admission.admission_number ?? '—'} · {admission.bed?.room?.ward?.name} — غرفة{' '}
-              {admission.bed?.room?.room_number} — سرير {admission.bed?.bed_number} · الطبيب:{' '}
-              {admission.admitting_doctor?.name ?? '—'}
+            <Text style={{ borderBottom: '1px dashed #d9d9d9', paddingBottom: 2, display: 'inline-block' }}>
+              <FileTextOutlined style={{ marginInlineEnd: 4 }} />
+              {admission.id != null ? `#${admission.id}` : '—'}
             </Text>
-            {admission.diagnosis && (
-              <div>
-                <Text>التشخيص: {admission.diagnosis}</Text>
-              </div>
-            )}
+            <Flex vertical gap={4} style={{ marginTop: 4 }}>
+              <Flex align="center" gap={6}>
+                <BankOutlined style={{ color: '#1677ff', fontSize: 15 }} />
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                  {admission.bed?.room?.ward?.floor?.name ?? '—'}
+                </Text>
+              </Flex>
+              <Flex align="center" gap={6} style={{ marginInlineStart: 16 }}>
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
+                <ApartmentOutlined style={{ color: '#1677ff', fontSize: 15 }} />
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                  {admission.bed?.room?.ward?.name}
+                </Text>
+              </Flex>
+              <Flex align="center" gap={6} style={{ marginInlineStart: 32 }}>
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
+                <HomeOutlined style={{ color: '#1677ff', fontSize: 15 }} />
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                  غرفة {admission.bed?.room?.room_number}
+                </Text>
+              </Flex>
+              <Flex align="center" gap={6} style={{ marginInlineStart: 48 }}>
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
+                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
+                  سرير {admission.bed?.bed_number}
+                </Text>
+              </Flex>
+            </Flex>
           </div>
+          <Flex vertical align="center" style={{ textAlign: 'center', flex: 1 }}>
+            <Text style={{ borderBottom: '1px dashed #d9d9d9', paddingBottom: 2 }}>
+              الطبيب: {admission.admitting_doctor?.name ?? '—'}
+            </Text>
+            {admission.diagnosis && <Text>التشخيص: {admission.diagnosis}</Text>}
+          </Flex>
           <Flex align="center" gap={8}>
             <Tag color={admission.status === 'admitted' ? 'success' : 'default'}>
               {STATUS_LABEL[admission.status] ?? admission.status}
@@ -291,24 +267,7 @@ export function AdmissionDetailPage() {
         <OperationsTab
           operations={admission.operations ?? []}
           onSchedule={(payload) => operationMutation.mutate(payload)}
-          onPrepare={(operationId, payload) => prepareOperationMutation.mutate({ operationId, ...payload })}
-          onStart={(operationId) => startOperationMutation.mutate(operationId)}
-          onComplete={(operationId, payload) => completeOperationMutation.mutate({ operationId, ...payload })}
-          onCancel={(operationId, cancellation_reason) =>
-            cancelOperationMutation.mutate({ operationId, cancellation_reason })
-          }
-          onAddTeamMember={(operationId, payload) => addTeamMemberMutation.mutate({ operationId, ...payload })}
-          onRemoveTeamMember={(operationId, teamMemberId) =>
-            removeTeamMemberMutation.mutate({ operationId, teamMemberId })
-          }
-          onAddSupply={(operationId, payload) => addSupplyMutation.mutate({ operationId, ...payload })}
-          onRemoveSupply={(operationId, supplyId) => removeSupplyMutation.mutate({ operationId, supplyId })}
           isSubmitting={operationMutation.isPending}
-          isPreparing={prepareOperationMutation.isPending}
-          isStarting={startOperationMutation.isPending}
-          isCompleting={completeOperationMutation.isPending}
-          isAddingTeamMember={addTeamMemberMutation.isPending}
-          isAddingSupply={addSupplyMutation.isPending}
         />
       )}
 

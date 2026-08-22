@@ -35,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true)
     try {
       const response = await authService.login(credentials)
+  
       localStorage.setItem('authToken', response.token)
       localStorage.setItem('authUser', JSON.stringify(response.user))
       setToken(response.token)
@@ -62,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void logout()
   }, [logout])
 
-  useIdleLogout(isAuthenticated, handleIdle)
+  // useIdleLogout(isAuthenticated, handleIdle)
 
   const value = useMemo<AuthContextType>(
     () => ({

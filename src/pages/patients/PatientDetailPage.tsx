@@ -1,7 +1,7 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ConfigProvider, Card, Typography, Row, Col, Space } from 'antd'
-import { antTheme } from '@/lib/antdTheme'
+import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { getPatient } from '@/services/patientService'
 import { getAdmissions } from '@/services/admissionService'
@@ -14,6 +14,7 @@ import { AdmissionHistoryTab } from '@/components/patients/AdmissionHistoryTab'
 const { Title, Text } = Typography
 
 export function PatientDetailPage() {
+  const antTheme = useAntTheme()
   const { patientId } = useParams<{ patientId: string }>()
   const id = Number(patientId)
   const { user } = useAuth()

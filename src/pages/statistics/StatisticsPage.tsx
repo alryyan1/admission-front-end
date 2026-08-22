@@ -1,25 +1,27 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, Tabs } from 'antd'
 import { PageLoader } from '@/components/common/PageLoader'
 import {
   getAdmissionsStatistics,
   getDoctorsServicesStatistics,
   getFinancialStatistics,
   getOccupancyStatistics,
+  getOperationsStatistics,
 } from '@/services/statisticsService'
 import { OccupancyTab } from '@/components/statistics/OccupancyTab'
 import { AdmissionsTab } from '@/components/statistics/AdmissionsTab'
 import { FinancialsTab } from '@/components/statistics/FinancialsTab'
 import { DoctorsServicesTab } from '@/components/statistics/DoctorsServicesTab'
+import { OperationsTab } from '@/components/statistics/OperationsTab'
 
 function toDateInputValue(date: Date): string {
   return date.toISOString().slice(0, 10)
 }
 
-const DEFAULT_TO = toDateInputValue(new Date())
-const DEFAULT_FROM = toDateInputValue(new Date(Date.now() - 29 * 24 * 60 * 60 * 1000))
+const now = new Date()
+const DEFAULT_FROM = toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1))
+const DEFAULT_TO = toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0))
 
 export function StatisticsPage() {
   const [tab, setTab] = useState('occupancy')
@@ -52,21 +54,31 @@ export function StatisticsPage() {
     enabled: tab === 'doctors-services',
   })
 
+  const operationsQuery = useQuery({
+    queryKey: ['statistics', 'operations', range],
+    queryFn: () => getOperationsStatistics(range),
+    enabled: tab === 'operations',
+  })
+
   return (
     <div>
-      <Card className="mb-4 p-4">
+      <Card className="mb-4">
         <h1 className="text-xl font-semibold">الإحصائيات</h1>
         <p className="text-sm text-muted-foreground">نظرة عامة على الإشغال وحالات التنويم والماليات.</p>
       </Card>
 
-      <Tabs value={tab} onValueChange={setTab} className="mb-4">
-        <TabsList>
-          <TabsTrigger value="occupancy">الإشغال</TabsTrigger>
-          <TabsTrigger value="admissions">حالات التنويم</TabsTrigger>
-          <TabsTrigger value="financials">الماليات</TabsTrigger>
-          <TabsTrigger value="doctors-services">الأطباء والخدمات</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <Tabs
+        activeKey={tab}
+        onChange={setTab}
+        className="mb-4"
+        items={[
+          { key: 'occupancy', label: 'الإشغال' },
+          { key: 'admissions', label: 'حالات التنويم' },
+          { key: 'financials', label: 'الماليات' },
+          { key: 'doctors-services', label: 'الأطباء والخدمات' },
+          { key: 'operations', label: 'العمليات' },
+        ]}
+      />
 
       {tab === 'occupancy' &&
         (occupancyQuery.data ? (
@@ -98,6 +110,13 @@ export function StatisticsPage() {
             onFromChange={setFrom}
             onToChange={setTo}
           />
+        ) : (
+          <PageLoader />
+        ))}
+
+      {tab === 'operations' &&
+        (operationsQuery.data ? (
+          <OperationsTab data={operationsQuery.data} from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
         ) : (
           <PageLoader />
         ))}

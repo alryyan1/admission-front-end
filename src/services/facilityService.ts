@@ -131,3 +131,10 @@ export async function getAvailableBeds(roomId?: number): Promise<Bed[]> {
   })
   return data
 }
+
+export async function getBeds(roomId?: number): Promise<Bed[]> {
+  const { data } = await apiClient.get<Bed[]>('/beds', {
+    params: roomId ? { room_id: roomId } : undefined,
+  })
+  return data
+}

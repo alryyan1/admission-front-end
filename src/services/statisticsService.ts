@@ -4,6 +4,7 @@ import type {
   DoctorsServicesStatistics,
   FinancialStatistics,
   OccupancyStatistics,
+  OperationsStatistics,
 } from '@/types/statistics'
 
 export interface StatisticsDateRange {
@@ -32,5 +33,10 @@ export async function getDoctorsServicesStatistics(
   const { data } = await apiClient.get<DoctorsServicesStatistics>('/statistics/doctors-services', {
     params: range,
   })
+  return data
+}
+
+export async function getOperationsStatistics(range?: StatisticsDateRange): Promise<OperationsStatistics> {
+  const { data } = await apiClient.get<OperationsStatistics>('/statistics/operations', { params: range })
   return data
 }

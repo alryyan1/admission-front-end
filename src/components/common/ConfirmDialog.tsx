@@ -1,15 +1,4 @@
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Modal } from 'antd'
 
 interface ConfirmDialogProps {
   open: boolean
@@ -22,26 +11,17 @@ interface ConfirmDialogProps {
 
 export function ConfirmDialog({ open, onOpenChange, title, description, onConfirm, isPending }: ConfirmDialogProps) {
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          {description && <AlertDialogDescription>{description}</AlertDialogDescription>}
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel disabled={isPending}>إلغاء</AlertDialogCancel>
-          <AlertDialogAction
-            className={cn(buttonVariants({ variant: 'destructive' }))}
-            disabled={isPending}
-            onClick={(e) => {
-              e.preventDefault()
-              onConfirm()
-            }}
-          >
-            حذف
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+    <Modal
+      open={open}
+      onCancel={() => onOpenChange(false)}
+      title={title}
+      okText="حذف"
+      cancelText="إلغاء"
+      okButtonProps={{ danger: true, loading: isPending, disabled: isPending }}
+      cancelButtonProps={{ disabled: isPending }}
+      onOk={onConfirm}
+    >
+      {description}
+    </Modal>
   )
 }

@@ -1,16 +1,28 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Card } from '@/components/ui/card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card, Table } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { StatTile } from '@/components/statistics/StatTile'
 import { formatNumber } from '@/lib/utils'
-import type { OccupancyStatistics } from '@/types/statistics'
+import type { OccupancyStatistics, WardOccupancy } from '@/types/statistics'
 
 interface OccupancyTabProps {
   data: OccupancyStatistics
 }
 
+interface WardOccupancyRow extends WardOccupancy {
+  occupancy_rate: number
+}
+
+const wardColumns: ColumnsType<WardOccupancyRow> = [
+  { title: 'الطابق', dataIndex: 'floor_name', key: 'floor_name' },
+  { title: 'الجناح', dataIndex: 'ward_name', key: 'ward_name' },
+  { title: 'إجمالي الأسرّة', dataIndex: 'total_beds', key: 'total_beds', render: (v) => formatNumber(v) },
+  { title: 'المشغولة', dataIndex: 'occupied_beds', key: 'occupied_beds', render: (v) => formatNumber(v) },
+  { title: 'نسبة الإشغال', dataIndex: 'occupancy_rate', key: 'occupancy_rate', render: (v) => `${v}%` },
+]
+
 export function OccupancyTab({ data }: OccupancyTabProps) {
-  const chartData = data.by_ward
+  const chartData: WardOccupancyRow[] = data.by_ward
     .map((ward) => ({
       ...ward,
       occupancy_rate: ward.total_beds > 0 ? Math.round((ward.occupied_beds / ward.total_beds) * 1000) / 10 : 0,
@@ -27,7 +39,7 @@ export function OccupancyTab({ data }: OccupancyTabProps) {
         <StatTile label="نسبة الإشغال" value={`${data.summary.occupancy_rate}%`} />
       </div>
 
-      <Card className="p-4">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold">نسبة الإشغال حسب الجناح</h2>
         <ResponsiveContainer width="100%" height={Math.max(chartData.length * 36, 120)}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 24 }}>
@@ -43,30 +55,9 @@ export function OccupancyTab({ data }: OccupancyTabProps) {
         </ResponsiveContainer>
       </Card>
 
-      <Card className="p-4">
+      <Card>
         <h2 className="mb-3 text-sm font-semibold">تفاصيل الإشغال</h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>الطابق</TableHead>
-              <TableHead>الجناح</TableHead>
-              <TableHead>إجمالي الأسرّة</TableHead>
-              <TableHead>المشغولة</TableHead>
-              <TableHead>نسبة الإشغال</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {chartData.map((ward) => (
-              <TableRow key={ward.ward_id}>
-                <TableCell>{ward.floor_name}</TableCell>
-                <TableCell>{ward.ward_name}</TableCell>
-                <TableCell>{formatNumber(ward.total_beds)}</TableCell>
-                <TableCell>{formatNumber(ward.occupied_beds)}</TableCell>
-                <TableCell>{ward.occupancy_rate}%</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <Table rowKey="ward_id" columns={wardColumns} dataSource={chartData} pagination={false} />
       </Card>
     </div>
   )

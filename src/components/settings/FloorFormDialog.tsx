@@ -1,9 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Modal, Form, Input, Checkbox, Button } from 'antd'
 import { createFloor, updateFloor } from '@/services/facilityService'
 import type { Floor } from '@/types/facility'
 
@@ -13,9 +10,16 @@ interface FloorFormDialogProps {
   floor?: Floor | null
 }
 
+interface FloorFormValues {
+  name: string
+  description?: string
+  status: boolean
+}
+
 export function FloorFormDialog({ open, onOpenChange, floor }: FloorFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!floor
+  const [form] = Form.useForm<FloorFormValues>()
 
   const mutation = useMutation({
     mutationFn: (payload: { name: string; description?: string; status: boolean }) =>
@@ -27,46 +31,49 @@ export function FloorFormDialog({ open, onOpenChange, floor }: FloorFormDialogPr
     },
   })
 
+  function handleFinish(values: FloorFormValues) {
+    mutation.mutate({
+      name: values.name,
+      description: values.description || '',
+      status: values.status,
+    })
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xs">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? `تعديل ${floor.name}` : 'إضافة طابق جديد'}</DialogTitle>
-        </DialogHeader>
-        <form
-          className="flex flex-col gap-4"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const form = new FormData(e.currentTarget)
-            mutation.mutate({
-              name: String(form.get('name')),
-              description: String(form.get('description') || ''),
-              status: form.get('status') === 'on',
-            })
-          }}
-        >
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="floor-name">اسم الطابق</Label>
-            <Input id="floor-name" name="name" defaultValue={floor?.name} required />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="floor-description">الوصف</Label>
-            <Input id="floor-description" name="description" defaultValue={floor?.description ?? ''} />
-          </div>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" name="status" defaultChecked={floor?.status ?? true} />
-            نشط
-          </label>
-          <DialogFooter>
-            <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
-              إلغاء
-            </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              حفظ
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+    <Modal
+      open={open}
+      onCancel={() => onOpenChange(false)}
+      title={isEditing ? `تعديل ${floor.name}` : 'إضافة طابق جديد'}
+      width={340}
+      footer={[
+        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
+          إلغاء
+        </Button>,
+        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
+          حفظ
+        </Button>,
+      ]}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={{
+          name: floor?.name,
+          description: floor?.description ?? '',
+          status: floor?.status ?? true,
+        }}
+        onFinish={handleFinish}
+      >
+        <Form.Item name="name" label="اسم الطابق" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
+          <Input />
+        </Form.Item>
+        <Form.Item name="description" label="الوصف">
+          <Input />
+        </Form.Item>
+        <Form.Item name="status" valuePropName="checked">
+          <Checkbox>نشط</Checkbox>
+        </Form.Item>
+      </Form>
+    </Modal>
   )
 }

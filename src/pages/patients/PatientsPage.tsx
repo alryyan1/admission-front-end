@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { PageLoader } from '@/components/common/PageLoader'
+import { ConfigProvider, Card, Input, Table, Typography } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import { useAntTheme } from '@/lib/antdTheme'
 import { searchLocalPatients } from '@/services/patientService'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import type { Patient } from '@/types/patient'
+
+const { Title } = Typography
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 
 export function PatientsPage() {
+  const antTheme = useAntTheme()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
@@ -20,51 +23,44 @@ export function PatientsPage() {
     queryFn: () => searchLocalPatients(debouncedSearch),
   })
 
+  const columns: ColumnsType<Patient> = [
+    { title: 'رقم الملف', dataIndex: 'id', key: 'id' },
+    { title: 'الاسم', dataIndex: 'name', key: 'name' },
+    { title: 'الهاتف', dataIndex: 'phone', key: 'phone', render: (v) => v ?? '—' },
+    {
+      title: 'الجنس',
+      key: 'gender',
+      render: (_, patient) => (patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'),
+    },
+    { title: 'العنوان', dataIndex: 'address', key: 'address', render: (v) => v ?? '—' },
+  ]
+
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">المرضى</h1>
-      </div>
+    <ConfigProvider direction="rtl" theme={antTheme}>
+      <Title level={3} style={{ margin: '0 0 16px' }}>
+        المرضى
+      </Title>
 
       <Input
-        className="mb-4 max-w-sm"
+        style={{ marginBottom: 16, maxWidth: 384 }}
         placeholder="بحث بالاسم أو رقم الهاتف..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      {patientsQuery.isLoading ? (
-        <PageLoader />
-      ) : (
-        <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>رقم الملف</TableHead>
-                <TableHead>الاسم</TableHead>
-                <TableHead>الهاتف</TableHead>
-                <TableHead>الجنس</TableHead>
-                <TableHead>العنوان</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {patientsQuery.data?.map((patient) => (
-                <TableRow
-                  key={patient.id}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/patients/${patient.id}`)}
-                >
-                  <TableCell>{patient.id}</TableCell>
-                  <TableCell>{patient.name}</TableCell>
-                  <TableCell>{patient.phone ?? '—'}</TableCell>
-                  <TableCell>{patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'}</TableCell>
-                  <TableCell>{patient.address ?? '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
-      )}
-    </div>
+      <Card>
+        <Table
+          rowKey="id"
+          loading={patientsQuery.isLoading}
+          columns={columns}
+          dataSource={patientsQuery.data ?? []}
+          pagination={false}
+          onRow={(patient) => ({
+            className: 'cursor-pointer',
+            onClick: () => navigate(`/patients/${patient.id}`),
+          })}
+        />
+      </Card>
+    </ConfigProvider>
   )
 }
