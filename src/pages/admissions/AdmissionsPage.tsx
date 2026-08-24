@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select } from 'antd'
+import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { getAdmissions } from '@/services/admissionService'
@@ -92,6 +92,29 @@ export function AdmissionsPage() {
       render: (_, admission) => dayjs(admission.admission_date).format('YYYY-MM-DD HH:mm A'),
     },
     {
+      title: 'عدد الأيام',
+      key: 'days',
+      render: (_, admission) => {
+        const isShortStay = admission.bed?.room?.is_short_stay
+        if (isShortStay) {
+          return <Tag color="blue">إقامة قصيرة </Tag>
+        }
+        console.log('isShortStay', isShortStay, admission.bed?.room?.is_short_stay)
+        const end = admission.discharge_date ? dayjs(admission.discharge_date) : dayjs()
+        const hoursElapsed = Math.max(0, end.diff(dayjs(admission.admission_date), 'hour'))
+        const days = Math.floor(hoursElapsed / 24)
+        const dayProgress = Math.round(((hoursElapsed % 24) / 24) * 100)
+        return (
+          <Flex vertical gap={2} style={{ minWidth: 110 }}>
+            <span>{days} يوم</span>
+            <Tooltip title={`${dayProgress}% من اليوم ${days + 1}`}>
+              <Progress percent={dayProgress} size="small" showInfo={false} />
+            </Tooltip>
+          </Flex>
+        )
+      },
+    },
+    {
       title: 'الحالة',
       key: 'status',
       render: (_, admission) => (
@@ -151,7 +174,9 @@ export function AdmissionsPage() {
             }}
             options={(roomsQuery.data ?? []).map((room) => ({
               value: room.id,
-              label: `${room.ward?.name ?? ''} — غرفة ${room.room_number}`,
+              label: [room.ward?.floor?.name, room.ward?.name, `غرفة ${room.room_number}`]
+                .filter(Boolean)
+                .join(' — '),
             }))}
           />
           <Select

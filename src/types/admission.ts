@@ -77,27 +77,27 @@ export interface RequestedService {
   quantity: number
   unit_price: string
   total_price: number
+  is_auto_added: boolean
 }
 
 export type OperationStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
 
-export type OperationTeamRole =
-  | 'surgeon'
-  | 'assistant_surgeon'
-  | 'anesthesiologist'
-  | 'scrub_nurse'
-  | 'circulating_nurse'
-  | 'technician'
-  | 'other'
+export interface TeamRole {
+  id: number
+  slug: string | null
+  name: string
+  is_protected: boolean
+}
 
 export interface OperationTeamMember {
   id: number
   operation_id: number
   doctor_id: number | null
   name: string | null
-  role: OperationTeamRole
+  role_id: number
   notes: string | null
   doctor?: Doctor | null
+  role?: TeamRole | null
 }
 
 export interface OperationSupply {

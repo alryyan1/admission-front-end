@@ -6,7 +6,11 @@ import { LoginPage } from '@/pages/auth/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { FacilitySettingsPage } from '@/pages/settings/FacilitySettingsPage'
 import { ProcedureCatalogSettingsPage } from '@/pages/settings/ProcedureCatalogSettingsPage'
+import { ServiceCatalogSettingsPage } from '@/pages/settings/ServiceCatalogSettingsPage'
+import { DoctorsSettingsPage } from '@/pages/settings/DoctorsSettingsPage'
+import { TeamRolesSettingsPage } from '@/pages/settings/TeamRolesSettingsPage'
 import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
+import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
 import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
 import { AdmissionsPage } from '@/pages/admissions/AdmissionsPage'
 import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
@@ -45,7 +49,11 @@ export const router = createBrowserRouter([
                 children: [
                   { path: '/settings/facility', element: <FacilitySettingsPage /> },
                   { path: '/settings/procedures', element: <ProcedureCatalogSettingsPage /> },
+                  { path: '/settings/services', element: <ServiceCatalogSettingsPage /> },
+                  { path: '/settings/doctors', element: <DoctorsSettingsPage /> },
+                  { path: '/settings/team-roles', element: <TeamRolesSettingsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
+                  { path: '/settings/activity-log', element: <ActivityLogPage /> },
                 ],
               },
             ],

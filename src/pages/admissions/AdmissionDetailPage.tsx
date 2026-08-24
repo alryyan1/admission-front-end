@@ -1,9 +1,16 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex } from 'antd'
-import { FileTextOutlined, BankOutlined, ApartmentOutlined, HomeOutlined } from '@ant-design/icons'
+import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, theme as antdThemeApi } from 'antd'
+import {
+  FileTextOutlined,
+  BankOutlined,
+  ApartmentOutlined,
+  HomeOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { useAntTheme } from '@/lib/antdTheme'
+import { useTheme, ADMISSION_HEADER_FONT_SIZE_PX } from '@/contexts/ThemeContext'
 import {
   getAdmission,
   dischargeAdmission,
@@ -13,6 +20,7 @@ import {
   addDose,
   addDeposit,
   addRequestedService,
+  removeRequestedService,
   getInvoice,
   getInvoices,
   generateInvoice,
@@ -28,13 +36,15 @@ import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { PageLoader } from '@/components/common/PageLoader'
 import type { AdmissionStatus } from '@/types/admission'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 const STATUS_LABEL: Record<AdmissionStatus, string> = {
   admitted: 'نشطة',
   discharged: 'مخرّجة',
   cancelled: 'ملغاة',
 }
+
+const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 
 const TAB_ITEMS = [
   { key: 'overview', label: 'نظرة عامة' },
@@ -47,6 +57,8 @@ const TAB_ITEMS = [
 
 export function AdmissionDetailPage() {
   const antTheme = useAntTheme()
+  const { token } = antdThemeApi.useToken()
+  const { admissionHeaderBg, admissionHeaderFontSize } = useTheme()
   const { admissionId } = useParams<{ admissionId: string }>()
   const id = Number(admissionId)
   const queryClient = useQueryClient()
@@ -138,6 +150,11 @@ export function AdmissionDetailPage() {
     onSuccess: invalidateAdmission,
   })
 
+  const removeServiceMutation = useMutation({
+    mutationFn: (requestedServiceId: number) => removeRequestedService(id, requestedServiceId),
+    onSuccess: invalidateAdmission,
+  })
+
   const operationMutation = useMutation({
     mutationFn: (payload: Parameters<typeof addOperation>[1]) => addOperation(id, payload),
     onSuccess: invalidateAdmission,
@@ -149,86 +166,106 @@ export function AdmissionDetailPage() {
     return <PageLoader />
   }
 
+  const autoAddedServices = (admission.requested_services ?? []).filter((s) => s.is_auto_added)
+
+  const headerBgColor = (() => {
+    switch (admissionHeaderBg) {
+      case 'fillAlter':
+        return token.colorFillAlter
+      case 'primaryBg':
+        return token.colorPrimaryBg
+      case 'infoBg':
+        return token.colorInfoBg
+      case 'statusReactive':
+        return admission.status === 'admitted' ? token.colorSuccessBg : token.colorFillAlter
+      default:
+        return undefined
+    }
+  })()
+
+  const { name: nameFontSize, secondary: secondaryFontSize } = ADMISSION_HEADER_FONT_SIZE_PX[admissionHeaderFontSize]
+
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
-      <Card style={{ marginBottom: 16 }}>
-        <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
-              <Link  to={`/patients/${admission.patient_id}`}>{admission.patient?.name}</Link>
-            </Title>
-            <Text style={{ borderBottom: '1px dashed #d9d9d9', paddingBottom: 2, display: 'inline-block' }}>
+      <Card
+        size="small"
+        style={{ marginBottom: 12, backgroundColor: headerBgColor }}
+        styles={{ body: { padding: '8px 14px' } }}
+      >
+        <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
+          <Flex align="center" gap={8} wrap="wrap">
+            <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary, flexShrink: 0 }} />
+            <Text strong style={{ fontSize: nameFontSize }}>
+              <Link to={`/patients/${admission.patient_id}`}>{admission.patient?.name}</Link>
+            </Text>
+            <Tag color={admission.status === 'admitted' ? 'success' : 'default'} style={{ marginInlineEnd: 0 }}>
+              {STATUS_LABEL[admission.status] ?? admission.status}
+            </Tag>
+            <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
               <FileTextOutlined style={{ marginInlineEnd: 4 }} />
               {admission.id != null ? `#${admission.id}` : '—'}
             </Text>
-            <Flex vertical gap={4} style={{ marginTop: 4 }}>
-              <Flex align="center" gap={6}>
-                <BankOutlined style={{ color: '#1677ff', fontSize: 15 }} />
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
-                  {admission.bed?.room?.ward?.floor?.name ?? '—'}
-                </Text>
-              </Flex>
-              <Flex align="center" gap={6} style={{ marginInlineStart: 16 }}>
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
-                <ApartmentOutlined style={{ color: '#1677ff', fontSize: 15 }} />
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
-                  {admission.bed?.room?.ward?.name}
-                </Text>
-              </Flex>
-              <Flex align="center" gap={6} style={{ marginInlineStart: 32 }}>
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
-                <HomeOutlined style={{ color: '#1677ff', fontSize: 15 }} />
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
-                  غرفة {admission.bed?.room?.room_number}
-                </Text>
-              </Flex>
-              <Flex align="center" gap={6} style={{ marginInlineStart: 48 }}>
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>↳</Text>
-                <Text strong style={{ color: '#1677ff', fontSize: 15 }}>
-                  سرير {admission.bed?.bed_number}
-                </Text>
-              </Flex>
-            </Flex>
-          </div>
-          <Flex vertical align="center" style={{ textAlign: 'center', flex: 1 }}>
-            <Text style={{ borderBottom: '1px dashed #d9d9d9', paddingBottom: 2 }}>
-              الطبيب: {admission.admitting_doctor?.name ?? '—'}
-            </Text>
-            {admission.diagnosis && <Text>التشخيص: {admission.diagnosis}</Text>}
-          </Flex>
-          <Flex align="center" gap={8}>
-            <Tag color={admission.status === 'admitted' ? 'success' : 'default'}>
-              {STATUS_LABEL[admission.status] ?? admission.status}
-            </Tag>
-            {admission.status === 'admitted' && (
-              <>
-                <Button
-                  size="small"
-                  loading={cancelMutation.isPending}
-                  onClick={() => {
-                    const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
-                    if (window.confirm('هل أنت متأكد من إلغاء هذا التنويم؟')) {
-                      cancelMutation.mutate(reason)
-                    }
-                  }}
-                >
-                  إلغاء التنويم
-                </Button>
-                <Button
-                  danger
-                  size="small"
-                  loading={dischargeMutation.isPending}
-                  onClick={() => {
-                    const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
-                    dischargeMutation.mutate(summary)
-                  }}
-                >
-                  إخراج المريض
-                </Button>
-              </>
+            {admission.patient?.gender && (
+              <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
+            )}
+            {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
+            {admission.patient?.blood_type && (
+              <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
             )}
           </Flex>
+
+          <Text type="secondary" style={{ fontSize: secondaryFontSize, whiteSpace: 'nowrap' }}>
+            <BankOutlined style={{ marginInlineEnd: 4 }} />
+            {admission.bed?.room?.ward?.floor?.name ?? '—'}
+            {' / '}
+            <ApartmentOutlined style={{ marginInlineEnd: 4 }} />
+            {admission.bed?.room?.ward?.name ?? '—'}
+            {' / '}
+            <HomeOutlined style={{ marginInlineEnd: 4 }} />
+            غرفة {admission.bed?.room?.room_number ?? '—'}
+            {' / '}
+            سرير {admission.bed?.bed_number ?? '—'}
+          </Text>
+
+          <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
+            الطبيب: {admission.admitting_doctor?.name ?? '—'}
+            {admission.diagnosis && ` • التشخيص: ${admission.diagnosis}`}
+          </Text>
+
+          {admission.status === 'admitted' && (
+            <Flex align="center" gap={6}>
+              <Button
+                size="small"
+                loading={cancelMutation.isPending}
+                onClick={() => {
+                  const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
+                  if (window.confirm('هل أنت متأكد من إلغاء هذا التنويم؟')) {
+                    cancelMutation.mutate(reason)
+                  }
+                }}
+              >
+                إلغاء التنويم
+              </Button>
+              <Button
+                danger
+                size="small"
+                loading={dischargeMutation.isPending}
+                onClick={() => {
+                  const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
+                  dischargeMutation.mutate(summary)
+                }}
+              >
+                إخراج المريض
+              </Button>
+            </Flex>
+          )}
         </Flex>
+
+        {autoAddedServices.length > 0 && (
+          <Text type="secondary" style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
+            تمت إضافة {autoAddedServices.map((s) => s.name).join('، ')} تلقائياً لهذا التنويم
+          </Text>
+        )}
       </Card>
 
       <Tabs activeKey={tab} onChange={setTab} items={TAB_ITEMS} />
@@ -258,8 +295,10 @@ export function AdmissionDetailPage() {
           deposits={admission.deposits ?? []}
           onAddService={(payload) => serviceMutation.mutate(payload)}
           onAddDeposit={(payload) => depositMutation.mutate(payload)}
+          onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}
           isSubmittingService={serviceMutation.isPending}
           isSubmittingDeposit={depositMutation.isPending}
+          isRemovingService={removeServiceMutation.isPending}
         />
       )}
 

@@ -2,15 +2,26 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Pencil, Trash2, X } from 'lucide-react'
-import { ConfigProvider, Button, Card, Tag, Collapse } from 'antd'
+import { ConfigProvider, Button, Card, Tag, Collapse, Tabs, Flex, Radio, theme as antdThemeApi } from 'antd'
 import type { CollapseProps } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
+import {
+  useTheme,
+  ADMISSION_HEADER_BG_OPTIONS,
+  ADMISSION_HEADER_FONT_SIZE_OPTIONS,
+  ADMISSION_HEADER_FONT_SIZE_PX,
+  type AdmissionHeaderBg,
+} from '@/contexts/ThemeContext'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { PageLoader } from '@/components/common/PageLoader'
 import { FloorFormDialog } from '@/components/settings/FloorFormDialog'
 import { WardFormDialog } from '@/components/settings/WardFormDialog'
 import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { BedFormDialog } from '@/components/settings/BedFormDialog'
+import { ChartOpeningServiceSettingsTab } from '@/components/settings/ChartOpeningServiceSettingsTab'
+import { ShortStayServiceSettingsTab } from '@/components/settings/ShortStayServiceSettingsTab'
+import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
+import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { getFloors, getFloor, deleteFloor, deleteWard, deleteRoom, deleteBed } from '@/services/facilityService'
 import { formatNumber } from '@/lib/utils'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
@@ -27,10 +38,18 @@ const BED_STATUS_LABEL: Record<BedStatus, string> = {
   maintenance: 'صيانة',
 }
 
+const ROOM_TYPE_STYLE: Record<Room['room_type'], { label: string; color: string; bg: string; tagColor: string }> = {
+  normal: { label: 'عادية', color: '#94a3b8', bg: '#f8fafc', tagColor: 'default' },
+  vip: { label: 'VIP', color: '#d4af37', bg: '#fdf8e9', tagColor: 'gold' },
+  operation: { label: 'عمليات', color: '#dc2626', bg: '#fef2f2', tagColor: 'red' },
+}
+
 type DeleteTarget = { type: 'floor' | 'ward' | 'room' | 'bed'; id: number; label: string }
 
 export function FacilitySettingsPage() {
   const antTheme = useAntTheme()
+  const { token } = antdThemeApi.useToken()
+  const { admissionHeaderBg, setAdmissionHeaderBg, admissionHeaderFontSize, setAdmissionHeaderFontSize } = useTheme()
   const queryClient = useQueryClient()
 
   const [floorDialog, setFloorDialog] = useState<{ open: boolean; floor?: Floor | null }>({ open: false })
@@ -127,11 +146,26 @@ export function FacilitySettingsPage() {
       ),
       children: (
         <div className="flex flex-wrap gap-4">
-          {ward.rooms?.map((room) => (
-            <Card key={room.id} size="small" className="min-w-[240px] p-3">
+          {ward.rooms?.map((room) => {
+            const typeStyle = ROOM_TYPE_STYLE[room.room_type]
+            return (
+            <Card
+              key={room.id}
+              size="small"
+              className="min-w-[240px] p-3"
+              style={{
+                borderInlineStart: `4px solid ${typeStyle.color}`,
+                backgroundColor: typeStyle.bg,
+                borderStyle: room.is_short_stay ? 'dashed' : undefined,
+              }}
+            >
               <div className="flex items-center justify-between">
-                <span className="font-bold">
-                  غرفة {room.room_number} {room.room_type === 'vip' && '(VIP)'}
+                <span className="flex items-center gap-1 font-bold">
+                  غرفة {room.room_number}
+                  <Tag color={typeStyle.tagColor} className="ms-1">
+                    {typeStyle.label}
+                  </Tag>
+                  {room.is_short_stay && <Tag color="blue">إقامة قصيرة</Tag>}
                 </span>
                 <div className="flex items-center gap-1">
                   <Button
@@ -157,7 +191,7 @@ export function FacilitySettingsPage() {
               <div className="mt-1 text-xs text-muted-foreground">
                 {room.is_short_stay ? (
                   <>
-                    إقامة قصيرة — 12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
+                    12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
                     24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
                   </>
                 ) : (
@@ -200,7 +234,8 @@ export function FacilitySettingsPage() {
                 </button>
               </div>
             </Card>
-          ))}
+            )
+          })}
           <Card
             size="small"
             className="flex min-w-[160px] cursor-pointer items-center justify-center p-3"
@@ -258,21 +293,136 @@ export function FacilitySettingsPage() {
     }
   })
 
+  const previewColorFor = (value: AdmissionHeaderBg) => {
+    switch (value) {
+      case 'fillAlter':
+        return token.colorFillAlter
+      case 'primaryBg':
+        return token.colorPrimaryBg
+      case 'infoBg':
+        return token.colorInfoBg
+      case 'statusReactive':
+        return token.colorSuccessBg
+      default:
+        return token.colorBgContainer
+    }
+  }
+
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
       <div>
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold">الإعدادات — الهيكل العام للمستشفى</h1>
-          <Button type="primary" onClick={() => setFloorDialog({ open: true })}>
-            + طابق جديد
-          </Button>
-        </div>
+        <h1 className="mb-4 text-xl font-semibold">الإعدادات</h1>
 
-        {(floorsQuery.isLoading || floorDetailsQuery.isLoading) && <PageLoader />}
+        <Tabs
+          items={[
+            {
+              key: 'rooms',
+              label: 'إدارة الغرف',
+              children: (
+                <>
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-base font-semibold text-muted-foreground">الهيكل العام للمستشفى</h2>
+                    <Button type="primary" onClick={() => setFloorDialog({ open: true })}>
+                      + طابق جديد
+                    </Button>
+                  </div>
 
-        <Collapse
-          defaultActiveKey={floorDetailsQuery.data?.map((f) => String(f.id))}
-          items={floorItems}
+                  {(floorsQuery.isLoading || floorDetailsQuery.isLoading) && <PageLoader />}
+
+                  <Collapse
+                    defaultActiveKey={floorDetailsQuery.data?.map((f) => String(f.id))}
+                    items={floorItems}
+                  />
+                </>
+              ),
+            },
+            {
+              key: 'chart-opening-service',
+              label: 'خدمة فتح الملف',
+              children: <ChartOpeningServiceSettingsTab />,
+            },
+            {
+              key: 'short-stay-service',
+              label: 'خدمات الإقامة القصيرة',
+              children: <ShortStayServiceSettingsTab />,
+            },
+            {
+              key: 'facility-info',
+              label: 'معلومات المنشأة',
+              children: <FacilityInfoSettingsTab />,
+            },
+            {
+              key: 'logo-stamp',
+              label: 'الشعار والختم',
+              children: <LogoStampSettingsTab />,
+            },
+            {
+              key: 'appearance',
+              label: 'المظهر',
+              children: (
+                <div>
+                  <h2 className="mb-3 text-base font-semibold text-muted-foreground">
+                    خلفية رأس صفحة التنويم
+                  </h2>
+                  <Radio.Group
+                    value={admissionHeaderBg}
+                    onChange={(e) => setAdmissionHeaderBg(e.target.value)}
+                  >
+                    <Flex gap={12} wrap="wrap">
+                      {ADMISSION_HEADER_BG_OPTIONS.map((option) => (
+                        <Radio.Button
+                          key={option.value}
+                          value={option.value}
+                          style={{ height: 'auto', padding: 0 }}
+                        >
+                          <Flex align="center" gap={8} style={{ padding: '8px 12px' }}>
+                            <span
+                              style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 4,
+                                backgroundColor: previewColorFor(option.value),
+                                border: `1px solid ${token.colorBorder}`,
+                                flexShrink: 0,
+                              }}
+                            />
+                            {option.label}
+                          </Flex>
+                        </Radio.Button>
+                      ))}
+                    </Flex>
+                  </Radio.Group>
+
+                  <h2 className="mb-3 mt-6 text-base font-semibold text-muted-foreground">
+                    حجم خط رأس صفحة التنويم
+                  </h2>
+                  <Radio.Group
+                    value={admissionHeaderFontSize}
+                    onChange={(e) => setAdmissionHeaderFontSize(e.target.value)}
+                  >
+                    <Flex gap={12} wrap="wrap">
+                      {ADMISSION_HEADER_FONT_SIZE_OPTIONS.map((option) => (
+                        <Radio.Button
+                          key={option.value}
+                          value={option.value}
+                          style={{ height: 'auto', padding: 0 }}
+                        >
+                          <Flex
+                            align="center"
+                            gap={8}
+                            style={{ padding: '8px 12px', fontSize: ADMISSION_HEADER_FONT_SIZE_PX[option.value].name }}
+                          >
+                           
+                            {option.label}
+                          </Flex>
+                        </Radio.Button>
+                      ))}
+                    </Flex>
+                  </Radio.Group>
+                </div>
+              ),
+            },
+          ]}
         />
 
         <FloorFormDialog

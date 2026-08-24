@@ -47,7 +47,29 @@ export async function createLocalPatient(payload: {
   return data
 }
 
-export async function getDoctors(search?: string): Promise<Doctor[]> {
-  const { data } = await apiClient.get<Doctor[]>('/doctors', { params: search ? { search } : undefined })
+export async function getDoctors(search?: string, roleId?: number): Promise<Doctor[]> {
+  const params = { ...(search ? { search } : {}), ...(roleId ? { role_id: roleId } : {}) }
+  const { data } = await apiClient.get<Doctor[]>('/doctors', { params: Object.keys(params).length ? params : undefined })
   return data
+}
+
+export async function createDoctor(payload: {
+  name: string
+  specialist?: string
+  role_id: number
+}): Promise<Doctor> {
+  const { data } = await apiClient.post<Doctor>('/doctors', payload)
+  return data
+}
+
+export async function updateDoctor(
+  id: number,
+  payload: Partial<{ name: string; specialist: string | null; role_id: number }>,
+): Promise<Doctor> {
+  const { data } = await apiClient.patch<Doctor>(`/doctors/${id}`, payload)
+  return data
+}
+
+export async function deleteDoctor(id: number): Promise<void> {
+  await apiClient.delete(`/doctors/${id}`)
 }

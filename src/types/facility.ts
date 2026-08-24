@@ -1,5 +1,19 @@
 export type WardGender = 'male' | 'female' | 'children'
 
+export interface FacilitySettings {
+  id: number
+  name: string | null
+  phone: string | null
+  email: string | null
+  address: string | null
+  logo_path: string | null
+  logo_url: string | null
+  stamp_path: string | null
+  stamp_url: string | null
+  use_logo: boolean
+  use_stamp: boolean
+}
+
 export interface Floor {
   id: number
   name: string

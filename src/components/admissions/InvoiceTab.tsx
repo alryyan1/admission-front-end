@@ -111,7 +111,9 @@ export function InvoiceTab({
               />
             </>
           )}
-          <SummaryRow label="تكلفة الإقامة" value={formatNumber(invoice.bed_charges)} bold />
+          {invoice.bed_charges > 0 && (
+            <SummaryRow label="تكلفة الإقامة" value={formatNumber(invoice.bed_charges)} bold />
+          )}
         </Space>
 
         <Divider style={{ margin: '12px 0' }} />

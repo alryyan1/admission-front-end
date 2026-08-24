@@ -27,6 +27,7 @@ import {
   createLocalPatient,
   getDoctors,
 } from '@/services/patientService'
+import { getTeamRoles } from '@/services/teamRoleService'
 import { createAdmission } from '@/services/admissionService'
 import type { Patient, JawdaPatientResult, Doctor } from '@/types/patient'
 
@@ -99,10 +100,12 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryFn: () => getAvailableBeds(roomId as number),
     enabled: open && roomId !== '',
   })
+  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles, enabled: open })
+  const surgeonRoleId = teamRolesQuery.data?.find((r) => r.slug === 'surgeon')?.id
   const doctorsQuery = useQuery({
-    queryKey: ['doctors', debouncedDoctorSearch],
-    queryFn: () => getDoctors(debouncedDoctorSearch),
-    enabled: open,
+    queryKey: ['doctors', debouncedDoctorSearch, surgeonRoleId],
+    queryFn: () => getDoctors(debouncedDoctorSearch, surgeonRoleId),
+    enabled: open && surgeonRoleId !== undefined,
   })
 
   const importMutation = useMutation({

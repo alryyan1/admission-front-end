@@ -10,7 +10,6 @@ import type {
   OperationPriority,
   OperationSupply,
   OperationTeamMember,
-  OperationTeamRole,
   RequestedService,
   TreatmentDose,
   VitalSign,
@@ -108,6 +107,10 @@ export async function addRequestedService(
     payload,
   )
   return data
+}
+
+export async function removeRequestedService(admissionId: number, requestedServiceId: number): Promise<void> {
+  await apiClient.delete(`/admissions/${admissionId}/services/${requestedServiceId}`)
 }
 
 export async function getInvoice(admissionId: number): Promise<AdmissionInvoice> {
@@ -217,7 +220,7 @@ export async function cancelOperation(
 
 export async function addOperationTeamMember(
   operationId: number,
-  payload: { doctor_id?: number | null; name?: string; role: OperationTeamRole; notes?: string },
+  payload: { doctor_id?: number | null; name?: string; role_id: number; notes?: string },
 ): Promise<OperationTeamMember> {
   const { data } = await apiClient.post<OperationTeamMember>(`/operations/${operationId}/team-members`, payload)
   return data

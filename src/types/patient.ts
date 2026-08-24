@@ -1,3 +1,5 @@
+import type { TeamRole } from '@/types/admission'
+
 export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 
 export interface Patient {
@@ -61,4 +63,6 @@ export interface Doctor {
   id: number
   name: string
   specialist: string | null
+  role_id: number
+  role?: TeamRole | null
 }

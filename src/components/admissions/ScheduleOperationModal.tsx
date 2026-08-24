@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Row, Col, Select, Input, InputNumber, Typography, Space } from 'antd'
 import { getDoctors } from '@/services/patientService'
+import { getTeamRoles } from '@/services/teamRoleService'
 import { getOperationRooms } from '@/services/facilityService'
 import { getProcedures } from '@/services/procedureService'
 import type { OperationPriority } from '@/types/admission'
@@ -66,7 +67,13 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
   const [notes, setNotes] = useState('')
 
   const proceduresQuery = useQuery({ queryKey: ['procedures', 'active'], queryFn: () => getProcedures({ active_only: true }) })
-  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
+  const surgeonRoleId = teamRolesQuery.data?.find((r) => r.slug === 'surgeon')?.id
+  const doctorsQuery = useQuery({
+    queryKey: ['doctors', '', surgeonRoleId],
+    queryFn: () => getDoctors(undefined, surgeonRoleId),
+    enabled: surgeonRoleId !== undefined,
+  })
   const operationRoomsQuery = useQuery({ queryKey: ['rooms', 'operation'], queryFn: getOperationRooms })
 
   const procedureOptions = groupProceduresByCategory(proceduresQuery.data ?? [])

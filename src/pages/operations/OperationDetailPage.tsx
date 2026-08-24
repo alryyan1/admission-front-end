@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { User, Stethoscope } from 'lucide-react'
+import { User, Stethoscope, Users } from 'lucide-react'
 import {
   ConfigProvider,
   Card,
@@ -19,12 +19,15 @@ import {
   Row,
   Col,
   Listy,
+  Modal,
+  Form,
 } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { formatDateTime } from '@/lib/utils'
 import { getOperation } from '@/services/operationService'
 import { getDoctors } from '@/services/patientService'
+import { getTeamRoles } from '@/services/teamRoleService'
 import {
   prepareOperation,
   startOperation,
@@ -40,25 +43,10 @@ import type {
   OperationStatus,
   OperationSupply,
   OperationTeamMember,
-  OperationTeamRole,
 } from '@/types/admission'
 
 const { Title, Text } = Typography
 const { TextArea } = Input
-
-const TEAM_ROLE_OPTIONS: { label: string; value: OperationTeamRole }[] = [
-  { label: 'جراح', value: 'surgeon' },
-  { label: 'مساعد جراح', value: 'assistant_surgeon' },
-  { label: 'طبيب تخدير', value: 'anesthesiologist' },
-  { label: 'ممرض/ة تعقيم', value: 'scrub_nurse' },
-  { label: 'ممرض/ة تداول', value: 'circulating_nurse' },
-  { label: 'فني', value: 'technician' },
-  { label: 'أخرى', value: 'other' },
-]
-
-const TEAM_ROLE_LABEL: Record<OperationTeamRole, string> = Object.fromEntries(
-  TEAM_ROLE_OPTIONS.map((o) => [o.value, o.label]),
-) as Record<OperationTeamRole, string>
 
 const OUTCOME_OPTIONS = [
   { label: 'نجحت دون مضاعفات', value: 'successful' },
@@ -116,6 +104,9 @@ export function OperationDetailPage() {
     enabled: !!id,
   })
   const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
+  const teamRoleLabel = (roleId: number | undefined) =>
+    teamRolesQuery.data?.find((r) => r.id === roleId)?.name ?? '—'
 
   const operation = operationQuery.data
 
@@ -168,9 +159,12 @@ export function OperationDetailPage() {
   const [preopVitalsChecked, setPreopVitalsChecked] = useState(false)
   const [preopNotes, setPreopNotes] = useState('')
 
-  const [teamRole, setTeamRole] = useState<OperationTeamRole>('assistant_surgeon')
-  const [teamDoctorId, setTeamDoctorId] = useState<number | undefined>(undefined)
-  const [teamName, setTeamName] = useState('')
+  const [bulkTeamModalOpen, setBulkTeamModalOpen] = useState(false)
+  const [bulkTeamForm] = Form.useForm<{
+    members: { role_id?: number; doctor_id?: number; name?: string }[]
+  }>()
+  const membersWatch = Form.useWatch('members', bulkTeamForm)
+  const defaultTeamRoleId = teamRolesQuery.data?.find((r) => r.slug === 'assistant_surgeon')?.id
 
   const [supplyName, setSupplyName] = useState('')
   const [supplyQuantity, setSupplyQuantity] = useState<number | null>(1)
@@ -215,15 +209,22 @@ export function OperationDetailPage() {
     })
   }
 
-  function handleAddTeamMember() {
-    if (!teamDoctorId && !teamName.trim()) return
-    addTeamMemberMutation.mutate({
-      role: teamRole,
-      doctor_id: teamDoctorId ?? undefined,
-      name: teamDoctorId ? undefined : teamName,
-    })
-    setTeamName('')
-    setTeamDoctorId(undefined)
+  async function handleBulkAddTeamMembers(values: {
+    members: { role_id?: number; doctor_id?: number; name?: string }[]
+  }) {
+    const members = (values.members ?? []).filter((m) => m.role_id && (m.doctor_id || m.name?.trim()))
+    if (members.length === 0) return
+    await Promise.all(
+      members.map((m) =>
+        addTeamMemberMutation.mutateAsync({
+          role_id: m.role_id as number,
+          doctor_id: m.doctor_id ?? undefined,
+          name: m.doctor_id ? undefined : m.name,
+        }),
+      ),
+    )
+    bulkTeamForm.resetFields()
+    setBulkTeamModalOpen(false)
   }
 
   function handleAddSupply() {
@@ -255,70 +256,70 @@ export function OperationDetailPage() {
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
-      <Card style={{ marginBottom: 16 }}>
-        <Button type="link" style={{ paddingInlineStart: 0, marginBottom: 4 }} onClick={() => navigate(-1)}>
+      <Card size="small" style={{ marginBottom: 2 }}>
+        <Button
+          type="link"
+          size="small"
+          style={{ paddingInlineStart: 0, height: 'auto', marginBottom: 4 }}
+          onClick={() => navigate(-1)}
+        >
           → رجوع
         </Button>
 
-        <Flex align="center" gap={8} style={{ marginBottom: 4 }}>
-          <User size={26} strokeWidth={2.25} style={{ flexShrink: 0 }} />
-          <Title level={2} style={{ margin: 0, fontWeight: 700 }}>
-            {patient ? (
-              <Link to={`/patients/${patient.id}`} style={{ color: 'inherit' }}>
-                {patient.name}
-              </Link>
-            ) : (
-              '—'
-            )}
-          </Title>
-        </Flex>
-        <Flex align="center" gap={8} style={{ marginBottom: 4 }}>
-          <Stethoscope size={20} strokeWidth={2.25} style={{ flexShrink: 0 }} />
-          <Title level={3} style={{ margin: 0, fontWeight: 700 }}>د. {operation.surgeon?.name ?? '—'}</Title>
-        </Flex>
-        <Title level={5} style={{ margin: '0 0 8px', fontWeight: 500, color: 'rgba(0,0,0,0.65)' }}>
-          {operation.procedure?.name_ar ?? '—'}
-        </Title>
-        <Space wrap size={8} style={{ marginBottom: 8 }}>
-          {operation.procedure?.category && <Tag>{operation.procedure.category.name}</Tag>}
-          <Tag color={PRIORITY_COLORS[operation.priority]}>{PRIORITY_LABELS[operation.priority]}</Tag>
-          <Tag color={STATUS_COLORS[operation.status]}>{STATUS_LABELS[operation.status]}</Tag>
-        </Space>
-
-        <Row gutter={[24, 4]} style={{ marginTop: 4 }}>
-          <Col xs={24} md={12}>
-            <Space direction="vertical" size={4} style={{ width: '100%' }}>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                رقم العملية: {operation.operation_number ?? '—'}
-              </Text>
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                الموعد: {formatDateTime(operation.scheduled_at)}
-                {operation.expected_duration_minutes && ` · ${operation.expected_duration_minutes} دقيقة`}
-                {operation.anesthesia_type && ` · تخدير ${operation.anesthesia_type}`}
-              </Text>
-            </Space>
-          </Col>
-          <Col xs={24} md={12}>
-            <Space direction="vertical" size={4} style={{ width: '100%' }}>
-              {patient && (
-                <Text type="secondary" style={{ fontSize: 13 }}>
-                  رقم التنويم:{' '}
-                  <Link to={`/admissions/${operation.admission_id}`}>
-                    {operation.admission?.admission_number ?? `تنويم #${operation.admission_id}`}
+        <Flex align="center" justify="space-between" wrap="wrap" gap={8}>
+          <Flex align="center" wrap="wrap" gap={16}>
+            <Flex align="center" gap={6}>
+              <User size={18} strokeWidth={2.25} style={{ flexShrink: 0 }} />
+              <Title level={4} style={{ margin: 0 }}>
+                {patient ? (
+                  <Link to={`/patients/${patient.id}`} style={{ color: 'inherit' }}>
+                    {patient.name}
                   </Link>
-                </Text>
-              )}
-              {operation.requested_by_doctor && (
-                <Text type="secondary" style={{ fontSize: 13 }}>
-                  الطبيب المسؤول: {operation.requested_by_doctor.name}
-                </Text>
-              )}
-              {operation.diagnosis && (
-                <Text style={{ fontSize: 13 }}>التشخيص: {operation.diagnosis}</Text>
-              )}
-            </Space>
-          </Col>
-        </Row>
+                ) : (
+                  '—'
+                )}
+              </Title>
+            </Flex>
+            <Flex align="center" gap={6}>
+              <Stethoscope size={16} strokeWidth={2.25} style={{ flexShrink: 0 }} />
+              <Text strong>د. {operation.surgeon?.name ?? '—'}</Text>
+            </Flex>
+            <Text type="secondary">{operation.procedure?.name_ar ?? '—'}</Text>
+          </Flex>
+
+          <Space wrap size={6}>
+            {operation.procedure?.category && <Tag>{operation.procedure.category.name}</Tag>}
+            <Tag color={PRIORITY_COLORS[operation.priority]}>{PRIORITY_LABELS[operation.priority]}</Tag>
+            <Tag color={STATUS_COLORS[operation.status]}>{STATUS_LABELS[operation.status]}</Tag>
+          </Space>
+        </Flex>
+
+        <Divider style={{ margin: '8px 0' }} />
+
+        <Flex wrap="wrap" gap={16}>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            رقم العملية: {operation.operation_number ?? '—'}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            الموعد: {formatDateTime(operation.scheduled_at)}
+            {operation.expected_duration_minutes && ` · ${operation.expected_duration_minutes} دقيقة`}
+            {operation.anesthesia_type && ` · تخدير ${operation.anesthesia_type}`}
+          </Text>
+          {patient && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              رقم التنويم:{' '}
+              <Link to={`/admissions/${operation.admission_id}`}>
+                {operation.admission?.admission_number ?? `تنويم #${operation.admission_id}`}
+              </Link>
+            </Text>
+          )}
+          {operation.requested_by_doctor && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              الطبيب المسؤول: {operation.requested_by_doctor.name}
+            </Text>
+          )}
+          {operation.diagnosis && <Text style={{ fontSize: 12 }}>التشخيص: {operation.diagnosis}</Text>}
+        </Flex>
       </Card>
 
       <Card>
@@ -326,187 +327,113 @@ export function OperationDetailPage() {
           <Row gutter={[32, 24]}>
             <Col xs={24} md={8} className="md:border-e md:pe-6">
               <div>
-                <Flex justify="space-between" align="center">
+                <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
                   <Title level={5} style={{ margin: 0 }}>
-                    تجهيز المريض قبل العملية
+                    الفريق الطبي
                   </Title>
-                  {operation.prepared_at && (
-                    <Text type="secondary" style={{ fontSize: 12 }}>
-                      تم التجهيز في {formatDateTime(operation.prepared_at)}
-                    </Text>
-                  )}
+                  <Button size="small" onClick={() => setBulkTeamModalOpen(true)}>
+                    إضافة عدة أعضاء
+                  </Button>
                 </Flex>
-                <Space direction="vertical" size={8} style={{ marginTop: 8 }}>
-                  <Checkbox
-                    checked={consentObtained}
-                    disabled={!isScheduled}
-                    onChange={(e) => setConsentObtained(e.target.checked)}
+                {(operation.team_members ?? []).length === 0 ? (
+                  <Flex
+                    vertical
+                    align="center"
+                    justify="center"
+                    gap={8}
+                    style={{ padding: '24px 0', color: 'rgba(0,0,0,0.25)' }}
                   >
-                    تم الحصول على موافقة المريض
-                  </Checkbox>
-                  <Checkbox
-                    checked={fastingConfirmed}
-                    disabled={!isScheduled}
-                    onChange={(e) => setFastingConfirmed(e.target.checked)}
-                  >
-                    تم تأكيد الصيام
-                  </Checkbox>
-                  <Checkbox
-                    checked={siteMarked}
-                    disabled={!isScheduled}
-                    onChange={(e) => setSiteMarked(e.target.checked)}
-                  >
-                    تم تحديد موضع العملية
-                  </Checkbox>
-                  <Checkbox
-                    checked={preopVitalsChecked}
-                    disabled={!isScheduled}
-                    onChange={(e) => setPreopVitalsChecked(e.target.checked)}
-                  >
-                    تم فحص العلامات الحيوية
-                  </Checkbox>
-                  <TextArea
-                    placeholder="ملاحظات التجهيز"
-                    disabled={!isScheduled}
-                    value={preopNotes}
-                    onChange={(e) => setPreopNotes(e.target.value)}
-                    autoSize={{ minRows: 1, maxRows: 3 }}
+                    <Users size={48} strokeWidth={1.5} />
+                    <Text type="secondary">لم يُضف أعضاء بعد</Text>
+                  </Flex>
+                ) : (
+                  <Listy
+                    items={operation.team_members ?? []}
+                    rowKey="id"
+                    itemRender={(member: OperationTeamMember, index) => (
+                      <Flex
+                        justify="space-between"
+                        align="center"
+                        style={{ padding: '6px 0', borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined }}
+                      >
+                        <Space>
+                          <Tag>{member.role?.name ?? '—'}</Tag>
+                          <Text>{member.doctor?.name ?? member.name ?? '—'}</Text>
+                        </Space>
+                        <Button
+                          size="small"
+                          danger
+                          type="text"
+                          onClick={() => removeTeamMemberMutation.mutate(member.id)}
+                        >
+                          إزالة
+                        </Button>
+                      </Flex>
+                    )}
                   />
-                  {isScheduled && (
-                    <Button size="small" onClick={handleSavePreop} loading={prepareMutation.isPending}>
-                      حفظ التجهيز
-                    </Button>
-                  )}
-                </Space>
+                )}
               </div>
             </Col>
 
             <Col xs={24} md={8} className="md:border-e md:pe-6">
-              {(isInProgress || operation.status === 'completed') ? (
-                <div>
-                  <Title level={5} style={{ margin: '0 0 8px' }}>
-                    تقرير العملية
-                  </Title>
-                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
-                    <FieldLabel label="النتائج">
-                      <TextArea
-                        disabled={!isInProgress}
-                        value={findings}
-                        onChange={(e) => setFindings(e.target.value)}
-                        autoSize={{ minRows: 1, maxRows: 3 }}
-                      />
-                    </FieldLabel>
-                    <FieldLabel label="المضاعفات">
-                      <TextArea
-                        disabled={!isInProgress}
-                        value={complications}
-                        onChange={(e) => setComplications(e.target.value)}
-                        autoSize={{ minRows: 1, maxRows: 3 }}
-                      />
-                    </FieldLabel>
-                    <Flex wrap="wrap" gap={8}>
-                      <FieldLabel label="فقد الدم (مل)">
-                        <InputNumber
-                          style={{ width: 128 }}
-                          min={0}
-                          disabled={!isInProgress}
-                          value={bloodLoss}
-                          onChange={(value) => setBloodLoss(typeof value === 'number' ? value : null)}
-                        />
-                      </FieldLabel>
-                      <FieldLabel label="النتيجة">
-                        <Select
-                          style={{ width: 192 }}
-                          allowClear
-                          disabled={!isInProgress}
-                          value={outcome}
-                          onChange={setOutcome}
-                          options={OUTCOME_OPTIONS}
-                        />
-                      </FieldLabel>
-                    </Flex>
-                    <FieldLabel label="ملاحظات التقرير">
-                      <TextArea
-                        disabled={!isInProgress}
-                        value={reportNotes}
-                        onChange={(e) => setReportNotes(e.target.value)}
-                        autoSize={{ minRows: 1, maxRows: 3 }}
-                      />
-                    </FieldLabel>
-                  </Space>
-                </div>
-              ) : (
-                <Text type="secondary">يظهر تقرير العملية بعد بدئها</Text>
-              )}
-            </Col>
-
-            <Col xs={24} md={8}>
               <Space direction="vertical" size={20} style={{ width: '100%' }}>
                 <div>
-                  <Title level={5} style={{ margin: '0 0 8px' }}>
-                    الفريق الطبي
-                  </Title>
-                  {(operation.team_members ?? []).length === 0 ? (
-                    <Text type="secondary">لم يُضف أعضاء بعد</Text>
-                  ) : (
-                    <Listy
-                      items={operation.team_members ?? []}
-                      rowKey="id"
-                      itemRender={(member: OperationTeamMember, index) => (
-                        <Flex
-                          justify="space-between"
-                          align="center"
-                          style={{ padding: '6px 0', borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined }}
-                        >
-                          <Space>
-                            <Tag>{TEAM_ROLE_LABEL[member.role] ?? member.role}</Tag>
-                            <Text>{member.doctor?.name ?? member.name ?? '—'}</Text>
-                          </Space>
-                          <Button
-                            size="small"
-                            danger
-                            type="text"
-                            onClick={() => removeTeamMemberMutation.mutate(member.id)}
-                          >
-                            إزالة
-                          </Button>
+                  {(isInProgress || operation.status === 'completed') ? (
+                    <>
+                      <Title level={5} style={{ margin: '0 0 8px' }}>
+                        تقرير العملية
+                      </Title>
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        <FieldLabel label="النتائج">
+                          <TextArea
+                            disabled={!isInProgress}
+                            value={findings}
+                            onChange={(e) => setFindings(e.target.value)}
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                          />
+                        </FieldLabel>
+                        <FieldLabel label="المضاعفات">
+                          <TextArea
+                            disabled={!isInProgress}
+                            value={complications}
+                            onChange={(e) => setComplications(e.target.value)}
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                          />
+                        </FieldLabel>
+                        <Flex wrap="wrap" gap={8}>
+                          <FieldLabel label="فقد الدم (مل)">
+                            <InputNumber
+                              style={{ width: 128 }}
+                              min={0}
+                              disabled={!isInProgress}
+                              value={bloodLoss}
+                              onChange={(value) => setBloodLoss(typeof value === 'number' ? value : null)}
+                            />
+                          </FieldLabel>
+                          <FieldLabel label="النتيجة">
+                            <Select
+                              style={{ width: 192 }}
+                              allowClear
+                              disabled={!isInProgress}
+                              value={outcome}
+                              onChange={setOutcome}
+                              options={OUTCOME_OPTIONS}
+                            />
+                          </FieldLabel>
                         </Flex>
-                      )}
-                    />
+                        <FieldLabel label="ملاحظات التقرير">
+                          <TextArea
+                            disabled={!isInProgress}
+                            value={reportNotes}
+                            onChange={(e) => setReportNotes(e.target.value)}
+                            autoSize={{ minRows: 1, maxRows: 3 }}
+                          />
+                        </FieldLabel>
+                      </Space>
+                    </>
+                  ) : (
+                    <Text type="secondary">يظهر تقرير العملية بعد بدئها</Text>
                   )}
-                  <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginTop: 8 }}>
-                    <FieldLabel label="الدور">
-                      <Select
-                        style={{ width: 160 }}
-                        value={teamRole}
-                        onChange={setTeamRole}
-                        options={TEAM_ROLE_OPTIONS}
-                      />
-                    </FieldLabel>
-                    <FieldLabel label="الطبيب (اختياري)">
-                      <Select
-                        style={{ width: 176 }}
-                        allowClear
-                        showSearch
-                        placeholder="اختر طبيباً"
-                        value={teamDoctorId}
-                        onChange={(v) => setTeamDoctorId(v)}
-                        optionFilterProp="label"
-                        options={(doctorsQuery.data ?? []).map((d) => ({ label: d.name, value: d.id }))}
-                      />
-                    </FieldLabel>
-                    <FieldLabel label="أو الاسم">
-                      <Input
-                        style={{ width: 160 }}
-                        value={teamName}
-                        disabled={!!teamDoctorId}
-                        onChange={(e) => setTeamName(e.target.value)}
-                      />
-                    </FieldLabel>
-                    <Button size="small" onClick={handleAddTeamMember} loading={addTeamMemberMutation.isPending}>
-                      إضافة
-                    </Button>
-                  </Flex>
                 </div>
 
                 <Divider style={{ margin: 0 }} />
@@ -559,6 +486,65 @@ export function OperationDetailPage() {
                 </div>
               </Space>
             </Col>
+
+            <Col xs={24} md={8}>
+              <Space direction="vertical" size={20} style={{ width: '100%' }}>
+                <div>
+                  <Flex justify="space-between" align="center">
+                    <Title level={5} style={{ margin: 0 }}>
+                      تجهيز المريض قبل العملية
+                    </Title>
+                    {operation.prepared_at && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        تم التجهيز في {formatDateTime(operation.prepared_at)}
+                      </Text>
+                    )}
+                  </Flex>
+                  <Space direction="vertical" size={8} style={{ marginTop: 8 }}>
+                    <Checkbox
+                      checked={consentObtained}
+                      disabled={!isScheduled}
+                      onChange={(e) => setConsentObtained(e.target.checked)}
+                    >
+                      تم الحصول على موافقة المريض
+                    </Checkbox>
+                    <Checkbox
+                      checked={fastingConfirmed}
+                      disabled={!isScheduled}
+                      onChange={(e) => setFastingConfirmed(e.target.checked)}
+                    >
+                      تم تأكيد الصيام
+                    </Checkbox>
+                    <Checkbox
+                      checked={siteMarked}
+                      disabled={!isScheduled}
+                      onChange={(e) => setSiteMarked(e.target.checked)}
+                    >
+                      تم تحديد موضع العملية
+                    </Checkbox>
+                    <Checkbox
+                      checked={preopVitalsChecked}
+                      disabled={!isScheduled}
+                      onChange={(e) => setPreopVitalsChecked(e.target.checked)}
+                    >
+                      تم فحص العلامات الحيوية
+                    </Checkbox>
+                    <TextArea
+                      placeholder="ملاحظات التجهيز"
+                      disabled={!isScheduled}
+                      value={preopNotes}
+                      onChange={(e) => setPreopNotes(e.target.value)}
+                      autoSize={{ minRows: 1, maxRows: 3 }}
+                    />
+                    {isScheduled && (
+                      <Button size="small" onClick={handleSavePreop} loading={prepareMutation.isPending}>
+                        حفظ التجهيز
+                      </Button>
+                    )}
+                  </Space>
+                </div>
+              </Space>
+            </Col>
           </Row>
 
           {(isScheduled || isInProgress) && (
@@ -595,6 +581,85 @@ export function OperationDetailPage() {
           )}
         </Space>
       </Card>
+
+      <Modal
+        title="إضافة عدة أعضاء للفريق الطبي"
+        open={bulkTeamModalOpen}
+        onCancel={() => setBulkTeamModalOpen(false)}
+        onOk={() => bulkTeamForm.submit()}
+        okText="إضافة الكل"
+        cancelText="إلغاء"
+        confirmLoading={addTeamMemberMutation.isPending}
+        width={680}
+        destroyOnClose
+      >
+        <Form
+          form={bulkTeamForm}
+          layout="vertical"
+          onFinish={handleBulkAddTeamMembers}
+          initialValues={{ members: [{ role_id: defaultTeamRoleId }] }}
+        >
+          <Form.List name="members">
+            {(fields, { add, remove }) => (
+              <Space direction="vertical" style={{ width: '100%' }} size={8}>
+                {fields.map((field) => {
+                  const rowRoleId: number | undefined = membersWatch?.[field.name]?.role_id ?? defaultTeamRoleId
+                  const roleDoctors = (doctorsQuery.data ?? []).filter((d) => d.role_id === rowRoleId)
+
+                  return (
+                  <Flex key={field.key} gap={8} align="flex-end" wrap="wrap">
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'role_id']}
+                      label="الدور"
+                      style={{ marginBottom: 0, width: 160 }}
+                      initialValue={defaultTeamRoleId}
+                    >
+                      <Select
+                        loading={teamRolesQuery.isLoading}
+                        options={(teamRolesQuery.data ?? []).map((r) => ({ label: r.name, value: r.id }))}
+                        onChange={() => bulkTeamForm.setFieldValue(['members', field.name, 'doctor_id'], undefined)}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'doctor_id']}
+                      label="الطبيب (اختياري)"
+                      style={{ marginBottom: 0, width: 200 }}
+                    >
+                      <Select
+                        allowClear
+                        showSearch
+                        optionFilterProp="label"
+                        placeholder="اختر طبيباً"
+                        notFoundContent={`لا يوجد أطباء بدور "${teamRoleLabel(rowRoleId)}"`}
+                        options={roleDoctors.map((d) => ({ label: d.name, value: d.id }))}
+                      />
+                    </Form.Item>
+                    <Form.Item
+                      {...field}
+                      name={[field.name, 'name']}
+                      label="أو الاسم"
+                      style={{ marginBottom: 0, width: 160 }}
+                    >
+                      <Input />
+                    </Form.Item>
+                    {fields.length > 1 && (
+                      <Button danger type="text" onClick={() => remove(field.name)}>
+                        إزالة
+                      </Button>
+                    )}
+                  </Flex>
+                  )
+                })}
+                <Button type="dashed" onClick={() => add({ role_id: defaultTeamRoleId })} block>
+                  + إضافة صف
+                </Button>
+              </Space>
+            )}
+          </Form.List>
+        </Form>
+      </Modal>
     </ConfigProvider>
   )
 }
