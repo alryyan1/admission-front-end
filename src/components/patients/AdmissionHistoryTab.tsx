@@ -48,8 +48,9 @@ export function AdmissionHistoryTab({ admissions, isLoading }: AdmissionHistoryT
   ]
 
   return (
-    <Card>
+    <Card size="small" title="سجل التنويمات">
       <Table
+        size="small"
         rowKey="id"
         loading={isLoading}
         columns={columns}

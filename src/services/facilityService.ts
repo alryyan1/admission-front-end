@@ -160,6 +160,14 @@ export async function getFacilityStampBlob(): Promise<Blob> {
   return data
 }
 
+export async function getFacilityWatermarkBlob(): Promise<Blob> {
+  const { data } = await apiClient.get<Blob>('/settings/facility/watermark', {
+    responseType: 'blob',
+    headers: { 'X-Suppress-Error-Toast': '1' },
+  })
+  return data
+}
+
 export async function updateFacilitySettings(payload: {
   name?: string | null
   phone?: string | null
@@ -167,10 +175,13 @@ export async function updateFacilitySettings(payload: {
   address?: string | null
   logo?: File | null
   stamp?: File | null
+  watermark?: File | null
   removeLogo?: boolean
   removeStamp?: boolean
+  removeWatermark?: boolean
   useLogo?: boolean
   useStamp?: boolean
+  useWatermark?: boolean
 }): Promise<FacilitySettings> {
   const formData = new FormData()
   if (payload.name !== undefined) formData.append('name', payload.name ?? '')
@@ -179,10 +190,13 @@ export async function updateFacilitySettings(payload: {
   if (payload.address !== undefined) formData.append('address', payload.address ?? '')
   if (payload.logo) formData.append('logo', payload.logo)
   if (payload.stamp) formData.append('stamp', payload.stamp)
+  if (payload.watermark) formData.append('watermark', payload.watermark)
   if (payload.removeLogo) formData.append('remove_logo', '1')
   if (payload.removeStamp) formData.append('remove_stamp', '1')
+  if (payload.removeWatermark) formData.append('remove_watermark', '1')
   if (payload.useLogo !== undefined) formData.append('use_logo', payload.useLogo ? '1' : '0')
   if (payload.useStamp !== undefined) formData.append('use_stamp', payload.useStamp ? '1' : '0')
+  if (payload.useWatermark !== undefined) formData.append('use_watermark', payload.useWatermark ? '1' : '0')
 
   const { data } = await apiClient.post<FacilitySettings>('/settings/facility', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

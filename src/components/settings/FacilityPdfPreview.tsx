@@ -79,6 +79,15 @@ const styles = StyleSheet.create({
   stampBox: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
   stampImg: { width: 100, height: 100, objectFit: 'contain' },
   footerAddress: { fontSize: 8, color: '#9ca3af', direction: 'rtl', textAlign: 'right', maxWidth: 320 },
+  watermark: {
+    position: 'absolute',
+    top: '30%',
+    left: '20%',
+    width: '60%',
+    height: '40%',
+    objectFit: 'contain',
+    opacity: 0.08,
+  },
 })
 
 const PLACEHOLDER_ROWS = [
@@ -90,8 +99,10 @@ const PLACEHOLDER_ROWS = [
 export interface FacilityPdfDocumentProps {
   logoSrc: string | null
   stampSrc: string | null
+  watermarkSrc?: string | null
   useLogo: boolean
   useStamp: boolean
+  useWatermark?: boolean
   facilityName?: string | null
   facilityPhone?: string | null
   facilityEmail?: string | null
@@ -101,8 +112,10 @@ export interface FacilityPdfDocumentProps {
 export function FacilityPdfDocument({
   logoSrc,
   stampSrc,
+  watermarkSrc,
   useLogo,
   useStamp,
+  useWatermark,
   facilityName,
   facilityPhone,
   facilityEmail,
@@ -111,12 +124,15 @@ export function FacilityPdfDocument({
   ensureFontRegistered()
   const showLogo = useLogo && !!logoSrc
   const showStamp = useStamp && !!stampSrc
+  const showWatermark = !!useWatermark && !!watermarkSrc
 
   const contactLine = [facilityPhone, facilityEmail].filter(Boolean).join('  —  ')
 
   return (
     <Document>
       <Page size="A4" style={styles.page}>
+        {showWatermark && <Image src={watermarkSrc!} style={styles.watermark} fixed />}
+
         <View style={styles.header}>
           <View style={styles.logoBox}>{showLogo && <Image src={logoSrc!} style={styles.logoImg} />}</View>
           <View style={styles.nameBox}>

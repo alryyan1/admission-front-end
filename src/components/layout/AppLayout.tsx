@@ -1,7 +1,18 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { LogOut, Menu as MenuIcon, Moon, Sun } from 'lucide-react'
-import { ConfigProvider, Layout, Menu, Drawer, Button, Typography, Grid, theme as antdTheme } from 'antd'
+import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Settings, Sun, UserRound } from 'lucide-react'
+import {
+  ConfigProvider,
+  Layout,
+  Menu,
+  Drawer,
+  Button,
+  Typography,
+  Grid,
+  Dropdown,
+  theme as antdTheme,
+} from 'antd'
+import type { MenuProps } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -23,13 +34,18 @@ const navItems: NavItem[] = [
   { to: '/facility-map', label: 'خريطة المستشفى' },
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
-  { to: '/settings/facility', label: 'الإعدادات', roles: ['admin'] },
-  { to: '/settings/procedures', label: 'كتالوج العمليات', roles: ['admin'] },
-  { to: '/settings/services', label: 'كتالوج الخدمات', roles: ['admin'] },
-  { to: '/settings/doctors', label: 'الأطباء', roles: ['admin'] },
-  { to: '/settings/team-roles', label: 'أدوار الفريق الطبي', roles: ['admin'] },
-  { to: '/settings/sessions', label: 'الجلسات النشطة', roles: ['admin'] },
-  { to: '/settings/activity-log', label: 'سجل النشاط', roles: ['admin'] },
+]
+
+const settingsNavItems: NavItem[] = [
+  { to: '/settings/facility', label: 'الإعدادات العامة' },
+  { to: '/settings/doctors', label: 'الأطباء' },
+  { to: '/settings/services', label: 'كتالوج الخدمات' },
+  { to: '/settings/procedures', label: 'كتالوج العمليات' },
+  { to: '/settings/team-roles', label: 'أدوار الفريق الطبي' },
+  { to: '/settings/roles-permissions', label: 'الأدوار والصلاحيات' },
+  { to: '/settings/users', label: 'المستخدمون' },
+  { to: '/settings/sessions', label: 'الجلسات النشطة' },
+  { to: '/settings/activity-log', label: 'سجل النشاط' },
 ]
 
 const SIDER_WIDTH = 240
@@ -68,6 +84,51 @@ function AppLayoutContent() {
     setMobileOpen(false)
   }
 
+  const isAdmin = user?.role === 'admin'
+
+  const userMenuItems: MenuProps['items'] = [
+    {
+      key: 'user-info',
+      label: (
+        <div style={{ padding: '2px 0' }}>
+          <div style={{ fontWeight: 600 }}>{user?.name}</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            @{user?.username}
+          </Text>
+        </div>
+      ),
+      disabled: true,
+    },
+    { type: 'divider' },
+    ...(isAdmin
+      ? [
+          {
+            key: 'settings',
+            label: 'الإعدادات',
+            icon: <Settings size={14} />,
+            children: settingsNavItems.map((item) => ({ key: item.to, label: item.label })),
+          },
+          { type: 'divider' as const },
+        ]
+      : []),
+    {
+      key: 'logout',
+      label: 'تسجيل الخروج',
+      icon: <LogOut size={14} />,
+      danger: true,
+    },
+  ]
+
+  function handleUserMenuClick({ key }: { key: string }) {
+    if (key === 'logout') {
+      void logout()
+      return
+    }
+    if (key.startsWith('/')) {
+      navigate(key)
+    }
+  }
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header
@@ -93,16 +154,25 @@ function AppLayoutContent() {
         <Text strong ellipsis style={{ flex: 1, fontSize: 16 }}>
           نظام إدارة التنويم
         </Text>
-        {user && isDesktop && <Text style={{ fontSize: 13 }}>{user.name}</Text>}
         <Button
           type="text"
           aria-label={mode === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
           icon={mode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           onClick={toggleTheme}
         />
-        <Button type="text" icon={<LogOut size={16} />} onClick={() => logout()}>
-          تسجيل الخروج
-        </Button>
+        {user && (
+          <Dropdown
+            menu={{ items: userMenuItems, onClick: handleUserMenuClick }}
+            trigger={['click']}
+            placement="bottomLeft"
+          >
+            <Button type="text" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <UserRound size={16} />
+              {isDesktop && <Text style={{ fontSize: 13 }}>{user.name}</Text>}
+              <ChevronDown size={14} />
+            </Button>
+          </Dropdown>
+        )}
       </Header>
 
       {!isDesktop && (

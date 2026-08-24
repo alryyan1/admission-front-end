@@ -45,9 +45,10 @@ export function DoctorsSettingsPage() {
   })
 
   const columns: ColumnsType<Doctor> = [
+    { title: 'المعرف', dataIndex: 'id', key: 'id', width: 80 },
     { title: 'الاسم', dataIndex: 'name', key: 'name' },
     { title: 'الدور', key: 'role', render: (_, d) => <Tag>{d.role?.name ?? '—'}</Tag> },
-    { title: 'التخصص', dataIndex: 'specialist', key: 'specialist', render: (v) => v ?? '—' },
+    { title: 'التخصص', key: 'specialist', render: (_, d) => d.specialist?.name ?? '—' },
     {
       title: '',
       key: 'actions',
@@ -88,7 +89,7 @@ export function DoctorsSettingsPage() {
           rowKey="id"
           loading={doctorsQuery.isLoading}
           columns={columns}
-          dataSource={doctorsQuery.data ?? []}
+          dataSource={[...(doctorsQuery.data ?? [])].sort((a, b) => b.id - a.id)}
           pagination={false}
         />
       </Card>

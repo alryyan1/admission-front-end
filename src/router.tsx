@@ -11,6 +11,8 @@ import { DoctorsSettingsPage } from '@/pages/settings/DoctorsSettingsPage'
 import { TeamRolesSettingsPage } from '@/pages/settings/TeamRolesSettingsPage'
 import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
 import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
+import { UsersSettingsPage } from '@/pages/settings/UsersSettingsPage'
+import { RolesPermissionsPage } from '@/pages/settings/RolesPermissionsPage'
 import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
 import { AdmissionsPage } from '@/pages/admissions/AdmissionsPage'
 import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
@@ -52,6 +54,8 @@ export const router = createBrowserRouter([
                   { path: '/settings/services', element: <ServiceCatalogSettingsPage /> },
                   { path: '/settings/doctors', element: <DoctorsSettingsPage /> },
                   { path: '/settings/team-roles', element: <TeamRolesSettingsPage /> },
+                  { path: '/settings/users', element: <UsersSettingsPage /> },
+                  { path: '/settings/roles-permissions', element: <RolesPermissionsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
                   { path: '/settings/activity-log', element: <ActivityLogPage /> },
                 ],

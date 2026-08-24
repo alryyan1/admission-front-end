@@ -12,7 +12,7 @@ export function EmergencyContactTab({ patient, editable }: EmergencyContactTabPr
   const saveField = usePatientFieldUpdate(patient.id)
 
   return (
-    <Card title="جهة الاتصال في حالة الطوارئ">
+    <Card size="small" title="جهة الاتصال في حالة الطوارئ">
       <Descriptions
         column={2}
         size="small"

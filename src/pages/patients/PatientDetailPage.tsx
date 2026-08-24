@@ -1,7 +1,8 @@
 import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigProvider, Card, Typography, Row, Col, Space } from 'antd'
+import { ConfigProvider, Card, Typography, Row, Col, Space, theme as antdThemeApi } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
+import { useTheme } from '@/contexts/ThemeContext'
 import { PageLoader } from '@/components/common/PageLoader'
 import { getPatient } from '@/services/patientService'
 import { getAdmissions } from '@/services/admissionService'
@@ -15,6 +16,8 @@ const { Title, Text } = Typography
 
 export function PatientDetailPage() {
   const antTheme = useAntTheme()
+  const { token } = antdThemeApi.useToken()
+  const { admissionHeaderBg } = useTheme()
   const { patientId } = useParams<{ patientId: string }>()
   const id = Number(patientId)
   const { user } = useAuth()
@@ -38,10 +41,24 @@ export function PatientDetailPage() {
     return <PageLoader />
   }
 
+  const headerBgColor = (() => {
+    switch (admissionHeaderBg) {
+      case 'fillAlter':
+      case 'statusReactive':
+        return token.colorFillAlter
+      case 'primaryBg':
+        return token.colorPrimaryBg
+      case 'infoBg':
+        return token.colorInfoBg
+      default:
+        return undefined
+    }
+  })()
+
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
-      <Card style={{ marginBottom: 16 }}>
-        <Title level={3} style={{ margin: 0 }}>
+      <Card size="small" style={{ marginBottom: 12, backgroundColor: headerBgColor }}>
+        <Title level={4} style={{ margin: 0 }}>
           {patient.name}
         </Title>
         <Text type="secondary">
@@ -49,40 +66,20 @@ export function PatientDetailPage() {
         </Text>
       </Card>
 
-      <Space direction="vertical" size={24} style={{ width: '100%' }}>
-        <Row gutter={[24, 24]}>
+      <Space direction="vertical" size={12} style={{ width: '100%' }}>
+        <Row gutter={[12, 12]}>
           <Col xs={24} md={12}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <Title level={4} style={{ margin: 0 }}>
-                نظرة عامة
-              </Title>
-              <OverviewTab patient={patient} editable={canEdit} />
-            </Space>
+            <OverviewTab patient={patient} editable={canEdit} />
           </Col>
 
           <Col xs={24} md={12}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <Title level={4} style={{ margin: 0 }}>
-                جهة الاتصال في الطوارئ
-              </Title>
-              <EmergencyContactTab patient={patient} editable={canEdit} />
-            </Space>
+            <EmergencyContactTab patient={patient} editable={canEdit} />
           </Col>
         </Row>
 
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Title level={4} style={{ margin: 0 }}>
-            البيانات الطبية
-          </Title>
-          <MedicalInfoTab patient={patient} editable={canEdit} />
-        </Space>
+        <MedicalInfoTab patient={patient} editable={canEdit} />
 
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Title level={4} style={{ margin: 0 }}>
-            سجل التنويمات
-          </Title>
-          <AdmissionHistoryTab admissions={admissionsQuery.data?.data} isLoading={admissionsQuery.isLoading} />
-        </Space>
+        <AdmissionHistoryTab admissions={admissionsQuery.data?.data} isLoading={admissionsQuery.isLoading} />
       </Space>
     </ConfigProvider>
   )

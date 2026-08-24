@@ -78,8 +78,39 @@ export function AdmissionsPage() {
     {
       title: 'السرير',
       key: 'bed',
-      render: (_, admission) =>
-        `${admission.bed?.room?.ward?.name ?? ''} — غرفة ${admission.bed?.room?.room_number ?? ''} — سرير ${admission.bed?.bed_number ?? ''}`,
+      render: (_, admission) => {
+        const tagStyle: React.CSSProperties = {
+          width: 90,
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }
+        return (
+          <Flex gap={4} wrap="wrap">
+            {admission.bed?.room?.ward?.floor?.name && (
+              <Tag color="purple" style={tagStyle}>
+                {admission.bed.room.ward.floor.name}
+              </Tag>
+            )}
+            {admission.bed?.room?.ward?.name && (
+              <Tag color="blue" style={tagStyle}>
+                {admission.bed.room.ward.name}
+              </Tag>
+            )}
+            {admission.bed?.room?.room_number && (
+              <Tag color="green" style={tagStyle}>
+                غرفة {admission.bed.room.room_number}
+              </Tag>
+            )}
+            {admission.bed?.bed_number && (
+              <Tag color="orange" style={tagStyle}>
+                سرير {admission.bed.bed_number}
+              </Tag>
+            )}
+          </Flex>
+        )
+      },
     },
     {
       title: 'الطبيب المعالج',
@@ -161,7 +192,7 @@ export function AdmissionsPage() {
             placeholder={['من تاريخ', 'إلى تاريخ']}
           />
           <Select
-            style={{ width: 200 }}
+            style={{ width: 400 }}
             placeholder="الغرفة"
             allowClear
             showSearch

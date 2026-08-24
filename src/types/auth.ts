@@ -7,6 +7,16 @@ export interface AuthUser {
   role: UserRole
 }
 
+export interface User {
+  id: number
+  name: string
+  username: string
+  role: UserRole
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface LoginCredentials {
   username: string
   password: string

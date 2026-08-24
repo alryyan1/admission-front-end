@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Row, Col, Select, Input, InputNumber, Typography, Space } from 'antd'
 import { getDoctors } from '@/services/patientService'
@@ -24,7 +24,7 @@ interface ScheduleOperationModalProps {
     requested_by_doctor_id?: number
     scheduled_at: string
     notes?: string
-  }) => void
+  }) => Promise<unknown>
   isSubmitting: boolean
 }
 
@@ -78,7 +78,8 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
 
   const procedureOptions = groupProceduresByCategory(proceduresQuery.data ?? [])
 
-  function reset() {
+  useEffect(() => {
+    if (open) return
     setProcedureId(undefined)
     setPriority('scheduled')
     setSurgeonId(undefined)
@@ -89,32 +90,32 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
     setAnesthesiaType(undefined)
     setDiagnosis('')
     setNotes('')
-  }
+  }, [open])
 
-  function handleSubmit() {
+  async function handleSubmit() {
     if (!procedureId || !surgeonId || !scheduledAt) return
-    onSchedule({
-      procedure_id: procedureId,
-      surgeon_id: surgeonId,
-      operation_room_id: operationRoomId,
-      priority,
-      scheduled_at: scheduledAt,
-      expected_duration_minutes: expectedDuration ?? undefined,
-      anesthesia_type: anesthesiaType,
-      requested_by_doctor_id: requestedByDoctorId,
-      diagnosis: diagnosis || undefined,
-      notes: notes || undefined,
-    })
-    reset()
+    try {
+      await onSchedule({
+        procedure_id: procedureId,
+        surgeon_id: surgeonId,
+        operation_room_id: operationRoomId,
+        priority,
+        scheduled_at: scheduledAt,
+        expected_duration_minutes: expectedDuration ?? undefined,
+        anesthesia_type: anesthesiaType,
+        requested_by_doctor_id: requestedByDoctorId,
+        diagnosis: diagnosis || undefined,
+        notes: notes || undefined,
+      })
+    } catch {
+      // request failed — surfaced by the global API error toast; keep the modal open for retry
+    }
   }
 
   return (
     <Modal
       open={open}
-      onCancel={() => {
-        reset()
-        onClose()
-      }}
+      onCancel={onClose}
       title="طلب عملية جديدة"
       width={640}
       okText="طلب العملية"

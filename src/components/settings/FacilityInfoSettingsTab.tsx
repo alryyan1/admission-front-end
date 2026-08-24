@@ -36,6 +36,7 @@ export function FacilityInfoSettingsTab() {
   const settings = settingsQuery.data
   const logoBlobUrl = useAuthedImageUrl('logo', settings?.logo_path ?? null)
   const stampBlobUrl = useAuthedImageUrl('stamp', settings?.stamp_path ?? null)
+  const watermarkBlobUrl = useAuthedImageUrl('watermark', settings?.watermark_path ?? null)
 
   useEffect(() => {
     if (!settings) return
@@ -78,8 +79,10 @@ export function FacilityInfoSettingsTab() {
             <FacilityPdfPreview
               logoSrc={logoBlobUrl}
               stampSrc={stampBlobUrl}
+              watermarkSrc={watermarkBlobUrl}
               useLogo={settings?.use_logo ?? true}
               useStamp={settings?.use_stamp ?? true}
+              useWatermark={settings?.use_watermark ?? false}
               facilityName={settings?.name}
               facilityPhone={settings?.phone}
               facilityEmail={settings?.email}

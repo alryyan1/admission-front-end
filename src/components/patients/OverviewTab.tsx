@@ -24,7 +24,7 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
   ].filter(Boolean)
 
   return (
-    <Card title="البيانات الأساسية">
+    <Card size="small" title="البيانات الأساسية">
       <Descriptions
         column={2}
         size="small"

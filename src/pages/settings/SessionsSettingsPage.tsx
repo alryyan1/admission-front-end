@@ -7,18 +7,10 @@ import { PageLoader } from '@/components/common/PageLoader'
 import { getSessions, revokeSession, revokeAllSessionsForUser } from '@/services/sessionService'
 import { formatDateTime } from '@/lib/utils'
 import { useAuth } from '@/contexts/AuthContext'
-import type { UserRole } from '@/types/auth'
+import { ROLE_LABEL } from '@/lib/roles'
 import type { UserSession, UserWithSessions } from '@/types/session'
 
 const { Title, Text } = Typography
-
-const ROLE_LABEL: Record<UserRole, string> = {
-  admin: 'مدير',
-  doctor: 'طبيب',
-  nurse: 'ممرض',
-  admission_clerk: 'موظف استقبال',
-  cashier: 'كاشير',
-}
 
 export function SessionsSettingsPage() {
   const antTheme = useAntTheme()

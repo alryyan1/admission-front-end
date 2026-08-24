@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Card, InputNumber, Select, Table, Button, Typography, Row, Col, Flex, Space, Popconfirm } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { getServices } from '@/services/serviceService'
+import { getPaymentMethods } from '@/services/paymentMethodService'
 import type { AdmissionDeposit, RequestedService } from '@/types/admission'
 
 const { Text } = Typography
@@ -11,20 +12,55 @@ const { Text } = Typography
 interface BillingTabProps {
   services: RequestedService[]
   deposits: AdmissionDeposit[]
+  isShortStayRoom: boolean
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
-  onAddDeposit: (payload: { amount: number; method?: string }) => void
+  onAddDeposit: (payload: { amount: number; payment_method_id?: number }) => void
+  onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
   onRemoveService: (serviceId: number) => void
+  onCalculateAccommodationFee: () => void
   isSubmittingService: boolean
   isSubmittingDeposit: boolean
+  isUpdatingService: boolean
   isRemovingService: boolean
+  isCalculatingAccommodationFee: boolean
 }
 
-const DEPOSIT_METHOD_OPTIONS = [
-  { label: 'نقدي', value: 'cash' },
-  { label: 'بنكي', value: 'bank' },
-  { label: 'فوري', value: 'fawry' },
-  { label: 'أوكاش', value: 'ocash' },
-]
+function EditableNumberCell({
+  value,
+  min,
+  disabled,
+  onCommit,
+}: {
+  value: number
+  min: number
+  disabled?: boolean
+  onCommit: (value: number) => void
+}) {
+  const [draft, setDraft] = useState<number | null>(value)
+
+  useEffect(() => {
+    setDraft(value)
+  }, [value])
+
+  function commit() {
+    if (draft !== null && draft !== value) {
+      onCommit(draft)
+    }
+  }
+
+  return (
+    <InputNumber
+      size="small"
+      style={{ width: 110 }}
+      min={min}
+      value={draft}
+      disabled={disabled}
+      onChange={(v) => setDraft(v === null ? null : Number(v))}
+      onBlur={commit}
+      onPressEnter={commit}
+    />
+  )
+}
 
 function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -40,21 +76,35 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 export function BillingTab({
   services,
   deposits,
+  isShortStayRoom,
   onAddService,
   onAddDeposit,
+  onUpdateService,
   onRemoveService,
+  onCalculateAccommodationFee,
   isSubmittingService,
   isSubmittingDeposit,
+  isUpdatingService,
   isRemovingService,
+  isCalculatingAccommodationFee,
 }: BillingTabProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
+  const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
+  const activePaymentMethods = (paymentMethodsQuery.data ?? []).filter((pm) => pm.is_active)
 
   const [selectedServiceId, setSelectedServiceId] = useState<number | undefined>(undefined)
   const [quantity, setQuantity] = useState<number | null>(1)
   const [unitPrice, setUnitPrice] = useState<number | null>(null)
 
   const [depositAmount, setDepositAmount] = useState<number | null>(null)
-  const [depositMethod, setDepositMethod] = useState('cash')
+  const [depositMethodId, setDepositMethodId] = useState<number | undefined>(undefined)
+
+  useEffect(() => {
+    if (depositMethodId === undefined && activePaymentMethods.length > 0) {
+      setDepositMethodId(activePaymentMethods[0].id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePaymentMethods.length])
 
   function handleServiceSelect(serviceId: number) {
     setSelectedServiceId(serviceId)
@@ -73,13 +123,36 @@ export function BillingTab({
 
   function handleAddDeposit() {
     if (depositAmount === null) return
-    onAddDeposit({ amount: depositAmount, method: depositMethod })
+    onAddDeposit({ amount: depositAmount, payment_method_id: depositMethodId })
     setDepositAmount(null)
   }
 
   const serviceColumns: ColumnsType<RequestedService> = [
     { title: 'الخدمة', dataIndex: 'name', key: 'name' },
-    { title: 'الكمية', dataIndex: 'quantity', key: 'quantity' },
+    {
+      title: 'الكمية',
+      key: 'quantity',
+      render: (_, s) => (
+        <EditableNumberCell
+          value={s.quantity}
+          min={1}
+          disabled={isUpdatingService}
+          onCommit={(quantity) => onUpdateService(s.id, { quantity })}
+        />
+      ),
+    },
+    {
+      title: 'سعر الوحدة',
+      key: 'unit_price',
+      render: (_, s) => (
+        <EditableNumberCell
+          value={Number(s.unit_price)}
+          min={0}
+          disabled={isUpdatingService}
+          onCommit={(unit_price) => onUpdateService(s.id, { unit_price })}
+        />
+      ),
+    },
     { title: 'الإجمالي', key: 'total', render: (_, s) => formatNumber(s.total_price) },
     {
       title: '',
@@ -101,13 +174,26 @@ export function BillingTab({
   const depositColumns: ColumnsType<AdmissionDeposit> = [
     { title: 'التاريخ', key: 'paid_at', render: (_, d) => formatDate(d.paid_at) },
     { title: 'المبلغ', key: 'amount', render: (_, d) => formatNumber(d.amount) },
-    { title: 'الطريقة', dataIndex: 'method', key: 'method' },
+    { title: 'الطريقة', key: 'method', render: (_, d) => d.payment_method?.name ?? '—' },
   ]
 
   return (
     <Row gutter={[16, 16]}>
       <Col xs={24} md={12}>
-        <Card title="الخدمات المطلوبة">
+        <Card
+          title="الخدمات المطلوبة"
+          extra={
+            !isShortStayRoom && (
+              <Button
+                size="small"
+                onClick={onCalculateAccommodationFee}
+                loading={isCalculatingAccommodationFee}
+              >
+                احتساب رسوم الإقامة
+              </Button>
+            )
+          }
+        >
           <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
             <FieldLabel label="الخدمة">
               <Select
@@ -156,16 +242,18 @@ export function BillingTab({
             <FieldLabel label="طريقة الدفع">
               <Select
                 style={{ width: 144 }}
-                value={depositMethod}
-                onChange={setDepositMethod}
-                options={DEPOSIT_METHOD_OPTIONS}
+                placeholder="اختر طريقة الدفع"
+                loading={paymentMethodsQuery.isLoading}
+                value={depositMethodId}
+                onChange={setDepositMethodId}
+                options={activePaymentMethods.map((pm) => ({ label: pm.name, value: pm.id }))}
               />
             </FieldLabel>
             <Button
               type="primary"
               onClick={handleAddDeposit}
               loading={isSubmittingDeposit}
-              disabled={depositAmount === null}
+              disabled={depositAmount === null || !depositMethodId}
             >
               إضافة
             </Button>

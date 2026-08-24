@@ -23,9 +23,9 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
 
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[12, 12]}>
       <Col xs={24} md={12}>
-        <Card title="فصيلة الدم">
+        <Card size="small" title="فصيلة الدم">
           <Descriptions
             column={1}
             size="small"
@@ -49,7 +49,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
       </Col>
 
       <Col xs={24} md={12}>
-        <Card title="الحساسية والأمراض">
+        <Card size="small" title="الحساسية والأمراض">
           <Descriptions
             column={1}
             size="small"
@@ -84,7 +84,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
       </Col>
 
       <Col xs={24} md={12}>
-        <Card title="الأدوية والعمليات السابقة">
+        <Card size="small" title="الأدوية والعمليات السابقة">
           <Descriptions
             column={1}
             size="small"
@@ -119,7 +119,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
       </Col>
 
       <Col xs={24} md={12}>
-        <Card title="التاريخ المرضي والملاحظات">
+        <Card size="small" title="التاريخ المرضي والملاحظات">
           <Descriptions
             column={1}
             size="small"

@@ -89,7 +89,7 @@ export async function addDose(
 
 export async function addDeposit(
   admissionId: number,
-  payload: { amount: number; method?: string },
+  payload: { amount: number; payment_method_id?: number },
 ): Promise<AdmissionDeposit> {
   const { data } = await apiClient.post<AdmissionDeposit>(
     `/admissions/${admissionId}/deposits`,
@@ -104,6 +104,25 @@ export async function addRequestedService(
 ): Promise<RequestedService> {
   const { data } = await apiClient.post<RequestedService>(
     `/admissions/${admissionId}/services`,
+    payload,
+  )
+  return data
+}
+
+export async function calculateAccommodationFee(admissionId: number): Promise<RequestedService> {
+  const { data } = await apiClient.post<RequestedService>(
+    `/admissions/${admissionId}/services/accommodation-fee`,
+  )
+  return data
+}
+
+export async function updateRequestedService(
+  admissionId: number,
+  requestedServiceId: number,
+  payload: { quantity?: number; unit_price?: number },
+): Promise<RequestedService> {
+  const { data } = await apiClient.patch<RequestedService>(
+    `/admissions/${admissionId}/services/${requestedServiceId}`,
     payload,
   )
   return data

@@ -20,7 +20,9 @@ import {
   addDose,
   addDeposit,
   addRequestedService,
+  updateRequestedService,
   removeRequestedService,
+  calculateAccommodationFee,
   getInvoice,
   getInvoices,
   generateInvoice,
@@ -150,9 +152,23 @@ export function AdmissionDetailPage() {
     onSuccess: invalidateAdmission,
   })
 
+  const updateServiceMutation = useMutation({
+    mutationFn: ({ serviceId, ...payload }: { serviceId: number; quantity?: number; unit_price?: number }) =>
+      updateRequestedService(id, serviceId, payload),
+    onSuccess: invalidateAdmission,
+  })
+
   const removeServiceMutation = useMutation({
     mutationFn: (requestedServiceId: number) => removeRequestedService(id, requestedServiceId),
     onSuccess: invalidateAdmission,
+  })
+
+  const accommodationFeeMutation = useMutation({
+    mutationFn: () => calculateAccommodationFee(id),
+    onSuccess: () => {
+      toast.success('تم احتساب رسوم الإقامة')
+      invalidateAdmission()
+    },
   })
 
   const operationMutation = useMutation({
@@ -293,19 +309,25 @@ export function AdmissionDetailPage() {
         <BillingTab
           services={admission.requested_services ?? []}
           deposits={admission.deposits ?? []}
+          isShortStayRoom={admission.bed?.room?.is_short_stay ?? false}
           onAddService={(payload) => serviceMutation.mutate(payload)}
           onAddDeposit={(payload) => depositMutation.mutate(payload)}
+          onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
           onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}
+          onCalculateAccommodationFee={() => accommodationFeeMutation.mutate()}
           isSubmittingService={serviceMutation.isPending}
           isSubmittingDeposit={depositMutation.isPending}
+          isUpdatingService={updateServiceMutation.isPending}
           isRemovingService={removeServiceMutation.isPending}
+          isCalculatingAccommodationFee={accommodationFeeMutation.isPending}
         />
       )}
 
       {tab === 'operations' && (
         <OperationsTab
           operations={admission.operations ?? []}
-          onSchedule={(payload) => operationMutation.mutate(payload)}
+          loading={admissionQuery.isFetching}
+          onSchedule={(payload) => operationMutation.mutateAsync(payload)}
           isSubmitting={operationMutation.isPending}
         />
       )}

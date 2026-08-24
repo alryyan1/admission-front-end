@@ -1,4 +1,4 @@
-import type { TeamRole } from '@/types/admission'
+import type { Specialist, TeamRole } from '@/types/admission'
 
 export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 
@@ -62,7 +62,8 @@ export interface JawdaPatientResult {
 export interface Doctor {
   id: number
   name: string
-  specialist: string | null
+  specialist_id: number | null
   role_id: number
   role?: TeamRole | null
+  specialist?: Specialist | null
 }

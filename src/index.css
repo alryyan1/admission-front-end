@@ -100,3 +100,10 @@
     font-family: 'Tajawal', sans-serif;
   }
 }
+
+/* antd's default Descriptions label color is a light gray (colorTextTertiary);
+   the app wants field labels as dark and bold as their values. */
+.ant-descriptions-item-label {
+  color: var(--foreground) !important;
+  font-weight: 600 !important;
+}

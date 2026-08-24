@@ -22,6 +22,7 @@ import { ChartOpeningServiceSettingsTab } from '@/components/settings/ChartOpeni
 import { ShortStayServiceSettingsTab } from '@/components/settings/ShortStayServiceSettingsTab'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
+import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
 import { getFloors, getFloor, deleteFloor, deleteWard, deleteRoom, deleteBed } from '@/services/facilityService'
 import { formatNumber } from '@/lib/utils'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
@@ -353,8 +354,13 @@ export function FacilitySettingsPage() {
             },
             {
               key: 'logo-stamp',
-              label: 'الشعار والختم',
+              label: 'الشعار والختم والعلامة المائية',
               children: <LogoStampSettingsTab />,
+            },
+            {
+              key: 'payment-methods',
+              label: 'طرق الدفع',
+              children: <PaymentMethodsSettingsTab />,
             },
             {
               key: 'appearance',
@@ -362,7 +368,7 @@ export function FacilitySettingsPage() {
               children: (
                 <div>
                   <h2 className="mb-3 text-base font-semibold text-muted-foreground">
-                    خلفية رأس صفحة التنويم
+                    خلفية رأس الصفحة (التنويم والمريض)
                   </h2>
                   <Radio.Group
                     value={admissionHeaderBg}

@@ -99,25 +99,6 @@ export function InvoiceTab({
           </Button>
         </Flex>
 
-        <Space direction="vertical" size={4} style={{ width: '100%' }}>
-          {invoice.billing_mode === 'short_stay' ? (
-            <SummaryRow label="مدة الإقامة القصيرة" value={`${invoice.admission_duration_hours} ساعة`} />
-          ) : (
-            <>
-              <SummaryRow label="عدد الليالي" value={invoice.nights_stayed} />
-              <SummaryRow
-                label="سعر اليوم"
-                value={invoice.price_per_day != null ? formatNumber(invoice.price_per_day) : null}
-              />
-            </>
-          )}
-          {invoice.bed_charges > 0 && (
-            <SummaryRow label="تكلفة الإقامة" value={formatNumber(invoice.bed_charges)} bold />
-          )}
-        </Space>
-
-        <Divider style={{ margin: '12px 0' }} />
-
         <Title level={5} style={{ marginBottom: 8 }}>
           الخدمات
         </Title>

@@ -8,12 +8,13 @@ import {
   updateFacilitySettings,
   getFacilityLogoBlob,
   getFacilityStampBlob,
+  getFacilityWatermarkBlob,
 } from '@/services/facilityService'
 import { FacilityPdfPreview } from '@/components/settings/FacilityPdfPreview'
 
 const { Text } = Typography
 
-export function useAuthedImageUrl(kind: 'logo' | 'stamp', cacheKey: string | null) {
+export function useAuthedImageUrl(kind: 'logo' | 'stamp' | 'watermark', cacheKey: string | null) {
   const [url, setUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -26,7 +27,8 @@ export function useAuthedImageUrl(kind: 'logo' | 'stamp', cacheKey: string | nul
 
     ;(async () => {
       try {
-        const blob = kind === 'logo' ? await getFacilityLogoBlob() : await getFacilityStampBlob()
+        const blob =
+          kind === 'logo' ? await getFacilityLogoBlob() : kind === 'stamp' ? await getFacilityStampBlob() : await getFacilityWatermarkBlob()
         if (cancelled) return
         objectUrl = URL.createObjectURL(blob)
         setUrl(objectUrl)
@@ -132,7 +134,7 @@ export function LogoStampSettingsTab() {
   const saveMutation = useMutation({
     mutationFn: updateFacilitySettings,
     onSuccess: (_, variables) => {
-      if (!('useLogo' in variables) && !('useStamp' in variables)) {
+      if (!('useLogo' in variables) && !('useStamp' in variables) && !('useWatermark' in variables)) {
         toast.success('تم الحفظ')
       }
       queryClient.invalidateQueries({ queryKey: ['facility-settings'] })
@@ -142,9 +144,10 @@ export function LogoStampSettingsTab() {
   const settings = settingsQuery.data
   const logoBlobUrl = useAuthedImageUrl('logo', settings?.logo_path ?? null)
   const stampBlobUrl = useAuthedImageUrl('stamp', settings?.stamp_path ?? null)
+  const watermarkBlobUrl = useAuthedImageUrl('watermark', settings?.watermark_path ?? null)
 
   return (
-    <Card title="الشعار والختم" loading={settingsQuery.isLoading}>
+    <Card title="الشعار والختم والعلامة المائية" loading={settingsQuery.isLoading}>
       <Flex gap={24} wrap="wrap" align="flex-start">
         <Flex gap={16} wrap="wrap">
           <ImageSlot
@@ -165,6 +168,15 @@ export function LogoStampSettingsTab() {
             onRemove={() => saveMutation.mutate({ removeStamp: true })}
             onToggleUse={(checked) => saveMutation.mutate({ useStamp: checked })}
           />
+          <ImageSlot
+            title="العلامة المائية"
+            imageUrl={settings?.watermark_url ?? null}
+            uploading={saveMutation.isPending}
+            useEnabled={settings?.use_watermark ?? false}
+            onUpload={(file) => saveMutation.mutate({ watermark: file })}
+            onRemove={() => saveMutation.mutate({ removeWatermark: true })}
+            onToggleUse={(checked) => saveMutation.mutate({ useWatermark: checked })}
+          />
         </Flex>
 
         <div style={{ width: 420, maxWidth: '100%' }}>
@@ -175,8 +187,10 @@ export function LogoStampSettingsTab() {
             <FacilityPdfPreview
               logoSrc={logoBlobUrl}
               stampSrc={stampBlobUrl}
+              watermarkSrc={watermarkBlobUrl}
               useLogo={settings?.use_logo ?? true}
               useStamp={settings?.use_stamp ?? true}
+              useWatermark={settings?.use_watermark ?? false}
               facilityName={settings?.name}
               facilityPhone={settings?.phone}
               facilityEmail={settings?.email}

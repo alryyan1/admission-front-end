@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Card, Button, Listy, Tag, Typography, Flex, Space } from 'antd'
+import { Card, Button, Table, Tag, Typography, Flex, Space } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { formatDateTime } from '@/lib/utils'
 import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
 import type { Operation, OperationPriority, OperationStatus } from '@/types/admission'
@@ -9,6 +10,7 @@ const { Text } = Typography
 
 interface OperationsTabProps {
   operations: Operation[]
+  loading?: boolean
   onSchedule: (payload: {
     surgeon_id: number
     operation_room_id?: number | null
@@ -20,7 +22,7 @@ interface OperationsTabProps {
     requested_by_doctor_id?: number
     scheduled_at: string
     notes?: string
-  }) => void
+  }) => Promise<unknown>
   isSubmitting: boolean
 }
 
@@ -50,9 +52,45 @@ const PRIORITY_COLORS: Record<OperationPriority, string> = {
   scheduled: 'default',
 }
 
-export function OperationsTab({ operations, onSchedule, isSubmitting }: OperationsTabProps) {
+export function OperationsTab({ operations, loading, onSchedule, isSubmitting }: OperationsTabProps) {
   const navigate = useNavigate()
   const [scheduleOpen, setScheduleOpen] = useState(false)
+
+  const columns: ColumnsType<Operation> = [
+    {
+      title: 'الإجراء',
+      key: 'procedure',
+      render: (_, op) => (
+        <Space size={4}>
+          <Text strong>{op.procedure?.name_ar ?? '—'}</Text>
+          {op.procedure?.category && <Tag>{op.procedure.category.name}</Tag>}
+        </Space>
+      ),
+    },
+    { title: 'رقم العملية', dataIndex: 'operation_number', key: 'operation_number', render: (v) => v ?? '—' },
+    { title: 'الجراح', key: 'surgeon', render: (_, op) => op.surgeon?.name ?? '—' },
+    { title: 'غرفة العمليات', key: 'room', render: (_, op) => op.operation_room?.room_number ?? '—' },
+    { title: 'الموعد', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
+    {
+      title: 'الأولوية',
+      key: 'priority',
+      render: (_, op) => <Tag color={PRIORITY_COLORS[op.priority]}>{PRIORITY_LABELS[op.priority]}</Tag>,
+    },
+    {
+      title: 'الحالة',
+      key: 'status',
+      render: (_, op) => <Tag color={STATUS_COLORS[op.status]}>{STATUS_LABELS[op.status]}</Tag>,
+    },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, op) => (
+        <Button size="small" onClick={() => navigate(`/operations/${op.id}`)}>
+          إدارة
+        </Button>
+      ),
+    },
+  ]
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -62,53 +100,27 @@ export function OperationsTab({ operations, onSchedule, isSubmitting }: Operatio
         </Button>
       </Flex>
 
-      <Card>
-        {operations.length === 0 ? (
-          <Text type="secondary">لا توجد عمليات مجدولة بعد</Text>
-        ) : (
-          <Listy
-            items={operations}
-            rowKey="id"
-            itemRender={(operation, index) => (
-              <Flex
-                justify="space-between"
-                align="center"
-                gap={16}
-                style={{
-                  padding: '12px 0',
-                  borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined,
-                }}
-              >
-                <div>
-                  <Space size={8}>
-                    <Text strong>{operation.procedure?.name_ar ?? '—'}</Text>
-                    {operation.procedure?.category && <Tag>{operation.procedure.category.name}</Tag>}
-                    <Tag color={PRIORITY_COLORS[operation.priority]}>{PRIORITY_LABELS[operation.priority]}</Tag>
-                    <Tag color={STATUS_COLORS[operation.status]}>{STATUS_LABELS[operation.status]}</Tag>
-                  </Space>
-                  <div>
-                    <Text type="secondary" style={{ fontSize: 13 }}>
-                      {operation.operation_number ?? '—'} · د. {operation.surgeon?.name ?? '—'}
-                      {operation.operation_room && ` · غرفة ${operation.operation_room.room_number}`}
-                      {' · '}
-                      {formatDateTime(operation.scheduled_at)}
-                    </Text>
-                  </div>
-                </div>
-                <Button size="small" onClick={() => navigate(`/operations/${operation.id}`)}>
-                  إدارة
-                </Button>
-              </Flex>
-            )}
-          />
-        )}
+      <Card size="small">
+        <Table
+          size="small"
+          rowKey="id"
+          columns={columns}
+          dataSource={operations}
+          loading={loading}
+          pagination={false}
+          locale={{ emptyText: 'لا توجد عمليات مجدولة بعد' }}
+          onRow={(op) => ({
+            className: 'cursor-pointer',
+            onClick: () => navigate(`/operations/${op.id}`),
+          })}
+        />
       </Card>
 
       <ScheduleOperationModal
         open={scheduleOpen}
         onClose={() => setScheduleOpen(false)}
-        onSchedule={(payload) => {
-          onSchedule(payload)
+        onSchedule={async (payload) => {
+          await onSchedule(payload)
           setScheduleOpen(false)
         }}
         isSubmitting={isSubmitting}

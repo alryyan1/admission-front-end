@@ -146,7 +146,13 @@ export function OperationDetailPage() {
   })
   const addSupplyMutation = useMutation({
     mutationFn: (payload: Parameters<typeof addOperationSupply>[1]) => addOperationSupply(id, payload),
-    onSuccess: invalidate,
+    onSuccess: () => {
+      invalidate()
+      setSupplyModalOpen(false)
+      setSupplyName('')
+      setSupplyQuantity(1)
+      setSupplyUnit('')
+    },
   })
   const removeSupplyMutation = useMutation({
     mutationFn: (supplyId: number) => removeOperationSupply(id, supplyId),
@@ -166,6 +172,7 @@ export function OperationDetailPage() {
   const membersWatch = Form.useWatch('members', bulkTeamForm)
   const defaultTeamRoleId = teamRolesQuery.data?.find((r) => r.slug === 'assistant_surgeon')?.id
 
+  const [supplyModalOpen, setSupplyModalOpen] = useState(false)
   const [supplyName, setSupplyName] = useState('')
   const [supplyQuantity, setSupplyQuantity] = useState<number | null>(1)
   const [supplyUnit, setSupplyUnit] = useState('')
@@ -230,9 +237,6 @@ export function OperationDetailPage() {
   function handleAddSupply() {
     if (!supplyName.trim()) return
     addSupplyMutation.mutate({ name: supplyName, quantity: supplyQuantity ?? 1, unit: supplyUnit || undefined })
-    setSupplyName('')
-    setSupplyQuantity(1)
-    setSupplyUnit('')
   }
 
   function handleComplete() {
@@ -439,9 +443,14 @@ export function OperationDetailPage() {
                 <Divider style={{ margin: 0 }} />
 
                 <div>
-                  <Title level={5} style={{ margin: '0 0 8px' }}>
-                    المستلزمات
-                  </Title>
+                  <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+                    <Title level={5} style={{ margin: 0 }}>
+                      المستلزمات
+                    </Title>
+                    <Button size="small" onClick={() => setSupplyModalOpen(true)}>
+                      إضافة مستلزم
+                    </Button>
+                  </Flex>
                   {(operation.supplies ?? []).length === 0 ? (
                     <Text type="secondary">لم تُضف مستلزمات بعد</Text>
                   ) : (
@@ -464,25 +473,6 @@ export function OperationDetailPage() {
                       )}
                     />
                   )}
-                  <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginTop: 8 }}>
-                    <FieldLabel label="الاسم">
-                      <Input style={{ width: 176 }} value={supplyName} onChange={(e) => setSupplyName(e.target.value)} />
-                    </FieldLabel>
-                    <FieldLabel label="الكمية">
-                      <InputNumber
-                        style={{ width: 80 }}
-                        min={1}
-                        value={supplyQuantity}
-                        onChange={(value) => setSupplyQuantity(typeof value === 'number' ? value : null)}
-                      />
-                    </FieldLabel>
-                    <FieldLabel label="الوحدة">
-                      <Input style={{ width: 96 }} value={supplyUnit} onChange={(e) => setSupplyUnit(e.target.value)} />
-                    </FieldLabel>
-                    <Button size="small" onClick={handleAddSupply} loading={addSupplyMutation.isPending}>
-                      إضافة
-                    </Button>
-                  </Flex>
                 </div>
               </Space>
             </Col>
@@ -659,6 +649,37 @@ export function OperationDetailPage() {
             )}
           </Form.List>
         </Form>
+      </Modal>
+
+      <Modal
+        title="إضافة مستلزم"
+        open={supplyModalOpen}
+        onCancel={() => setSupplyModalOpen(false)}
+        onOk={handleAddSupply}
+        okText="إضافة"
+        cancelText="إلغاء"
+        confirmLoading={addSupplyMutation.isPending}
+        okButtonProps={{ disabled: !supplyName.trim() }}
+        destroyOnClose
+      >
+        <Space direction="vertical" size={12} style={{ width: '100%' }}>
+          <FieldLabel label="الاسم">
+            <Input value={supplyName} onChange={(e) => setSupplyName(e.target.value)} />
+          </FieldLabel>
+          <Flex gap={8}>
+            <FieldLabel label="الكمية">
+              <InputNumber
+                style={{ width: '100%' }}
+                min={1}
+                value={supplyQuantity}
+                onChange={(value) => setSupplyQuantity(typeof value === 'number' ? value : null)}
+              />
+            </FieldLabel>
+            <FieldLabel label="الوحدة">
+              <Input value={supplyUnit} onChange={(e) => setSupplyUnit(e.target.value)} />
+            </FieldLabel>
+          </Flex>
+        </Space>
       </Modal>
     </ConfigProvider>
   )

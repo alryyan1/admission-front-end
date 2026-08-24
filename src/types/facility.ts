@@ -10,8 +10,11 @@ export interface FacilitySettings {
   logo_url: string | null
   stamp_path: string | null
   stamp_url: string | null
+  watermark_path: string | null
+  watermark_url: string | null
   use_logo: boolean
   use_stamp: boolean
+  use_watermark: boolean
 }
 
 export interface Floor {

@@ -1,5 +1,6 @@
 import type { Bed, Room } from '@/types/facility'
 import type { Doctor, Patient } from '@/types/patient'
+import type { PaymentMethod } from '@/types/paymentMethod'
 
 export type AdmissionStatus = 'admitted' | 'discharged' | 'cancelled'
 export type AdmissionType = 'inpatient' | 'short_stay'
@@ -66,7 +67,8 @@ export interface AdmissionDeposit {
   id: number
   admission_id: number
   amount: string
-  method: 'cash' | 'bank' | 'fawry' | 'ocash'
+  payment_method_id: number | null
+  payment_method?: PaymentMethod | null
   paid_at: string
 }
 
@@ -87,6 +89,11 @@ export interface TeamRole {
   slug: string | null
   name: string
   is_protected: boolean
+}
+
+export interface Specialist {
+  id: number
+  name: string
 }
 
 export interface OperationTeamMember {
@@ -194,11 +201,6 @@ export interface Invoice {
 export interface AdmissionInvoice {
   admission_id: number
   patient: Patient
-  billing_mode: 'daily' | 'short_stay'
-  nights_stayed: number | null
-  price_per_day: number | null
-  admission_duration_hours: 12 | 24 | null
-  bed_charges: number
   requested_services: RequestedService[]
   services_total: number
   total: number
