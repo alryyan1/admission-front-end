@@ -43,6 +43,7 @@ const ROOM_TYPE_STYLE: Record<Room['room_type'], { label: string; color: string;
   normal: { label: 'عادية', color: '#94a3b8', bg: '#f8fafc', tagColor: 'default' },
   vip: { label: 'VIP', color: '#d4af37', bg: '#fdf8e9', tagColor: 'gold' },
   operation: { label: 'عمليات', color: '#dc2626', bg: '#fef2f2', tagColor: 'red' },
+  ward: { label: 'عنبر', color: '#2563eb', bg: '#eff6ff', tagColor: 'blue' },
 }
 
 type DeleteTarget = { type: 'floor' | 'ward' | 'room' | 'bed'; id: number; label: string }

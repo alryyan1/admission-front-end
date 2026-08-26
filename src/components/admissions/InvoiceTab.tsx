@@ -1,6 +1,12 @@
-import { Card, Table, Tag, Button, Typography, Divider, Space, Flex, Spin } from 'antd'
+import { useEffect, useRef, useState } from 'react'
+import { pdf } from '@react-pdf/renderer'
+import { toast } from 'sonner'
+import { Card, Table, Tag, Button, Typography, Divider, Space, Flex, Spin, Modal } from 'antd'
+import { FileDown, Printer } from 'lucide-react'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
+import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
+import { InvoicePdfDocument } from '@/components/admissions/InvoicePdfDocument'
 import type { AdmissionInvoice, Invoice, InvoiceStatus, RequestedService } from '@/types/admission'
 
 const { Title, Text } = Typography
@@ -52,6 +58,17 @@ export function InvoiceTab({
   onMarkPaid,
   isGenerating,
 }: InvoiceTabProps) {
+  const { assets: pdfAssets } = useFacilityPdfAssets()
+  const [isGeneratingDraft, setIsGeneratingDraft] = useState(false)
+  const [draftPreviewUrl, setDraftPreviewUrl] = useState<string | null>(null)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl)
+    }
+  }, [draftPreviewUrl])
+
   if (isLoading || !invoice) {
     return (
       <Flex align="center" gap={8}>
@@ -59,6 +76,39 @@ export function InvoiceTab({
         <Text>جارٍ تحميل الفاتورة...</Text>
       </Flex>
     )
+  }
+
+  async function handleOpenDraftPreview() {
+    if (!invoice) return
+    setIsGeneratingDraft(true)
+    try {
+      const blob = await pdf(
+        <InvoicePdfDocument
+          assets={pdfAssets}
+          patientName={invoice.patient.name}
+          admissionId={invoice.admission_id}
+          services={invoice.requested_services}
+          servicesTotal={invoice.services_total}
+          depositsTotal={invoice.deposits_total}
+          balanceDue={invoice.balance_due}
+          total={invoice.total}
+        />,
+      ).toBlob()
+      setDraftPreviewUrl(URL.createObjectURL(blob))
+    } catch {
+      toast.error('تعذر إنشاء ملف PDF')
+    } finally {
+      setIsGeneratingDraft(false)
+    }
+  }
+
+  function handleCloseDraftPreview() {
+    if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl)
+    setDraftPreviewUrl(null)
+  }
+
+  function handlePrintDraft() {
+    iframeRef.current?.contentWindow?.print()
   }
 
   const serviceColumns: ColumnsType<RequestedService> = [
@@ -88,15 +138,21 @@ export function InvoiceTab({
   ]
 
   return (
+    <>
     <Space direction="vertical" size={16} style={{ maxWidth: 576, width: '100%' }}>
       <Card>
         <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
           <Title level={4} style={{ margin: 0 }}>
             فاتورة التنويم — {invoice.patient.name}
           </Title>
-          <Button type="primary" onClick={onGenerateInvoice} loading={isGenerating}>
-            إصدار فاتورة
-          </Button>
+          <Space>
+            <Button icon={<FileDown className="h-4 w-4" />} onClick={handleOpenDraftPreview} loading={isGeneratingDraft}>
+              فاتورة مبدئية
+            </Button>
+            <Button type="primary" onClick={onGenerateInvoice} loading={isGenerating}>
+              إصدار فاتورة
+            </Button>
+          </Space>
         </Flex>
 
         <Title level={5} style={{ marginBottom: 8 }}>
@@ -142,5 +198,31 @@ export function InvoiceTab({
         </Card>
       )}
     </Space>
+
+    <Modal
+      open={!!draftPreviewUrl}
+      onCancel={handleCloseDraftPreview}
+      width={860}
+      title="معاينة الفاتورة المبدئية"
+      destroyOnHidden
+      footer={[
+        <Button key="close" onClick={handleCloseDraftPreview}>
+          إغلاق
+        </Button>,
+        <Button key="print" type="primary" icon={<Printer className="h-4 w-4" />} onClick={handlePrintDraft}>
+          طباعة
+        </Button>,
+      ]}
+    >
+      {draftPreviewUrl && (
+        <iframe
+          ref={iframeRef}
+          src={draftPreviewUrl}
+          title="معاينة الفاتورة المبدئية"
+          style={{ width: '100%', height: 640, border: 'none' }}
+        />
+      )}
+    </Modal>
+    </>
   )
 }

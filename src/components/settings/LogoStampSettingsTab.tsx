@@ -1,50 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Card, Button, Space, Typography, Flex, Switch } from 'antd'
 import { Upload, Trash2 } from 'lucide-react'
-import {
-  getFacilitySettings,
-  updateFacilitySettings,
-  getFacilityLogoBlob,
-  getFacilityStampBlob,
-  getFacilityWatermarkBlob,
-} from '@/services/facilityService'
+import { getFacilitySettings, updateFacilitySettings } from '@/services/facilityService'
+import { useAuthedImageUrl } from '@/hooks/useAuthedImageUrl'
 import { FacilityPdfPreview } from '@/components/settings/FacilityPdfPreview'
 
 const { Text } = Typography
-
-export function useAuthedImageUrl(kind: 'logo' | 'stamp' | 'watermark', cacheKey: string | null) {
-  const [url, setUrl] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!cacheKey) {
-      setUrl(null)
-      return
-    }
-    let cancelled = false
-    let objectUrl: string | null = null
-
-    ;(async () => {
-      try {
-        const blob =
-          kind === 'logo' ? await getFacilityLogoBlob() : kind === 'stamp' ? await getFacilityStampBlob() : await getFacilityWatermarkBlob()
-        if (cancelled) return
-        objectUrl = URL.createObjectURL(blob)
-        setUrl(objectUrl)
-      } catch {
-        if (!cancelled) setUrl(null)
-      }
-    })()
-
-    return () => {
-      cancelled = true
-      if (objectUrl) URL.revokeObjectURL(objectUrl)
-    }
-  }, [kind, cacheKey])
-
-  return url
-}
 
 function ImageSlot({
   title,

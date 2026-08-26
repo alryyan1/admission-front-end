@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { Card, Button, Flex, Form, Input, Typography } from 'antd'
 import { Save } from 'lucide-react'
 import { getFacilitySettings, updateFacilitySettings } from '@/services/facilityService'
-import { useAuthedImageUrl } from '@/components/settings/LogoStampSettingsTab'
+import { useAuthedImageUrl } from '@/hooks/useAuthedImageUrl'
 import { FacilityPdfPreview } from '@/components/settings/FacilityPdfPreview'
 
 const { Text } = Typography

@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
+import dayjs from 'dayjs'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -10,7 +11,7 @@ export function formatNumber(value: number | string): string {
 }
 
 export function formatDate(value: string | Date): string {
-  return new Date(value).toLocaleDateString('en-US')
+  return dayjs(value).format('DD/MM/YYYY')
 }
 
 export function formatDateTime(value: string | Date): string {

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip } from 'antd'
+import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip, Divider } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { getAdmissions } from '@/services/admissionService'
@@ -9,6 +9,7 @@ import { getRooms, getBeds } from '@/services/facilityService'
 import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Admission, AdmissionStatus } from '@/types/admission'
+import type { Room } from '@/types/facility'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const { Title } = Typography
@@ -18,6 +19,13 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
   admitted: 'نشطة',
   discharged: 'مخرّجة',
   cancelled: 'ملغاة',
+}
+
+const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
+  normal: { label: 'عادية', color: 'default' },
+  vip: { label: 'VIP', color: 'gold' },
+  operation: { label: 'عمليات', color: 'red' },
+  ward: { label: 'عنبر', color: 'cyan' },
 }
 
 const STATUS_TABS: { key: AdmissionStatus; label: string }[] = [
@@ -76,38 +84,45 @@ export function AdmissionsPage() {
       ),
     },
     {
-      title: 'السرير',
+      title: 'الطابق',
+      key: 'floor',
+      render: (_, admission) =>
+        admission.bed?.room?.ward?.floor?.name ? (
+          <Tag color="purple">{admission.bed.room.ward.floor.name}</Tag>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      title: 'الجناح',
+      key: 'ward',
+      render: (_, admission) =>
+        admission.bed?.room?.ward?.name ? <Tag color="blue">{admission.bed.room.ward.name}</Tag> : '—',
+    },
+    {
+      title: 'نوع الغرفة',
+      key: 'room_type',
+      render: (_, admission) =>
+        admission.bed?.room?.room_type ? (
+          <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color}>
+            {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
+          </Tag>
+        ) : (
+          '—'
+        ),
+    },
+    {
+      title: 'الغرفة / السرير',
       key: 'bed',
       render: (_, admission) => {
-        const tagStyle: React.CSSProperties = {
-          width: 90,
-          textAlign: 'center',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-        }
+        const roomNumber = admission.bed?.room?.room_number
+        const bedNumber = admission.bed?.bed_number
+        if (!roomNumber && !bedNumber) return '—'
         return (
-          <Flex gap={4} wrap="wrap">
-            {admission.bed?.room?.ward?.floor?.name && (
-              <Tag color="purple" style={tagStyle}>
-                {admission.bed.room.ward.floor.name}
-              </Tag>
-            )}
-            {admission.bed?.room?.ward?.name && (
-              <Tag color="blue" style={tagStyle}>
-                {admission.bed.room.ward.name}
-              </Tag>
-            )}
-            {admission.bed?.room?.room_number && (
-              <Tag color="green" style={tagStyle}>
-                غرفة {admission.bed.room.room_number}
-              </Tag>
-            )}
-            {admission.bed?.bed_number && (
-              <Tag color="orange" style={tagStyle}>
-                سرير {admission.bed.bed_number}
-              </Tag>
-            )}
+          <Flex align="center">
+            {roomNumber && <Tag color="green">غرفة {roomNumber}</Tag>}
+            {roomNumber && bedNumber && <Divider vertical />}
+            {bedNumber && <Tag color="orange">سرير {bedNumber}</Tag>}
           </Flex>
         )
       },
@@ -145,15 +160,7 @@ export function AdmissionsPage() {
         )
       },
     },
-    {
-      title: 'الحالة',
-      key: 'status',
-      render: (_, admission) => (
-        <Tag color={admission.status === 'admitted' ? 'success' : 'default'}>
-          {STATUS_LABEL[admission.status] ?? admission.status}
-        </Tag>
-      ),
-    },
+
   ]
 
   return (
@@ -203,12 +210,20 @@ export function AdmissionsPage() {
               setRoomId(value ?? null)
               setBedId(null)
             }}
-            options={(roomsQuery.data ?? []).map((room) => ({
-              value: room.id,
-              label: [room.ward?.floor?.name, room.ward?.name, `غرفة ${room.room_number}`]
-                .filter(Boolean)
-                .join(' — '),
-            }))}
+            options={[...(roomsQuery.data ?? [])]
+              .sort((a, b) => {
+                const floorCompare = (a.ward?.floor?.id ?? 0) - (b.ward?.floor?.id ?? 0)
+                if (floorCompare !== 0) return floorCompare
+                const wardCompare = (a.ward?.id ?? 0) - (b.ward?.id ?? 0)
+                if (wardCompare !== 0) return wardCompare
+                return a.room_number.localeCompare(b.room_number)
+              })
+              .map((room) => ({
+                value: room.id,
+                label: [room.ward?.floor?.name, room.ward?.name, `غرفة ${room.room_number}`]
+                  .filter(Boolean)
+                  .join(' — '),
+              }))}
           />
           <Select
             style={{ width: 160 }}

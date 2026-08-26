@@ -17,6 +17,7 @@ import {
   Box,
   Typography,
   ListItemText,
+  MenuItem,
 } from '@mui/material'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getAvailableBeds, getFloors, getRooms, getWards } from '@/services/facilityService'
@@ -59,6 +60,12 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [diagnosis, setDiagnosis] = useState('')
   const [notes, setNotes] = useState('')
 
+  const [createPatientOpen, setCreatePatientOpen] = useState(false)
+  const [newPatientName, setNewPatientName] = useState('')
+  const [newPatientPhone, setNewPatientPhone] = useState('')
+  const [newPatientGender, setNewPatientGender] = useState<'male' | 'female' | ''>('')
+  const [newPatientAgeYear, setNewPatientAgeYear] = useState('')
+
   const floorInputRef = useRef<HTMLInputElement>(null)
   const wardInputRef = useRef<HTMLInputElement>(null)
   const roomInputRef = useRef<HTMLInputElement>(null)
@@ -67,6 +74,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const doctorInputRef = useRef<HTMLInputElement>(null)
   const diagnosisInputRef = useRef<HTMLInputElement>(null)
   const notesInputRef = useRef<HTMLTextAreaElement>(null)
+  const newPatientNameInputRef = useRef<HTMLInputElement>(null)
 
   function focusField(ref: React.RefObject<HTMLElement | null>) {
     setTimeout(() => ref.current?.focus(), 50)
@@ -117,6 +125,17 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     },
   })
 
+  const createPatientMutation = useMutation({
+    mutationFn: createLocalPatient,
+    onSuccess: (patient) => {
+      toast.success('تم إضافة المريض')
+      setSelectedPatient(patient)
+      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      setCreatePatientOpen(false)
+      focusField(floorInputRef)
+    },
+  })
+
   const admitMutation = useMutation({
     mutationFn: createAdmission,
     onSuccess: (admission) => {
@@ -124,7 +143,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       queryClient.invalidateQueries({ queryKey: ['admissions'] })
       queryClient.invalidateQueries({ queryKey: ['floors'] })
       resetAndClose()
-      navigate(`/admissions/${admission.id}`)
+      navigate(`/admissions/${admission.id}?tab=billing`)
     },
   })
 
@@ -140,14 +159,29 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setDurationHours('')
     setDiagnosis('')
     setNotes('')
+    setCreatePatientOpen(false)
+    setNewPatientName('')
+    setNewPatientPhone('')
+    setNewPatientGender('')
+    setNewPatientAgeYear('')
     onClose()
   }
 
-  function handleCreateWalkIn() {
-    if (!search.trim()) return
-    createLocalPatient({ name: search.trim() }).then((patient) => {
-      setSelectedPatient(patient)
-      focusField(floorInputRef)
+  function openCreatePatientDialog(name: string) {
+    setNewPatientName(name.trim())
+    setNewPatientPhone('')
+    setNewPatientGender('')
+    setNewPatientAgeYear('')
+    setCreatePatientOpen(true)
+  }
+
+  function handleCreatePatientSubmit() {
+    if (!newPatientName.trim()) return
+    createPatientMutation.mutate({
+      name: newPatientName.trim(),
+      phone: newPatientPhone.trim() || undefined,
+      gender: newPatientGender || undefined,
+      age_year: newPatientAgeYear ? Number(newPatientAgeYear) : undefined,
     })
   }
 
@@ -168,12 +202,11 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   }
 
   const isSearchingPatients = localResultsQuery.isLoading || jawdaResultsQuery.isLoading
-  const hasNoPatientMatches =
-    debouncedSearch.length >= 2 && !isSearchingPatients && !localResultsQuery.data?.length && !jawdaResultsQuery.data?.length
+  const canOfferCreate = debouncedSearch.trim().length >= 2 && !isSearchingPatients
   const patientSearchOptions: PatientSearchOption[] = [
     ...(localResultsQuery.data ?? []).map((patient) => ({ kind: 'local' as const, patient })),
     ...(jawdaResultsQuery.data ?? []).map((patient) => ({ kind: 'jawda' as const, patient })),
-    ...(hasNoPatientMatches ? [{ kind: 'create' as const, name: search }] : []),
+    ...(canOfferCreate ? [{ kind: 'create' as const, name: search }] : []),
   ]
 
   const selectedFloor = floorsQuery.data?.find((floor) => floor.id === floorId) ?? null
@@ -182,8 +215,14 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const selectedDuration = DURATION_OPTIONS.find((option) => option.value === durationHours) ?? null
 
   return (
-    <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm">
-      <DialogTitle>تنويم مريض جديد</DialogTitle>
+    <>
+    <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm" disableEnforceFocus={createPatientOpen}>
+      <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        تنويم مريض جديد
+        <Button size="small" onClick={() => openCreatePatientDialog(search)}>
+          + مريض جديد
+        </Button>
+      </DialogTitle>
 
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
@@ -203,7 +242,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                   setSelectedPatient(option.patient)
                   focusField(floorInputRef)
                 } else if (option.kind === 'jawda') importMutation.mutate(option.patient)
-                else handleCreateWalkIn()
+                else openCreatePatientDialog(option.name)
               }}
               getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.patient.name)}
               noOptionsText={search.length < 2 ? 'اكتب حرفين على الأقل' : 'لا توجد نتائج'}
@@ -321,7 +360,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setDurationHours('')
                 if (room) focusField(bedInputRef)
               }}
-              renderInput={(params) => <TextField {...params} label="الغرفة" inputRef={roomInputRef} />}
+              renderInput={(params) => <TextField {...params} label="العنبر/الغرفة" inputRef={roomInputRef} />}
             />
 
             <Autocomplete
@@ -433,5 +472,75 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
         </Button>
       </DialogActions>
     </Dialog>
+
+    <Dialog
+      open={createPatientOpen}
+      onClose={() => setCreatePatientOpen(false)}
+      fullWidth
+      maxWidth="xs"
+      slotProps={{ transition: { onEntered: () => newPatientNameInputRef.current?.focus() } }}
+    >
+      <DialogTitle>إضافة مريض جديد</DialogTitle>
+      <DialogContent>
+        <Stack
+          component="form"
+          id="create-patient-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleCreatePatientSubmit()
+          }}
+          spacing={2.5}
+          sx={{ pt: 1 }}
+        >
+          <TextField
+            inputRef={newPatientNameInputRef}
+            label="اسم المريض"
+            fullWidth
+            size="small"
+            value={newPatientName}
+            onChange={(e) => setNewPatientName(e.target.value)}
+          />
+          <TextField
+            label="رقم الهاتف"
+            fullWidth
+            size="small"
+            value={newPatientPhone}
+            onChange={(e) => setNewPatientPhone(e.target.value)}
+          />
+          <TextField
+            select
+            label="الجنس"
+            fullWidth
+            size="small"
+            value={newPatientGender}
+            onChange={(e) => setNewPatientGender(e.target.value as 'male' | 'female' | '')}
+          >
+            <MenuItem value="">غير محدد</MenuItem>
+            <MenuItem value="male">ذكر</MenuItem>
+            <MenuItem value="female">أنثى</MenuItem>
+          </TextField>
+          <TextField
+            label="العمر (سنوات)"
+            type="number"
+            fullWidth
+            size="small"
+            value={newPatientAgeYear}
+            onChange={(e) => setNewPatientAgeYear(e.target.value)}
+          />
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setCreatePatientOpen(false)}>إلغاء</Button>
+        <Button
+          type="submit"
+          form="create-patient-form"
+          variant="contained"
+          disabled={!newPatientName.trim() || createPatientMutation.isPending}
+        >
+          إضافة
+        </Button>
+      </DialogActions>
+    </Dialog>
+    </>
   )
 }

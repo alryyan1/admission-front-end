@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card, InputNumber, Select, Table, Button, Typography, Row, Col, Flex, Space, Popconfirm } from 'antd'
+import { Card, InputNumber, Select, Table, Button, Typography, Row, Col, Flex, Space, Popconfirm, Tooltip } from 'antd'
+import { ThunderboltFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { getServices } from '@/services/serviceService'
@@ -17,11 +18,13 @@ interface BillingTabProps {
   onAddDeposit: (payload: { amount: number; payment_method_id?: number }) => void
   onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
   onRemoveService: (serviceId: number) => void
+  onRemoveDeposit: (depositId: number) => void
   onCalculateAccommodationFee: () => void
   isSubmittingService: boolean
   isSubmittingDeposit: boolean
   isUpdatingService: boolean
   isRemovingService: boolean
+  isRemovingDeposit: boolean
   isCalculatingAccommodationFee: boolean
 }
 
@@ -81,11 +84,13 @@ export function BillingTab({
   onAddDeposit,
   onUpdateService,
   onRemoveService,
+  onRemoveDeposit,
   onCalculateAccommodationFee,
   isSubmittingService,
   isSubmittingDeposit,
   isUpdatingService,
   isRemovingService,
+  isRemovingDeposit,
   isCalculatingAccommodationFee,
 }: BillingTabProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
@@ -128,7 +133,21 @@ export function BillingTab({
   }
 
   const serviceColumns: ColumnsType<RequestedService> = [
-    { title: 'الخدمة', dataIndex: 'name', key: 'name' },
+    {
+      title: 'الخدمة',
+      dataIndex: 'name',
+      key: 'name',
+      render: (name: string, s) => (
+        <Space size={6}>
+          {name}
+          {s.is_auto_added && (
+            <Tooltip title="تمت إضافتها تلقائياً">
+              <ThunderboltFilled style={{ color: '#faad14' }} />
+            </Tooltip>
+          )}
+        </Space>
+      ),
+    },
     {
       title: 'الكمية',
       key: 'quantity',
@@ -175,6 +194,21 @@ export function BillingTab({
     { title: 'التاريخ', key: 'paid_at', render: (_, d) => formatDate(d.paid_at) },
     { title: 'المبلغ', key: 'amount', render: (_, d) => formatNumber(d.amount) },
     { title: 'الطريقة', key: 'method', render: (_, d) => d.payment_method?.name ?? '—' },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, d) => (
+        <Popconfirm
+          title="حذف الدفعة؟"
+          description="لا يمكن التراجع عن هذا الإجراء."
+          onConfirm={() => onRemoveDeposit(d.id)}
+        >
+          <Button size="small" danger type="text" loading={isRemovingDeposit}>
+            إزالة
+          </Button>
+        </Popconfirm>
+      ),
+    },
   ]
 
   return (
@@ -208,7 +242,7 @@ export function BillingTab({
               />
             </FieldLabel>
             <FieldLabel label="الكمية">
-              <InputNumber style={{ width: 80 }} min={1} value={quantity} onChange={(v) => setQuantity(v)} />
+              <InputNumber style={{ width: 110 }} min={1} value={quantity} onChange={(v) => setQuantity(v)} />
             </FieldLabel>
             <FieldLabel label="سعر الوحدة">
               <InputNumber style={{ width: 112 }} min={0} value={unitPrice} onChange={(v) => setUnitPrice(v)} />

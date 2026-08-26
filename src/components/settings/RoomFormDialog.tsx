@@ -95,6 +95,7 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
               { value: 'normal', label: 'عادية' },
               { value: 'vip', label: 'VIP' },
               { value: 'operation', label: 'غرفة عمليات' },
+              { value: 'ward', label: 'عنبر' },
             ]}
           />
         </Form.Item>

@@ -7,7 +7,7 @@ import { ConfigProvider, Card, Tag, Typography, Row, Col, Flex, Space, Popover, 
 import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { getFloors, getFloor } from '@/services/facilityService'
-import type { BedStatus } from '@/types/facility'
+import type { BedStatus, Room } from '@/types/facility'
 
 const { Title, Text } = Typography
 
@@ -15,6 +15,13 @@ const BED_STATUS_LABEL: Record<BedStatus, string> = {
   available: 'متاح',
   occupied: 'مشغول',
   maintenance: 'صيانة',
+}
+
+const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
+  normal: { label: 'عادية', color: 'default' },
+  vip: { label: 'VIP', color: 'warning' },
+  operation: { label: 'عمليات', color: 'red' },
+  ward: { label: 'عنبر', color: 'blue' },
 }
 
 const BED_STATUS_COLORS: Record<BedStatus, { border: string; background: string; color: string }> = {
@@ -179,8 +186,8 @@ export function FacilityMapPage() {
                               <Text strong style={{ fontSize: 13 }}>
                                 غرفة {room.room_number}
                               </Text>
-                              <Tag color={room.room_type === 'vip' ? 'warning' : 'default'}>
-                                {room.room_type === 'vip' ? 'VIP' : 'عادية'}
+                              <Tag color={ROOM_TYPE_TAG[room.room_type].color}>
+                                {ROOM_TYPE_TAG[room.room_type].label}
                               </Tag>
                             </Flex>
                             {(room.beds ?? []).length === 0 ? (

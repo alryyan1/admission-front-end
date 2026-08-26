@@ -21,6 +21,7 @@ import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
 import { OperationDetailPage } from '@/pages/operations/OperationDetailPage'
 import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
+import { CashierPage } from '@/pages/cashier/CashierPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
 export const router = createBrowserRouter([
@@ -46,6 +47,10 @@ export const router = createBrowserRouter([
               { path: '/operations', element: <OperationsPage /> },
               { path: '/operations/:operationId', element: <OperationDetailPage /> },
               { path: '/statistics', element: <StatisticsPage /> },
+              {
+                element: <RequireRole roles={['admin', 'cashier']} />,
+                children: [{ path: '/cashier', element: <CashierPage /> }],
+              },
               {
                 element: <RequireRole roles={['admin']} />,
                 children: [

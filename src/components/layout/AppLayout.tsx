@@ -34,6 +34,7 @@ const navItems: NavItem[] = [
   { to: '/facility-map', label: 'خريطة المستشفى' },
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
+  { to: '/cashier', label: 'شاشة المحاسب', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [

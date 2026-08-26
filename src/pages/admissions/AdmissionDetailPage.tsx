@@ -10,6 +10,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { useAntTheme } from '@/lib/antdTheme'
+import { formatNumber } from '@/lib/utils'
 import { useTheme, ADMISSION_HEADER_FONT_SIZE_PX } from '@/contexts/ThemeContext'
 import {
   getAdmission,
@@ -19,6 +20,7 @@ import {
   addDoctorOrder,
   addDose,
   addDeposit,
+  removeDeposit,
   addRequestedService,
   updateRequestedService,
   removeRequestedService,
@@ -33,6 +35,7 @@ import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
 import { OrdersTab } from '@/components/admissions/OrdersTab'
 import { BillingTab } from '@/components/admissions/BillingTab'
+import { AccountStatementTab } from '@/components/admissions/AccountStatementTab'
 import { InvoiceTab } from '@/components/admissions/InvoiceTab'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { PageLoader } from '@/components/common/PageLoader'
@@ -53,6 +56,7 @@ const TAB_ITEMS = [
   { key: 'vitals', label: 'العلامات الحيوية' },
   { key: 'orders', label: 'أوامر الأطباء' },
   { key: 'billing', label: 'الفوترة' },
+  { key: 'statement', label: 'كشف الحساب' },
   { key: 'operations', label: 'العمليات' },
   { key: 'invoice', label: 'الفاتورة' },
 ]
@@ -147,6 +151,11 @@ export function AdmissionDetailPage() {
     onSuccess: invalidateAdmission,
   })
 
+  const removeDepositMutation = useMutation({
+    mutationFn: (depositId: number) => removeDeposit(id, depositId),
+    onSuccess: invalidateAdmission,
+  })
+
   const serviceMutation = useMutation({
     mutationFn: (payload: Parameters<typeof addRequestedService>[1]) => addRequestedService(id, payload),
     onSuccess: invalidateAdmission,
@@ -184,6 +193,10 @@ export function AdmissionDetailPage() {
 
   const autoAddedServices = (admission.requested_services ?? []).filter((s) => s.is_auto_added)
 
+  const totalServices = (admission.requested_services ?? []).reduce((sum, s) => sum + Number(s.total_price), 0)
+  const totalDeposits = (admission.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
+  const dueBalance = totalServices - totalDeposits
+
   const headerBgColor = (() => {
     switch (admissionHeaderBg) {
       case 'fillAlter':
@@ -201,6 +214,10 @@ export function AdmissionDetailPage() {
 
   const { name: nameFontSize, secondary: secondaryFontSize } = ADMISSION_HEADER_FONT_SIZE_PX[admissionHeaderFontSize]
 
+  function sectionStyle(bg: string): React.CSSProperties {
+    return { flex: '1 1 220px', backgroundColor: bg, borderRadius: token.borderRadius, padding: '6px 10px' }
+  }
+
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Card
@@ -208,48 +225,67 @@ export function AdmissionDetailPage() {
         style={{ marginBottom: 12, backgroundColor: headerBgColor }}
         styles={{ body: { padding: '8px 14px' } }}
       >
-        <Flex justify="space-between" align="center" wrap="wrap" gap={10}>
-          <Flex align="center" gap={8} wrap="wrap">
-            <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary, flexShrink: 0 }} />
-            <Text strong style={{ fontSize: nameFontSize }}>
-              <Link to={`/patients/${admission.patient_id}`}>{admission.patient?.name}</Link>
-            </Text>
-            <Tag color={admission.status === 'admitted' ? 'success' : 'default'} style={{ marginInlineEnd: 0 }}>
-              {STATUS_LABEL[admission.status] ?? admission.status}
-            </Tag>
-            <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
-              <FileTextOutlined style={{ marginInlineEnd: 4 }} />
-              {admission.id != null ? `#${admission.id}` : '—'}
-            </Text>
-            {admission.patient?.gender && (
-              <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
-            )}
-            {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
-            {admission.patient?.blood_type && (
-              <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
-            )}
+        <Flex align="stretch" wrap="wrap" gap={10}>
+          <Flex
+            vertical
+            align="center"
+            gap={6}
+            style={{ ...sectionStyle(token.colorPrimaryBg), flex: '1 1 260px' }}
+          >
+            <Flex align="center" justify="center" gap={8}>
+              <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary, flexShrink: 0 }} />
+              <Text strong style={{ fontSize: nameFontSize, color: token.colorPrimaryTextActive }}>
+                <Link to={`/patients/${admission.patient_id}`} style={{ color: token.colorPrimaryTextActive }}>
+                  {admission.patient?.name}
+                </Link>
+              </Text>
+            </Flex>
+            <Flex align="center" justify="center" gap={8} wrap="wrap">
+              <Tag color={admission.status === 'admitted' ? 'success' : 'default'} style={{ marginInlineEnd: 0 }}>
+                {STATUS_LABEL[admission.status] ?? admission.status}
+              </Tag>
+              <Text style={{ fontSize: secondaryFontSize, color: token.colorPrimaryTextActive, fontWeight: 600 }}>
+                <FileTextOutlined style={{ marginInlineEnd: 4 }} />
+                {admission.id != null ? `#${admission.id}` : '—'}
+              </Text>
+              {admission.patient?.gender && (
+                <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
+              )}
+              {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
+              {admission.patient?.blood_type && (
+                <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
+              )}
+            </Flex>
           </Flex>
 
-          <Text type="secondary" style={{ fontSize: secondaryFontSize, whiteSpace: 'nowrap' }}>
-            <BankOutlined style={{ marginInlineEnd: 4 }} />
-            {admission.bed?.room?.ward?.floor?.name ?? '—'}
-            {' / '}
-            <ApartmentOutlined style={{ marginInlineEnd: 4 }} />
-            {admission.bed?.room?.ward?.name ?? '—'}
-            {' / '}
-            <HomeOutlined style={{ marginInlineEnd: 4 }} />
-            غرفة {admission.bed?.room?.room_number ?? '—'}
-            {' / '}
-            سرير {admission.bed?.bed_number ?? '—'}
-          </Text>
+          <Flex align="center" style={sectionStyle(token.colorPrimaryBg)}>
+            <Text style={{ fontSize: secondaryFontSize, whiteSpace: 'nowrap', color: token.colorPrimaryTextActive, fontWeight: 600 }}>
+              <BankOutlined style={{ marginInlineEnd: 4 }} />
+              {admission.bed?.room?.ward?.floor?.name ?? '—'}
+              {' / '}
+              <ApartmentOutlined style={{ marginInlineEnd: 4 }} />
+              {admission.bed?.room?.ward?.name ?? '—'}
+              {' / '}
+              <HomeOutlined style={{ marginInlineEnd: 4 }} />
+              غرفة {admission.bed?.room?.room_number ?? '—'}
+              {' / '}
+              سرير {admission.bed?.bed_number ?? '—'}
+            </Text>
+          </Flex>
 
-          <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
-            الطبيب: {admission.admitting_doctor?.name ?? '—'}
-            {admission.diagnosis && ` • التشخيص: ${admission.diagnosis}`}
-          </Text>
+          <Flex align="center" style={sectionStyle(token.colorPrimaryBg)}>
+            <Text style={{ fontSize: secondaryFontSize, color: token.colorPrimaryTextActive, fontWeight: 600 }}>
+              الطبيب: {admission.admitting_doctor?.name ?? '—'}
+              {admission.diagnosis && ` • التشخيص: ${admission.diagnosis}`}
+            </Text>
+          </Flex>
 
           {admission.status === 'admitted' && (
-            <Flex align="center" gap={6}>
+            <Flex
+              align="center"
+              gap={6}
+              style={sectionStyle(token.colorPrimaryBg)}
+            >
               <Button
                 size="small"
                 loading={cancelMutation.isPending}
@@ -267,6 +303,10 @@ export function AdmissionDetailPage() {
                 size="small"
                 loading={dischargeMutation.isPending}
                 onClick={() => {
+                  if (dueBalance > 0) {
+                    toast.error(`لا يمكن إخراج المريض، يوجد مبلغ مستحق قدره ${formatNumber(dueBalance)}`)
+                    return
+                  }
                   const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
                   dischargeMutation.mutate(summary)
                 }}
@@ -314,12 +354,23 @@ export function AdmissionDetailPage() {
           onAddDeposit={(payload) => depositMutation.mutate(payload)}
           onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
           onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}
+          onRemoveDeposit={(depositId) => removeDepositMutation.mutate(depositId)}
           onCalculateAccommodationFee={() => accommodationFeeMutation.mutate()}
           isSubmittingService={serviceMutation.isPending}
           isSubmittingDeposit={depositMutation.isPending}
           isUpdatingService={updateServiceMutation.isPending}
           isRemovingService={removeServiceMutation.isPending}
+          isRemovingDeposit={removeDepositMutation.isPending}
           isCalculatingAccommodationFee={accommodationFeeMutation.isPending}
+        />
+      )}
+
+      {tab === 'statement' && (
+        <AccountStatementTab
+          services={admission.requested_services ?? []}
+          deposits={admission.deposits ?? []}
+          patientName={admission.patient?.name ?? ''}
+          admissionId={admission.id}
         />
       )}
 

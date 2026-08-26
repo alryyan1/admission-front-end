@@ -42,7 +42,7 @@ export interface Room {
   id: number
   ward_id: number
   room_number: string
-  room_type: 'normal' | 'vip' | 'operation'
+  room_type: 'normal' | 'vip' | 'operation' | 'ward'
   capacity: number
   price_per_day: string | null
   is_short_stay: boolean

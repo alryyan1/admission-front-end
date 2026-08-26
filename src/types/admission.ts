@@ -80,6 +80,7 @@ export interface RequestedService {
   unit_price: string
   total_price: number
   is_auto_added: boolean
+  created_at: string
 }
 
 export type OperationStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
@@ -196,6 +197,33 @@ export interface Invoice {
   paid_at: string | null
   items?: InvoiceItem[]
   created_by?: { id: number; name: string } | null
+}
+
+export interface CashierAdmission {
+  id: number
+  admission_date: string
+  patient: Patient
+  bed?: Bed
+  services_total: number
+  deposits_total: number
+  balance_due: number
+}
+
+export interface CashierDepositsByPaymentMethod {
+  payment_method_id: number | null
+  payment_method_name: string
+  total: number
+}
+
+export interface CashierOverview {
+  summary: {
+    admissions_count: number
+    admissions_with_balance: number
+    total_outstanding: number
+    deposits_today: number
+    deposits_by_payment_method: CashierDepositsByPaymentMethod[]
+  }
+  admissions: CashierAdmission[]
 }
 
 export interface AdmissionInvoice {
