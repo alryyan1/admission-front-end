@@ -20,7 +20,6 @@ export function InlineEditableField({
   type = 'text',
   options,
 }: InlineEditableFieldProps) {
-  const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<FieldValue>(value)
   const [saving, setSaving] = useState(false)
 
@@ -32,34 +31,20 @@ export function InlineEditableField({
     return <>{displayValue ?? value ?? '—'}</>
   }
 
-  if (!editing) {
-    return (
-      <span
-        onClick={() => setEditing(true)}
-        style={{ cursor: 'pointer', borderBottom: '1px dashed #999' }}
-      >
-        {displayValue ?? value ?? '—'}
-      </span>
-    )
-  }
-
   const cancel = () => {
     setDraft(value)
-    setEditing(false)
   }
 
   const commit = async () => {
     const normalized = draft === '' ? null : draft
     if (normalized === value) {
-      setEditing(false)
       return
     }
     setSaving(true)
     try {
       await onSave(normalized)
-      setEditing(false)
     } catch {
-      // keep field open for retry on failure
+      // keep draft for retry on failure
     } finally {
       setSaving(false)
     }
@@ -68,8 +53,6 @@ export function InlineEditableField({
   if (type === 'select') {
     return (
       <Select
-        autoFocus
-        defaultOpen
         value={draft ?? undefined}
         options={options}
         disabled={saving}
@@ -84,7 +67,6 @@ export function InlineEditableField({
   if (type === 'number') {
     return (
       <InputNumber
-        autoFocus
         size="small"
         min={0}
         disabled={saving}
@@ -103,7 +85,6 @@ export function InlineEditableField({
   if (type === 'textarea') {
     return (
       <Input.TextArea
-        autoFocus
         size="small"
         disabled={saving}
         value={(draft as string) ?? ''}
@@ -124,7 +105,6 @@ export function InlineEditableField({
 
   return (
     <Input
-      autoFocus
       size="small"
       disabled={saving}
       value={(draft as string) ?? ''}

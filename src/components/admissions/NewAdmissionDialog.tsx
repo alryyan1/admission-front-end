@@ -515,9 +515,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             value={newPatientGender}
             onChange={(e) => setNewPatientGender(e.target.value as 'male' | 'female' | '')}
           >
-            <MenuItem value="">غير محدد</MenuItem>
             <MenuItem value="male">ذكر</MenuItem>
-            <MenuItem value="female">أنثى</MenuItem>
+            <MenuItem defaultValue={'female'} value="female">أنثى</MenuItem>
           </TextField>
           <TextField
             label="العمر (سنوات)"

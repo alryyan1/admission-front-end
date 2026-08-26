@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ConfigProvider, Card, Input, Button, Table, Tag, Switch, Popconfirm, Typography, Row, Col, Space } from 'antd'
+import { pdf } from '@react-pdf/renderer'
+import { ConfigProvider, Card, Input, Button, Table, Tag, Switch, Popconfirm, Typography, Row, Col, Space, Modal } from 'antd'
+import { PrinterOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
+import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import {
   getProcedureCategories,
   createProcedureCategory,
@@ -16,6 +19,7 @@ import {
 } from '@/services/procedureService'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { ProcedureFormModal } from '@/components/settings/ProcedureFormModal'
+import { ProcedureCatalogPdfDocument } from '@/components/settings/ProcedureCatalogPdfDocument'
 import type { Procedure } from '@/types/admission'
 
 const { Title, Text } = Typography
@@ -23,14 +27,45 @@ const { Title, Text } = Typography
 export function ProcedureCatalogSettingsPage() {
   const antTheme = useAntTheme()
   const queryClient = useQueryClient()
+  const { assets: pdfAssets } = useFacilityPdfAssets()
   const [newCategoryName, setNewCategoryName] = useState('')
   const [procedureModal, setProcedureModal] = useState<{ open: boolean; procedure: Procedure | null }>({
     open: false,
     procedure: null,
   })
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null)
+  const pdfIframeRef = useRef<HTMLIFrameElement>(null)
 
   const categoriesQuery = useQuery({ queryKey: ['procedure-categories'], queryFn: getProcedureCategories })
   const proceduresQuery = useQuery({ queryKey: ['procedures'], queryFn: () => getProcedures() })
+
+  async function handleOpenCatalogPdf() {
+    setIsGeneratingPdf(true)
+    try {
+      const blob = await pdf(
+        <ProcedureCatalogPdfDocument
+          assets={pdfAssets}
+          categories={categoriesQuery.data ?? []}
+          procedures={proceduresQuery.data ?? []}
+        />,
+      ).toBlob()
+      setPdfPreviewUrl(URL.createObjectURL(blob))
+    } catch {
+      toast.error('تعذر إنشاء ملف PDF')
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
+  function handleClosePdfPreview() {
+    if (pdfPreviewUrl) URL.revokeObjectURL(pdfPreviewUrl)
+    setPdfPreviewUrl(null)
+  }
+
+  function handlePrintCatalogPdf() {
+    pdfIframeRef.current?.contentWindow?.print()
+  }
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['procedure-categories'] })
@@ -127,9 +162,18 @@ export function ProcedureCatalogSettingsPage() {
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
-      <Title level={3} style={{ margin: '0 0 16px' }}>
-        كتالوج العمليات
-      </Title>
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Col>
+          <Title level={3} style={{ margin: 0 }}>
+            كتالوج العمليات
+          </Title>
+        </Col>
+        <Col>
+          <Button icon={<PrinterOutlined />} loading={isGeneratingPdf} onClick={handleOpenCatalogPdf}>
+            طباعة الكتالوج
+          </Button>
+        </Col>
+      </Row>
 
       <Row gutter={[16, 16]}>
         <Col xs={24} md={7}>
@@ -211,6 +255,31 @@ export function ProcedureCatalogSettingsPage() {
         }
         isSubmitting={saveProcedureMutation.isPending}
       />
+
+      <Modal
+        open={!!pdfPreviewUrl}
+        onCancel={handleClosePdfPreview}
+        width={860}
+        title="معاينة كتالوج العمليات"
+        destroyOnHidden
+        footer={[
+          <Button key="close" onClick={handleClosePdfPreview}>
+            إغلاق
+          </Button>,
+          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrintCatalogPdf}>
+            طباعة
+          </Button>,
+        ]}
+      >
+        {pdfPreviewUrl && (
+          <iframe
+            ref={pdfIframeRef}
+            src={pdfPreviewUrl}
+            title="معاينة كتالوج العمليات"
+            style={{ width: '100%', height: 640, border: 'none' }}
+          />
+        )}
+      </Modal>
     </ConfigProvider>
   )
 }

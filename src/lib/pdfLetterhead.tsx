@@ -1,7 +1,6 @@
 import { View, Text, Image, StyleSheet, Font } from '@react-pdf/renderer'
 import ArabicReshaper from 'arabic-reshaper'
-import amiriRegular from '@fontsource/amiri/files/amiri-arabic-400-normal.woff?url'
-import amiriBold from '@fontsource/amiri/files/amiri-arabic-700-normal.woff?url'
+import arialRegular from '@/assets/fonts/arial.ttf?url'
 
 // react-pdf's font engine handles bidi reordering but not Arabic letter joining,
 // so glyphs render disconnected unless pre-shaped into presentation forms first.
@@ -13,10 +12,11 @@ let fontRegistered = false
 export function ensurePdfFontRegistered() {
   if (fontRegistered) return
   Font.register({
-    family: 'Tajawal',
+    family: 'Arial',
+    // only a regular weight file is available; bold text renders at the same weight
     fonts: [
-      { src: amiriRegular, fontWeight: 'normal' },
-      { src: amiriBold, fontWeight: 'bold' },
+      { src: arialRegular, fontWeight: 'normal' },
+      { src: arialRegular, fontWeight: 'bold' },
     ],
   })
   fontRegistered = true
@@ -35,7 +35,7 @@ export interface PdfFacilityAssets {
   facilityAddress?: string | null
 }
 
-export const pdfPageStyle = { padding: 36, fontFamily: 'Tajawal', fontSize: 10, color: '#1f2937' } as const
+export const pdfPageStyle = { padding: 36, fontFamily: 'Arial', fontSize: 10, color: '#1f2937' } as const
 
 export const pdfTitleStyle = {
   fontSize: 13,

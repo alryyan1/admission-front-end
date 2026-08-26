@@ -11,6 +11,7 @@ import { DoctorsSettingsPage } from '@/pages/settings/DoctorsSettingsPage'
 import { TeamRolesSettingsPage } from '@/pages/settings/TeamRolesSettingsPage'
 import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
 import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
+import { BackupPage } from '@/pages/settings/BackupPage'
 import { UsersSettingsPage } from '@/pages/settings/UsersSettingsPage'
 import { RolesPermissionsPage } from '@/pages/settings/RolesPermissionsPage'
 import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
@@ -22,6 +23,7 @@ import { OperationsPage } from '@/pages/operations/OperationsPage'
 import { OperationDetailPage } from '@/pages/operations/OperationDetailPage'
 import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
 import { CashierPage } from '@/pages/cashier/CashierPage'
+import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
 export const router = createBrowserRouter([
@@ -49,7 +51,10 @@ export const router = createBrowserRouter([
               { path: '/statistics', element: <StatisticsPage /> },
               {
                 element: <RequireRole roles={['admin', 'cashier']} />,
-                children: [{ path: '/cashier', element: <CashierPage /> }],
+                children: [
+                  { path: '/cashier', element: <CashierPage /> },
+                  { path: '/expenses', element: <ExpensesPage /> },
+                ],
               },
               {
                 element: <RequireRole roles={['admin']} />,
@@ -63,6 +68,7 @@ export const router = createBrowserRouter([
                   { path: '/settings/roles-permissions', element: <RolesPermissionsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
                   { path: '/settings/activity-log', element: <ActivityLogPage /> },
+                  { path: '/settings/backup', element: <BackupPage /> },
                 ],
               },
             ],

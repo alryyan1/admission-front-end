@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Card, Button, Table, Tag, Typography, Flex, Space } from 'antd'
+import { EditOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDateTime } from '@/lib/utils'
 import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
@@ -20,9 +21,24 @@ interface OperationsTabProps {
     expected_duration_minutes?: number
     anesthesia_type?: string
     requested_by_doctor_id?: number
-    scheduled_at: string
+    scheduled_at: string | null
     notes?: string
   }) => Promise<unknown>
+  onUpdate: (
+    operationId: number,
+    payload: Partial<{
+      surgeon_id: number
+      operation_room_id: number | null
+      procedure_id: number
+      priority: OperationPriority
+      diagnosis: string | null
+      expected_duration_minutes: number | null
+      anesthesia_type: string | null
+      requested_by_doctor_id: number | null
+      scheduled_at: string | null
+      notes: string
+    }>,
+  ) => Promise<unknown>
   isSubmitting: boolean
 }
 
@@ -52,11 +68,14 @@ const PRIORITY_COLORS: Record<OperationPriority, string> = {
   scheduled: 'default',
 }
 
-export function OperationsTab({ operations, loading, onSchedule, isSubmitting }: OperationsTabProps) {
+export function OperationsTab({ operations, loading, onSchedule, onUpdate, isSubmitting }: OperationsTabProps) {
   const navigate = useNavigate()
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
 
   const columns: ColumnsType<Operation> = [
+    { title: 'رقم العملية', dataIndex: 'operation_number', key: 'operation_number', render: (v) => v ?? '—' },
+
     {
       title: 'الإجراء',
       key: 'procedure',
@@ -67,7 +86,6 @@ export function OperationsTab({ operations, loading, onSchedule, isSubmitting }:
         </Space>
       ),
     },
-    { title: 'رقم العملية', dataIndex: 'operation_number', key: 'operation_number', render: (v) => v ?? '—' },
     { title: 'الجراح', key: 'surgeon', render: (_, op) => op.surgeon?.name ?? '—' },
     { title: 'غرفة العمليات', key: 'room', render: (_, op) => op.operation_room?.room_number ?? '—' },
     { title: 'الموعد', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
@@ -85,9 +103,23 @@ export function OperationsTab({ operations, loading, onSchedule, isSubmitting }:
       title: '',
       key: 'actions',
       render: (_, op) => (
-        <Button size="small" onClick={() => navigate(`/operations/${op.id}`)}>
-          إدارة
-        </Button>
+        <Space size={4}>
+          {op.status === 'scheduled' && (
+            <Button
+              size="small"
+              icon={<EditOutlined />}
+              onClick={(e) => {
+                e.stopPropagation()
+                setEditingOperation(op)
+              }}
+            >
+              تعديل
+            </Button>
+          )}
+          <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/operations/${op.id}`) }}>
+             إدارة العملية
+          </Button>
+        </Space>
       ),
     },
   ]
@@ -117,11 +149,19 @@ export function OperationsTab({ operations, loading, onSchedule, isSubmitting }:
       </Card>
 
       <ScheduleOperationModal
-        open={scheduleOpen}
-        onClose={() => setScheduleOpen(false)}
+        open={scheduleOpen || !!editingOperation}
+        operation={editingOperation}
+        onClose={() => {
+          setScheduleOpen(false)
+          setEditingOperation(null)
+        }}
         onSchedule={async (payload) => {
           await onSchedule(payload)
           setScheduleOpen(false)
+        }}
+        onUpdate={async (operationId, payload) => {
+          await onUpdate(operationId, payload)
+          setEditingOperation(null)
         }}
         isSubmitting={isSubmitting}
       />

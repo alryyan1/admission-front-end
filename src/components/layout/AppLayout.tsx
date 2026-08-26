@@ -35,6 +35,7 @@ const navItems: NavItem[] = [
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
   { to: '/cashier', label: 'شاشة المحاسب', roles: ['admin', 'cashier'] },
+  { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [
@@ -47,10 +48,23 @@ const settingsNavItems: NavItem[] = [
   { to: '/settings/users', label: 'المستخدمون' },
   { to: '/settings/sessions', label: 'الجلسات النشطة' },
   { to: '/settings/activity-log', label: 'سجل النشاط' },
+  { to: '/settings/backup', label: 'النسخ الاحتياطي' },
 ]
 
-const SIDER_WIDTH = 240
+const SIDER_WIDTH = 260
 const HEADER_HEIGHT = 56
+
+const sidebarMenuTheme = {
+  components: {
+    Menu: {
+      itemHeight: 48,
+      fontSize: 15,
+      iconSize: 18,
+      itemMarginInline: 10,
+      itemMarginBlock: 4,
+    },
+  },
+}
 
 export function AppLayout() {
   const antTheme = useAntTheme()
@@ -185,12 +199,15 @@ function AppLayoutContent() {
           size={SIDER_WIDTH}
           styles={{ body: { padding: 0 } }}
         >
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            items={menuItems}
-            onClick={({ key }) => handleNavigate(key)}
-          />
+          <ConfigProvider theme={sidebarMenuTheme}>
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              items={menuItems}
+              onClick={({ key }) => handleNavigate(key)}
+              style={{ fontWeight: 600 }}
+            />
+          </ConfigProvider>
         </Drawer>
       )}
 
@@ -205,13 +222,15 @@ function AppLayoutContent() {
             borderInlineEnd: `1px solid ${token.colorBorderSecondary}`,
           }}
         >
-          <Menu
-            mode="inline"
-            selectedKeys={[selectedKey]}
-            items={menuItems}
-            onClick={({ key }) => handleNavigate(key)}
-            style={{ height: '100%', borderInlineEnd: 'none' }}
-          />
+          <ConfigProvider theme={sidebarMenuTheme}>
+            <Menu
+              mode="inline"
+              selectedKeys={[selectedKey]}
+              items={menuItems}
+              onClick={({ key }) => handleNavigate(key)}
+              style={{ height: '100%', borderInlineEnd: 'none', fontWeight: 600 }}
+            />
+          </ConfigProvider>
         </Sider>
       )}
 

@@ -147,7 +147,7 @@ export interface Operation {
   expected_duration_minutes: number | null
   anesthesia_type: string | null
   requested_by_doctor_id: number | null
-  scheduled_at: string
+  scheduled_at: string | null
   started_at: string | null
   ended_at: string | null
   status: OperationStatus

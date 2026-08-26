@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import type { ElementRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Row, Col, Select, Input, InputNumber, Typography, Space } from 'antd'
+import dayjs from 'dayjs'
 import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { getOperationRooms } from '@/services/facilityService'
 import { getProcedures } from '@/services/procedureService'
-import type { OperationPriority } from '@/types/admission'
+import type { Operation, OperationPriority } from '@/types/admission'
 
 const { Text } = Typography
 const { TextArea } = Input
@@ -13,6 +15,7 @@ const { TextArea } = Input
 interface ScheduleOperationModalProps {
   open: boolean
   onClose: () => void
+  operation?: Operation | null
   onSchedule: (payload: {
     surgeon_id: number
     operation_room_id?: number | null
@@ -22,9 +25,24 @@ interface ScheduleOperationModalProps {
     expected_duration_minutes?: number
     anesthesia_type?: string
     requested_by_doctor_id?: number
-    scheduled_at: string
+    scheduled_at: string | null
     notes?: string
   }) => Promise<unknown>
+  onUpdate?: (
+    operationId: number,
+    payload: Partial<{
+      surgeon_id: number
+      operation_room_id: number | null
+      procedure_id: number
+      priority: OperationPriority
+      diagnosis: string | null
+      expected_duration_minutes: number | null
+      anesthesia_type: string | null
+      requested_by_doctor_id: number | null
+      scheduled_at: string | null
+      notes: string
+    }>,
+  ) => Promise<unknown>
   isSubmitting: boolean
 }
 
@@ -54,7 +72,14 @@ function FieldLabel({ label, required, children }: { label: string; required?: b
   )
 }
 
-export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting }: ScheduleOperationModalProps) {
+export function ScheduleOperationModal({
+  open,
+  onClose,
+  operation,
+  onSchedule,
+  onUpdate,
+  isSubmitting,
+}: ScheduleOperationModalProps) {
   const [procedureId, setProcedureId] = useState<number | undefined>(undefined)
   const [priority, setPriority] = useState<OperationPriority>('scheduled')
   const [surgeonId, setSurgeonId] = useState<number | undefined>(undefined)
@@ -65,6 +90,9 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
   const [anesthesiaType, setAnesthesiaType] = useState<string | undefined>(undefined)
   const [diagnosis, setDiagnosis] = useState('')
   const [notes, setNotes] = useState('')
+  const procedureSelectRef = useRef<ElementRef<typeof Select>>(null)
+  const surgeonSelectRef = useRef<ElementRef<typeof Select>>(null)
+  const surgeonDropdownOpenRef = useRef(false)
 
   const proceduresQuery = useQuery({ queryKey: ['procedures', 'active'], queryFn: () => getProcedures({ active_only: true }) })
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
@@ -79,34 +107,53 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
   const procedureOptions = groupProceduresByCategory(proceduresQuery.data ?? [])
 
   useEffect(() => {
-    if (open) return
-    setProcedureId(undefined)
-    setPriority('scheduled')
-    setSurgeonId(undefined)
-    setRequestedByDoctorId(undefined)
-    setOperationRoomId(undefined)
-    setScheduledAt('')
-    setExpectedDuration(null)
-    setAnesthesiaType(undefined)
-    setDiagnosis('')
-    setNotes('')
-  }, [open])
+    if (!open) {
+      setProcedureId(undefined)
+      setPriority('scheduled')
+      setSurgeonId(undefined)
+      setRequestedByDoctorId(undefined)
+      setOperationRoomId(undefined)
+      setScheduledAt('')
+      setExpectedDuration(null)
+      setAnesthesiaType(undefined)
+      setDiagnosis('')
+      setNotes('')
+      return
+    }
+    if (operation) {
+      setProcedureId(operation.procedure_id)
+      setPriority(operation.priority)
+      setSurgeonId(operation.surgeon_id)
+      setRequestedByDoctorId(operation.requested_by_doctor_id ?? undefined)
+      setOperationRoomId(operation.operation_room_id ?? undefined)
+      setScheduledAt(operation.scheduled_at ? dayjs(operation.scheduled_at).format('YYYY-MM-DDTHH:mm') : '')
+      setExpectedDuration(operation.expected_duration_minutes)
+      setAnesthesiaType(operation.anesthesia_type ?? undefined)
+      setDiagnosis(operation.diagnosis ?? '')
+      setNotes(operation.notes ?? '')
+    }
+  }, [open, operation])
 
   async function handleSubmit() {
-    if (!procedureId || !surgeonId || !scheduledAt) return
+    if (!procedureId || !surgeonId) return
     try {
-      await onSchedule({
+      const payload = {
         procedure_id: procedureId,
         surgeon_id: surgeonId,
         operation_room_id: operationRoomId,
         priority,
-        scheduled_at: scheduledAt,
+        scheduled_at: scheduledAt || null,
         expected_duration_minutes: expectedDuration ?? undefined,
         anesthesia_type: anesthesiaType,
         requested_by_doctor_id: requestedByDoctorId,
         diagnosis: diagnosis || undefined,
         notes: notes || undefined,
-      })
+      }
+      if (operation) {
+        await onUpdate?.(operation.id, payload)
+      } else {
+        await onSchedule(payload)
+      }
     } catch {
       // request failed — surfaced by the global API error toast; keep the modal open for retry
     }
@@ -116,23 +163,30 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
     <Modal
       open={open}
       onCancel={onClose}
-      title="طلب عملية جديدة"
+      title={operation ? 'تعديل العملية' : 'طلب عملية جديدة'}
       width={640}
-      okText="طلب العملية"
+      okText={operation ? 'حفظ التعديلات' : 'طلب العملية'}
       cancelText="إلغاء"
       onOk={handleSubmit}
       confirmLoading={isSubmitting}
-      okButtonProps={{ disabled: !procedureId || !surgeonId || !scheduledAt }}
+      okButtonProps={{ disabled: !procedureId || !surgeonId }}
+      afterOpenChange={(opened) => {
+        if (opened) procedureSelectRef.current?.focus()
+      }}
     >
       <Row gutter={[16, 16]}>
         <Col span={24}>
           <FieldLabel label="الإجراء المطلوب" required>
             <Select
+              ref={procedureSelectRef}
               style={{ width: '100%' }}
               showSearch
               placeholder="اختر العملية"
               value={procedureId}
-              onChange={setProcedureId}
+              onChange={(value) => {
+                setProcedureId(value)
+                surgeonSelectRef.current?.focus()
+              }}
               optionFilterProp="label"
               options={procedureOptions}
             />
@@ -147,6 +201,7 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
         <Col xs={24} md={8}>
           <FieldLabel label="الجراح" required>
             <Select
+              ref={surgeonSelectRef}
               style={{ width: '100%' }}
               showSearch
               placeholder="اختر الجراح"
@@ -154,6 +209,15 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
               onChange={setSurgeonId}
               optionFilterProp="label"
               options={(doctorsQuery.data ?? []).map((d) => ({ label: d.name, value: d.id }))}
+              onOpenChange={(visible) => {
+                surgeonDropdownOpenRef.current = visible
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !surgeonDropdownOpenRef.current && surgeonId) {
+                  e.preventDefault()
+                  handleSubmit()
+                }
+              }}
             />
           </FieldLabel>
         </Col>
@@ -188,7 +252,7 @@ export function ScheduleOperationModal({ open, onClose, onSchedule, isSubmitting
           </FieldLabel>
         </Col>
         <Col xs={24} md={8}>
-          <FieldLabel label="الموعد" required>
+          <FieldLabel label="الموعد">
             <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </FieldLabel>
         </Col>

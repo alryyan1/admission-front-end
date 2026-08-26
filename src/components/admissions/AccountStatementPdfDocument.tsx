@@ -33,11 +33,11 @@ const styles = StyleSheet.create({
   cellNum: { width: '15.33%', direction: 'rtl', textAlign: 'right' },
   headerCell: { fontWeight: 'bold' },
   totalsBlock: { marginTop: 12, alignItems: 'flex-end' },
-  totalsRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', width: '46%', paddingVertical: 3 },
-  totalsLabel: { fontSize: 10, direction: 'rtl' },
-  totalsValue: { fontSize: 10, direction: 'rtl' },
-  balanceLabel: { fontSize: 12, fontWeight: 'bold', direction: 'rtl' },
-  balanceValue: { fontSize: 12, fontWeight: 'bold', direction: 'rtl' },
+  totalsRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', width: 260, paddingVertical: 3 },
+  totalsLabel: { fontSize: 10, direction: 'rtl', textAlign: 'right', width: 190 },
+  totalsValue: { fontSize: 10, direction: 'rtl', textAlign: 'left', width: 70 },
+  balanceLabel: { fontSize: 12, fontWeight: 'bold', direction: 'rtl', textAlign: 'right', width: 190 },
+  balanceValue: { fontSize: 12, fontWeight: 'bold', direction: 'rtl', textAlign: 'left', width: 70 },
 })
 
 export interface AccountStatementPdfRow {

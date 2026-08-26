@@ -21,7 +21,9 @@ import {
   Listy,
   Modal,
   Form,
+  Table,
 } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { formatDateTime } from '@/lib/utils'
@@ -201,6 +203,20 @@ export function OperationDetailPage() {
     return <PageLoader />
   }
 
+  const teamMemberColumns: ColumnsType<OperationTeamMember> = [
+    { title: 'الدور', key: 'role', render: (_, member) => <Tag>{member.role?.name ?? '—'}</Tag> },
+    { title: 'الاسم', key: 'name', render: (_, member) => member.doctor?.name ?? member.name ?? '—' },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, member) => (
+        <Button size="small" danger type="text" onClick={() => removeTeamMemberMutation.mutate(member.id)}>
+          إزالة
+        </Button>
+      ),
+    },
+  ]
+
   const isScheduled = operation.status === 'scheduled'
   const isInProgress = operation.status === 'in_progress'
   const isPrepared =
@@ -339,43 +355,27 @@ export function OperationDetailPage() {
                     إضافة عدة أعضاء
                   </Button>
                 </Flex>
-                {(operation.team_members ?? []).length === 0 ? (
-                  <Flex
-                    vertical
-                    align="center"
-                    justify="center"
-                    gap={8}
-                    style={{ padding: '24px 0', color: 'rgba(0,0,0,0.25)' }}
-                  >
-                    <Users size={48} strokeWidth={1.5} />
-                    <Text type="secondary">لم يُضف أعضاء بعد</Text>
-                  </Flex>
-                ) : (
-                  <Listy
-                    items={operation.team_members ?? []}
-                    rowKey="id"
-                    itemRender={(member: OperationTeamMember, index) => (
+                <Table<OperationTeamMember>
+                  size="small"
+                  rowKey="id"
+                  pagination={false}
+                  dataSource={operation.team_members ?? []}
+                  locale={{
+                    emptyText: (
                       <Flex
-                        justify="space-between"
+                        vertical
                         align="center"
-                        style={{ padding: '6px 0', borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined }}
+                        justify="center"
+                        gap={8}
+                        style={{ padding: '24px 0', color: 'rgba(0,0,0,0.25)' }}
                       >
-                        <Space>
-                          <Tag>{member.role?.name ?? '—'}</Tag>
-                          <Text>{member.doctor?.name ?? member.name ?? '—'}</Text>
-                        </Space>
-                        <Button
-                          size="small"
-                          danger
-                          type="text"
-                          onClick={() => removeTeamMemberMutation.mutate(member.id)}
-                        >
-                          إزالة
-                        </Button>
+                        <Users size={48} strokeWidth={1.5} />
+                        <Text type="secondary">لم يُضف أعضاء بعد</Text>
                       </Flex>
-                    )}
-                  />
-                )}
+                    ),
+                  }}
+                  columns={teamMemberColumns}
+                />
               </div>
             </Col>
 

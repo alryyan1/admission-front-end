@@ -178,7 +178,7 @@ export async function addOperation(
     expected_duration_minutes?: number
     anesthesia_type?: string
     requested_by_doctor_id?: number
-    scheduled_at: string
+    scheduled_at: string | null
     notes?: string
   },
 ): Promise<Operation> {
@@ -197,7 +197,7 @@ export async function updateOperation(
     expected_duration_minutes: number | null
     anesthesia_type: string | null
     requested_by_doctor_id: number | null
-    scheduled_at: string
+    scheduled_at: string | null
     notes: string
   }>,
 ): Promise<Operation> {

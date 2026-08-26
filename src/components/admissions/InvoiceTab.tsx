@@ -5,6 +5,7 @@ import { Card, Table, Tag, Button, Typography, Divider, Space, Flex, Spin, Modal
 import { FileDown, Printer } from 'lucide-react'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
+import { amountToArabicWords } from '@/lib/numberToArabicWords'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { InvoicePdfDocument } from '@/components/admissions/InvoicePdfDocument'
 import type { AdmissionInvoice, Invoice, InvoiceStatus, RequestedService } from '@/types/admission'
@@ -60,14 +61,16 @@ export function InvoiceTab({
 }: InvoiceTabProps) {
   const { assets: pdfAssets } = useFacilityPdfAssets()
   const [isGeneratingDraft, setIsGeneratingDraft] = useState(false)
-  const [draftPreviewUrl, setDraftPreviewUrl] = useState<string | null>(null)
+  const [isGeneratingFinal, setIsGeneratingFinal] = useState<number | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [previewTitle, setPreviewTitle] = useState('معاينة الفاتورة المبدئية')
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     return () => {
-      if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl)
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
-  }, [draftPreviewUrl])
+  }, [previewUrl])
 
   if (isLoading || !invoice) {
     return (
@@ -94,7 +97,8 @@ export function InvoiceTab({
           total={invoice.total}
         />,
       ).toBlob()
-      setDraftPreviewUrl(URL.createObjectURL(blob))
+      setPreviewTitle('معاينة الفاتورة المبدئية')
+      setPreviewUrl(URL.createObjectURL(blob))
     } catch {
       toast.error('تعذر إنشاء ملف PDF')
     } finally {
@@ -102,12 +106,39 @@ export function InvoiceTab({
     }
   }
 
-  function handleCloseDraftPreview() {
-    if (draftPreviewUrl) URL.revokeObjectURL(draftPreviewUrl)
-    setDraftPreviewUrl(null)
+  async function handleOpenFinalPreview(persistedInvoice: Invoice) {
+    if (!invoice) return
+    setIsGeneratingFinal(persistedInvoice.id)
+    try {
+      const items = persistedInvoice.items ?? []
+      const blob = await pdf(
+        <InvoicePdfDocument
+          assets={pdfAssets}
+          patientName={invoice.patient.name}
+          admissionId={invoice.admission_id}
+          services={items.map((item) => ({ id: item.id, name: item.description, quantity: item.quantity, total_price: item.total }))}
+          servicesTotal={Number(persistedInvoice.subtotal)}
+          total={Number(persistedInvoice.total)}
+          isFinal
+          invoiceNumber={persistedInvoice.invoice_number}
+          issuedAt={persistedInvoice.issued_at}
+        />,
+      ).toBlob()
+      setPreviewTitle('معاينة الفاتورة النهائية')
+      setPreviewUrl(URL.createObjectURL(blob))
+    } catch {
+      toast.error('تعذر إنشاء ملف PDF')
+    } finally {
+      setIsGeneratingFinal(null)
+    }
   }
 
-  function handlePrintDraft() {
+  function handleClosePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
+  }
+
+  function handlePrintPreview() {
     iframeRef.current?.contentWindow?.print()
   }
 
@@ -128,12 +159,23 @@ export function InvoiceTab({
     {
       title: '',
       key: 'actions',
-      render: (_, i) =>
-        i.status === 'issued' && (
-          <Button size="small" onClick={() => onMarkPaid(i.id)}>
-            تحصيل
+      render: (_, i) => (
+        <Space size={4}>
+          <Button
+            size="small"
+            icon={<Printer className="h-4 w-4" />}
+            loading={isGeneratingFinal === i.id}
+            onClick={() => handleOpenFinalPreview(i)}
+          >
+            طباعة
           </Button>
-        ),
+          {i.status === 'issued' && (
+            <Button size="small" onClick={() => onMarkPaid(i.id)}>
+              تحصيل
+            </Button>
+          )}
+        </Space>
+      ),
     },
   ]
 
@@ -190,6 +232,10 @@ export function InvoiceTab({
             valueColor={invoice.balance_due > 0 ? '#dc2626' : '#16a34a'}
           />
         </Space>
+
+        <Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
+          المبلغ كتابة: {amountToArabicWords(invoice.total)}
+        </Text>
       </Card>
 
       {persistedInvoices.length > 0 && (
@@ -200,25 +246,25 @@ export function InvoiceTab({
     </Space>
 
     <Modal
-      open={!!draftPreviewUrl}
-      onCancel={handleCloseDraftPreview}
+      open={!!previewUrl}
+      onCancel={handleClosePreview}
       width={860}
-      title="معاينة الفاتورة المبدئية"
+      title={previewTitle}
       destroyOnHidden
       footer={[
-        <Button key="close" onClick={handleCloseDraftPreview}>
+        <Button key="close" onClick={handleClosePreview}>
           إغلاق
         </Button>,
-        <Button key="print" type="primary" icon={<Printer className="h-4 w-4" />} onClick={handlePrintDraft}>
+        <Button key="print" type="primary" icon={<Printer className="h-4 w-4" />} onClick={handlePrintPreview}>
           طباعة
         </Button>,
       ]}
     >
-      {draftPreviewUrl && (
+      {previewUrl && (
         <iframe
           ref={iframeRef}
-          src={draftPreviewUrl}
-          title="معاينة الفاتورة المبدئية"
+          src={previewUrl}
+          title={previewTitle}
           style={{ width: '100%', height: 640, border: 'none' }}
         />
       )}

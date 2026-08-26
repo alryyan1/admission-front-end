@@ -1,16 +1,26 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, theme as antdThemeApi } from 'antd'
+import { pdf } from '@react-pdf/renderer'
+import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, Badge, theme as antdThemeApi, Divider, Modal } from 'antd'
 import {
   FileTextOutlined,
   BankOutlined,
   ApartmentOutlined,
   HomeOutlined,
   UserOutlined,
+  BorderOutlined,
+  MedicineBoxOutlined,
+  SolutionOutlined,
+  CalendarOutlined,
+  PrinterOutlined,
 } from '@ant-design/icons'
+import dayjs from 'dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
-import { formatNumber } from '@/lib/utils'
+import { formatNumber, formatDate } from '@/lib/utils'
+import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
+import { AdmissionSummaryPdfDocument } from '@/components/admissions/AdmissionSummaryPdfDocument'
 import { useTheme, ADMISSION_HEADER_FONT_SIZE_PX } from '@/contexts/ThemeContext'
 import {
   getAdmission,
@@ -30,6 +40,7 @@ import {
   generateInvoice,
   markInvoicePaid,
   addOperation,
+  updateOperation,
 } from '@/services/admissionService'
 import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
@@ -40,6 +51,7 @@ import { InvoiceTab } from '@/components/admissions/InvoiceTab'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { PageLoader } from '@/components/common/PageLoader'
 import type { AdmissionStatus } from '@/types/admission'
+import type { Room } from '@/types/facility'
 
 const { Text } = Typography
 
@@ -50,6 +62,13 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
 }
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
+
+const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
+  normal: { label: 'عادية', color: 'default' },
+  vip: { label: 'VIP', color: 'gold' },
+  operation: { label: 'عمليات', color: 'red' },
+  ward: { label: 'عنبر', color: 'cyan' },
+}
 
 const TAB_ITEMS = [
   { key: 'overview', label: 'نظرة عامة' },
@@ -71,6 +90,17 @@ export function AdmissionDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const tab = searchParams.get('tab') ?? 'overview'
   const setTab = (key: string) => setSearchParams(key === 'overview' ? {} : { tab: key }, { replace: true })
+
+  const { assets: pdfAssets } = useFacilityPdfAssets()
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
+  const [summaryPreviewUrl, setSummaryPreviewUrl] = useState<string | null>(null)
+  const summaryIframeRef = useRef<HTMLIFrameElement>(null)
+
+  useEffect(() => {
+    return () => {
+      if (summaryPreviewUrl) URL.revokeObjectURL(summaryPreviewUrl)
+    }
+  }, [summaryPreviewUrl])
 
   const admissionQuery = useQuery({
     queryKey: ['admissions', id],
@@ -185,17 +215,43 @@ export function AdmissionDetailPage() {
     onSuccess: invalidateAdmission,
   })
 
+  const updateOperationMutation = useMutation({
+    mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof updateOperation>[1]) =>
+      updateOperation(operationId, payload),
+    onSuccess: invalidateAdmission,
+  })
+
   const admission = admissionQuery.data
 
   if (!admission) {
     return <PageLoader />
   }
 
-  const autoAddedServices = (admission.requested_services ?? []).filter((s) => s.is_auto_added)
-
   const totalServices = (admission.requested_services ?? []).reduce((sum, s) => sum + Number(s.total_price), 0)
   const totalDeposits = (admission.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
   const dueBalance = totalServices - totalDeposits
+
+  async function handleOpenSummaryPdf() {
+    if (!admission) return
+    setIsGeneratingSummary(true)
+    try {
+      const blob = await pdf(<AdmissionSummaryPdfDocument assets={pdfAssets} admission={admission} />).toBlob()
+      setSummaryPreviewUrl(URL.createObjectURL(blob))
+    } catch {
+      toast.error('تعذر إنشاء ملف PDF')
+    } finally {
+      setIsGeneratingSummary(false)
+    }
+  }
+
+  function handleCloseSummaryPreview() {
+    if (summaryPreviewUrl) URL.revokeObjectURL(summaryPreviewUrl)
+    setSummaryPreviewUrl(null)
+  }
+
+  function handlePrintSummary() {
+    summaryIframeRef.current?.contentWindow?.print()
+  }
 
   const headerBgColor = (() => {
     switch (admissionHeaderBg) {
@@ -214,114 +270,196 @@ export function AdmissionDetailPage() {
 
   const { name: nameFontSize, secondary: secondaryFontSize } = ADMISSION_HEADER_FONT_SIZE_PX[admissionHeaderFontSize]
 
-  function sectionStyle(bg: string): React.CSSProperties {
-    return { flex: '1 1 220px', backgroundColor: bg, borderRadius: token.borderRadius, padding: '6px 10px' }
+  const stayDuration = Math.max(
+    1,
+    dayjs(admission.discharge_date ?? undefined).diff(dayjs(admission.admission_date), 'day') + 1,
+  )
+
+  const infoCardStyle: React.CSSProperties = {
+    flex: '1 1 220px',
+    backgroundColor: token.colorFillTertiary,
+    border: `1px solid ${token.colorBorderSecondary}`,
+    borderRadius: token.borderRadiusLG,
+    padding: '10px 14px',
+  }
+
+  const infoLabelStyle: React.CSSProperties = {
+    fontSize: 11,
+    fontWeight: 600,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   }
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Card
-        size="small"
-        style={{ marginBottom: 12, backgroundColor: headerBgColor }}
-        styles={{ body: { padding: '8px 14px' } }}
+        style={{ marginBottom: 12, borderRadius: 16, backgroundColor: headerBgColor, boxShadow: token.boxShadowTertiary }}
+        styles={{ body: { padding: '18px 20px' } }}
       >
-        <Flex align="stretch" wrap="wrap" gap={10}>
-          <Flex
-            vertical
-            align="center"
-            gap={6}
-            style={{ ...sectionStyle(token.colorPrimaryBg), flex: '1 1 260px' }}
-          >
-            <Flex align="center" justify="center" gap={8}>
-              <Avatar size={32} icon={<UserOutlined />} style={{ backgroundColor: token.colorPrimary, flexShrink: 0 }} />
-              <Text strong style={{ fontSize: nameFontSize, color: token.colorPrimaryTextActive }}>
-                <Link to={`/patients/${admission.patient_id}`} style={{ color: token.colorPrimaryTextActive }}>
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={16}>
+          <Flex align="center" gap={14}>
+            <Avatar
+              size={56}
+              icon={<UserOutlined />}
+              style={{
+                backgroundColor: admission.patient?.gender === 'female' ? token.colorError : token.colorPrimary,
+                flexShrink: 0,
+                boxShadow: `0 0 0 3px ${token.colorPrimaryBg}`,
+              }}
+            />
+            <Flex vertical gap={6}>
+              <Text strong style={{ fontSize: nameFontSize, lineHeight: 1.2 }}>
+                <Link to={`/patients/${admission.patient_id}`} style={{ color: token.colorText }}>
                   {admission.patient?.name}
                 </Link>
               </Text>
-            </Flex>
-            <Flex align="center" justify="center" gap={8} wrap="wrap">
-              <Tag color={admission.status === 'admitted' ? 'success' : 'default'} style={{ marginInlineEnd: 0 }}>
-                {STATUS_LABEL[admission.status] ?? admission.status}
-              </Tag>
-              <Text style={{ fontSize: secondaryFontSize, color: token.colorPrimaryTextActive, fontWeight: 600 }}>
-                <FileTextOutlined style={{ marginInlineEnd: 4 }} />
-                {admission.id != null ? `#${admission.id}` : '—'}
-              </Text>
-              {admission.patient?.gender && (
-                <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
-              )}
-              {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
-              {admission.patient?.blood_type && (
-                <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
-              )}
-            </Flex>
-          </Flex>
-
-          <Flex align="center" style={sectionStyle(token.colorPrimaryBg)}>
-            <Text style={{ fontSize: secondaryFontSize, whiteSpace: 'nowrap', color: token.colorPrimaryTextActive, fontWeight: 600 }}>
-              <BankOutlined style={{ marginInlineEnd: 4 }} />
-              {admission.bed?.room?.ward?.floor?.name ?? '—'}
-              {' / '}
-              <ApartmentOutlined style={{ marginInlineEnd: 4 }} />
-              {admission.bed?.room?.ward?.name ?? '—'}
-              {' / '}
-              <HomeOutlined style={{ marginInlineEnd: 4 }} />
-              غرفة {admission.bed?.room?.room_number ?? '—'}
-              {' / '}
-              سرير {admission.bed?.bed_number ?? '—'}
-            </Text>
-          </Flex>
-
-          <Flex align="center" style={sectionStyle(token.colorPrimaryBg)}>
-            <Text style={{ fontSize: secondaryFontSize, color: token.colorPrimaryTextActive, fontWeight: 600 }}>
-              الطبيب: {admission.admitting_doctor?.name ?? '—'}
-              {admission.diagnosis && ` • التشخيص: ${admission.diagnosis}`}
-            </Text>
-          </Flex>
-
-          {admission.status === 'admitted' && (
-            <Flex
-              align="center"
-              gap={6}
-              style={sectionStyle(token.colorPrimaryBg)}
-            >
-              <Button
-                size="small"
-                loading={cancelMutation.isPending}
-                onClick={() => {
-                  const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
-                  if (window.confirm('هل أنت متأكد من إلغاء هذا التنويم؟')) {
-                    cancelMutation.mutate(reason)
+              <Flex align="center" gap={8} wrap="wrap">
+                <Badge
+                  status={admission.status === 'admitted' ? 'success' : 'default'}
+                  text={
+                    <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                      {STATUS_LABEL[admission.status] ?? admission.status}
+                    </Text>
                   }
-                }}
-              >
-                إلغاء التنويم
-              </Button>
-              <Button
-                danger
-                size="small"
-                loading={dischargeMutation.isPending}
-                onClick={() => {
-                  if (dueBalance > 0) {
-                    toast.error(`لا يمكن إخراج المريض، يوجد مبلغ مستحق قدره ${formatNumber(dueBalance)}`)
-                    return
-                  }
-                  const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
-                  dischargeMutation.mutate(summary)
-                }}
-              >
-                إخراج المريض
-              </Button>
+                />
+                <Divider type="vertical" style={{ margin: 0 }} />
+                <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  <FileTextOutlined style={{ marginInlineEnd: 4 }} />
+                  {admission.id != null ? `#${admission.id}` : '—'}
+                </Text>
+                {admission.patient?.gender && (
+                  <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
+                )}
+                {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
+                {admission.patient?.blood_type && (
+                  <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
+                )}
+              </Flex>
             </Flex>
-          )}
+          </Flex>
+
+          <Flex gap={8}>
+            <Button size="small" icon={<PrinterOutlined />} loading={isGeneratingSummary} onClick={handleOpenSummaryPdf}>
+              طباعة ملخص التنويم
+            </Button>
+            {admission.status === 'admitted' && (
+              <>
+                <Button
+                  size="small"
+                  loading={cancelMutation.isPending}
+                  onClick={() => {
+                    const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
+                    if (window.confirm('هل أنت متأكد من إلغاء هذا التنويم؟')) {
+                      cancelMutation.mutate(reason)
+                    }
+                  }}
+                >
+                  إلغاء التنويم
+                </Button>
+                <Button
+                  danger
+                  size="small"
+                  loading={dischargeMutation.isPending}
+                  onClick={() => {
+                    if (dueBalance > 0) {
+                      toast.error(`لا يمكن إخراج المريض، يوجد مبلغ مستحق قدره ${formatNumber(dueBalance)}`)
+                      return
+                    }
+                    const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
+                    dischargeMutation.mutate(summary)
+                  }}
+                >
+                  إخراج المريض
+                </Button>
+              </>
+            )}
+          </Flex>
         </Flex>
 
-        {autoAddedServices.length > 0 && (
+        <Divider style={{ margin: '16px 0' }} />
+
+        <Flex gap={12} wrap="wrap">
+          <div style={infoCardStyle}>
+            <Text type="secondary" style={infoLabelStyle}>الموقع</Text>
+            <div
+              style={{
+                marginTop: 8,
+                borderInlineStart: `2px solid ${token.colorBorderSecondary}`,
+                paddingInlineStart: 12,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 6,
+              }}
+            >
+              <Flex align="center" gap={6}>
+                <BankOutlined style={{ color: token.colorPrimary }} />
+                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  {admission.bed?.room?.ward?.floor?.name ?? '—'}
+                </Text>
+              </Flex>
+              <Flex align="center" gap={6}>
+                <ApartmentOutlined style={{ color: token.colorPrimary }} />
+                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  {admission.bed?.room?.ward?.name ?? '—'}
+                </Text>
+              </Flex>
+              <Flex align="center" gap={6} wrap="wrap">
+                <HomeOutlined style={{ color: token.colorPrimary }} />
+                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  غرفة {admission.bed?.room?.room_number ?? '—'}
+                </Text>
+                {admission.bed?.room?.room_type && (
+                  <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color} style={{ marginInlineEnd: 0 }}>
+                    {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
+                  </Tag>
+                )}
+              </Flex>
+              <Flex align="center" gap={6}>
+                <BorderOutlined style={{ color: token.colorPrimary }} />
+                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  سرير {admission.bed?.bed_number ?? '—'}
+                </Text>
+              </Flex>
+            </div>
+          </div>
+
+          <div style={infoCardStyle}>
+            <Text type="secondary" style={infoLabelStyle}>الطبيب المعالج</Text>
+            <Flex align="center" gap={6} style={{ marginTop: 8 }}>
+              <MedicineBoxOutlined style={{ color: token.colorPrimary }} />
+              <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                {admission.admitting_doctor?.name ?? '—'}
+              </Text>
+            </Flex>
+            {admission.diagnosis && (
+              <Flex align="flex-start" gap={6} style={{ marginTop: 6 }}>
+                <SolutionOutlined style={{ color: token.colorTextSecondary, marginTop: 2 }} />
+                <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
+                  {admission.diagnosis}
+                </Text>
+              </Flex>
+            )}
+          </div>
+
+          <div style={infoCardStyle}>
+            <Text type="secondary" style={infoLabelStyle}>مدة الإقامة</Text>
+            <Flex align="center" gap={6} style={{ marginTop: 8 }}>
+              <CalendarOutlined style={{ color: token.colorPrimary }} />
+              <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                {formatDate(admission.admission_date)}
+              </Text>
+            </Flex>
+            <Text type="secondary" style={{ fontSize: secondaryFontSize, marginTop: 4, display: 'block' }}>
+              {stayDuration} {stayDuration === 1 ? 'يوم' : 'أيام'}
+            </Text>
+          </div>
+        </Flex>
+
+        {/* {autoAddedServices.length > 0 && (
           <Text type="secondary" style={{ display: 'block', marginTop: 6, fontSize: 12 }}>
             تمت إضافة {autoAddedServices.map((s) => s.name).join('، ')} تلقائياً لهذا التنويم
           </Text>
-        )}
+        )} */}
       </Card>
 
       <Tabs activeKey={tab} onChange={setTab} items={TAB_ITEMS} />
@@ -379,7 +517,8 @@ export function AdmissionDetailPage() {
           operations={admission.operations ?? []}
           loading={admissionQuery.isFetching}
           onSchedule={(payload) => operationMutation.mutateAsync(payload)}
-          isSubmitting={operationMutation.isPending}
+          onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
+          isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
         />
       )}
 
@@ -393,6 +532,31 @@ export function AdmissionDetailPage() {
           isGenerating={generateInvoiceMutation.isPending}
         />
       )}
+
+      <Modal
+        open={!!summaryPreviewUrl}
+        onCancel={handleCloseSummaryPreview}
+        width={860}
+        title="معاينة ملخص التنويم"
+        destroyOnHidden
+        footer={[
+          <Button key="close" onClick={handleCloseSummaryPreview}>
+            إغلاق
+          </Button>,
+          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrintSummary}>
+            طباعة
+          </Button>,
+        ]}
+      >
+        {summaryPreviewUrl && (
+          <iframe
+            ref={summaryIframeRef}
+            src={summaryPreviewUrl}
+            title="معاينة ملخص التنويم"
+            style={{ width: '100%', height: 640, border: 'none' }}
+          />
+        )}
+      </Modal>
     </ConfigProvider>
   )
 }

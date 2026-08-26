@@ -14,6 +14,7 @@ export function formatDate(value: string | Date): string {
   return dayjs(value).format('DD/MM/YYYY')
 }
 
-export function formatDateTime(value: string | Date): string {
-  return new Date(value).toLocaleString('en-US')
+export function formatDateTime(value: string | Date | null | undefined): string {
+  if (!value) return '—'
+  return dayjs(value).format('DD/MM/YYYY hh:mm A')
 }
