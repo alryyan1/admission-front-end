@@ -135,7 +135,7 @@ export function OperationsPage() {
           rowKey="id"
           loading={operationsQuery.isLoading}
           columns={columns}
-          dataSource={operationsQuery.data?.data ?? []}
+          dataSource={[...(operationsQuery.data?.data ?? [])].sort((a, b) => b.id - a.id)}
           pagination={false}
           onRow={(op) => ({
             className: 'cursor-pointer',

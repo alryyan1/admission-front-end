@@ -90,7 +90,7 @@ export async function addDose(
 
 export async function addDeposit(
   admissionId: number,
-  payload: { amount: number; payment_method_id?: number },
+  payload: { amount: number; payment_method_id?: number; comment?: string },
 ): Promise<AdmissionDeposit> {
   const { data } = await apiClient.post<AdmissionDeposit>(
     `/admissions/${admissionId}/deposits`,

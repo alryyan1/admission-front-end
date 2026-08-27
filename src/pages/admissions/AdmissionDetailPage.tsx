@@ -3,7 +3,7 @@ import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { pdf } from '@react-pdf/renderer'
-import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, Badge, theme as antdThemeApi, Divider, Modal } from 'antd'
+import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, Badge, theme as antdThemeApi, Divider, Modal, Popover } from 'antd'
 import {
   FileTextOutlined,
   BankOutlined,
@@ -11,14 +11,11 @@ import {
   HomeOutlined,
   UserOutlined,
   BorderOutlined,
-  MedicineBoxOutlined,
-  SolutionOutlined,
-  CalendarOutlined,
   PrinterOutlined,
+  EnvironmentOutlined,
 } from '@ant-design/icons'
-import dayjs from 'dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
-import { formatNumber, formatDate } from '@/lib/utils'
+import { formatNumber } from '@/lib/utils'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { AdmissionSummaryPdfDocument } from '@/components/admissions/AdmissionSummaryPdfDocument'
 import { useTheme, ADMISSION_HEADER_FONT_SIZE_PX } from '@/contexts/ThemeContext'
@@ -270,25 +267,39 @@ export function AdmissionDetailPage() {
 
   const { name: nameFontSize, secondary: secondaryFontSize } = ADMISSION_HEADER_FONT_SIZE_PX[admissionHeaderFontSize]
 
-  const stayDuration = Math.max(
-    1,
-    dayjs(admission.discharge_date ?? undefined).diff(dayjs(admission.admission_date), 'day') + 1,
+  const locationPopoverContent = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200 }}>
+      <Flex align="center" gap={6}>
+        <BankOutlined style={{ color: token.colorPrimary }} />
+        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+          {admission.bed?.room?.ward?.floor?.name ?? '—'}
+        </Text>
+      </Flex>
+      <Flex align="center" gap={6}>
+        <ApartmentOutlined style={{ color: token.colorPrimary }} />
+        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+          {admission.bed?.room?.ward?.name ?? '—'}
+        </Text>
+      </Flex>
+      <Flex align="center" gap={6} wrap="wrap">
+        <HomeOutlined style={{ color: token.colorPrimary }} />
+        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+          غرفة {admission.bed?.room?.room_number ?? '—'}
+        </Text>
+        {admission.bed?.room?.room_type && (
+          <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color} style={{ marginInlineEnd: 0 }}>
+            {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
+          </Tag>
+        )}
+      </Flex>
+      <Flex align="center" gap={6}>
+        <BorderOutlined style={{ color: token.colorPrimary }} />
+        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+          سرير {admission.bed?.bed_number ?? '—'}
+        </Text>
+      </Flex>
+    </div>
   )
-
-  const infoCardStyle: React.CSSProperties = {
-    flex: '1 1 220px',
-    backgroundColor: token.colorFillTertiary,
-    border: `1px solid ${token.colorBorderSecondary}`,
-    borderRadius: token.borderRadiusLG,
-    padding: '10px 14px',
-  }
-
-  const infoLabelStyle: React.CSSProperties = {
-    fontSize: 11,
-    fontWeight: 600,
-    letterSpacing: 0.3,
-    textTransform: 'uppercase',
-  }
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
@@ -327,6 +338,10 @@ export function AdmissionDetailPage() {
                   <FileTextOutlined style={{ marginInlineEnd: 4 }} />
                   {admission.id != null ? `#${admission.id}` : '—'}
                 </Text>
+                <Divider type="vertical" style={{ margin: 0 }} />
+                <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                  الطبيب: {admission.admitting_doctor?.name ?? '—'}
+                </Text>
                 {admission.patient?.gender && (
                   <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
                 )}
@@ -339,6 +354,11 @@ export function AdmissionDetailPage() {
           </Flex>
 
           <Flex gap={8}>
+            <Popover content={locationPopoverContent} title="الموقع" trigger="click" placement="bottomLeft">
+              <Button size="small" icon={<EnvironmentOutlined />}>
+                الموقع
+              </Button>
+            </Popover>
             <Button size="small" icon={<PrinterOutlined />} loading={isGeneratingSummary} onClick={handleOpenSummaryPdf}>
               طباعة ملخص التنويم
             </Button>
@@ -374,85 +394,6 @@ export function AdmissionDetailPage() {
               </>
             )}
           </Flex>
-        </Flex>
-
-        <Divider style={{ margin: '16px 0' }} />
-
-        <Flex gap={12} wrap="wrap">
-          <div style={infoCardStyle}>
-            <Text type="secondary" style={infoLabelStyle}>الموقع</Text>
-            <div
-              style={{
-                marginTop: 8,
-                borderInlineStart: `2px solid ${token.colorBorderSecondary}`,
-                paddingInlineStart: 12,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 6,
-              }}
-            >
-              <Flex align="center" gap={6}>
-                <BankOutlined style={{ color: token.colorPrimary }} />
-                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                  {admission.bed?.room?.ward?.floor?.name ?? '—'}
-                </Text>
-              </Flex>
-              <Flex align="center" gap={6}>
-                <ApartmentOutlined style={{ color: token.colorPrimary }} />
-                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                  {admission.bed?.room?.ward?.name ?? '—'}
-                </Text>
-              </Flex>
-              <Flex align="center" gap={6} wrap="wrap">
-                <HomeOutlined style={{ color: token.colorPrimary }} />
-                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                  غرفة {admission.bed?.room?.room_number ?? '—'}
-                </Text>
-                {admission.bed?.room?.room_type && (
-                  <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color} style={{ marginInlineEnd: 0 }}>
-                    {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
-                  </Tag>
-                )}
-              </Flex>
-              <Flex align="center" gap={6}>
-                <BorderOutlined style={{ color: token.colorPrimary }} />
-                <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                  سرير {admission.bed?.bed_number ?? '—'}
-                </Text>
-              </Flex>
-            </div>
-          </div>
-
-          <div style={infoCardStyle}>
-            <Text type="secondary" style={infoLabelStyle}>الطبيب المعالج</Text>
-            <Flex align="center" gap={6} style={{ marginTop: 8 }}>
-              <MedicineBoxOutlined style={{ color: token.colorPrimary }} />
-              <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                {admission.admitting_doctor?.name ?? '—'}
-              </Text>
-            </Flex>
-            {admission.diagnosis && (
-              <Flex align="flex-start" gap={6} style={{ marginTop: 6 }}>
-                <SolutionOutlined style={{ color: token.colorTextSecondary, marginTop: 2 }} />
-                <Text type="secondary" style={{ fontSize: secondaryFontSize }}>
-                  {admission.diagnosis}
-                </Text>
-              </Flex>
-            )}
-          </div>
-
-          <div style={infoCardStyle}>
-            <Text type="secondary" style={infoLabelStyle}>مدة الإقامة</Text>
-            <Flex align="center" gap={6} style={{ marginTop: 8 }}>
-              <CalendarOutlined style={{ color: token.colorPrimary }} />
-              <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                {formatDate(admission.admission_date)}
-              </Text>
-            </Flex>
-            <Text type="secondary" style={{ fontSize: secondaryFontSize, marginTop: 4, display: 'block' }}>
-              {stayDuration} {stayDuration === 1 ? 'يوم' : 'أيام'}
-            </Text>
-          </div>
         </Flex>
 
         {/* {autoAddedServices.length > 0 && (

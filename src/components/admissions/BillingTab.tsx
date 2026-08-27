@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Card, InputNumber, Select, Table, Button, Typography, Row, Col, Flex, Space, Popconfirm, Tooltip } from 'antd'
+import { Card, InputNumber, Input, Select, Table, Button, Typography, Row, Col, Flex, Space, Popconfirm, Tooltip } from 'antd'
 import { ThunderboltFilled } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
@@ -15,7 +15,7 @@ interface BillingTabProps {
   deposits: AdmissionDeposit[]
   isShortStayRoom: boolean
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
-  onAddDeposit: (payload: { amount: number; payment_method_id?: number }) => void
+  onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
   onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
   onRemoveService: (serviceId: number) => void
   onRemoveDeposit: (depositId: number) => void
@@ -103,6 +103,7 @@ export function BillingTab({
 
   const [depositAmount, setDepositAmount] = useState<number | null>(null)
   const [depositMethodId, setDepositMethodId] = useState<number | undefined>(undefined)
+  const [depositComment, setDepositComment] = useState('')
 
   useEffect(() => {
     if (depositMethodId === undefined && activePaymentMethods.length > 0) {
@@ -128,8 +129,9 @@ export function BillingTab({
 
   function handleAddDeposit() {
     if (depositAmount === null) return
-    onAddDeposit({ amount: depositAmount, payment_method_id: depositMethodId })
+    onAddDeposit({ amount: depositAmount, payment_method_id: depositMethodId, comment: depositComment.trim() || undefined })
     setDepositAmount(null)
+    setDepositComment('')
   }
 
   const serviceColumns: ColumnsType<RequestedService> = [
@@ -194,6 +196,7 @@ export function BillingTab({
     { title: 'التاريخ', key: 'paid_at', render: (_, d) => formatDate(d.paid_at) },
     { title: 'المبلغ', key: 'amount', render: (_, d) => formatNumber(d.amount) },
     { title: 'الطريقة', key: 'method', render: (_, d) => d.payment_method?.name ?? '—' },
+    { title: 'ملاحظة', key: 'comment', render: (_, d) => d.comment ?? '—' },
     {
       title: '',
       key: 'actions',
@@ -281,6 +284,14 @@ export function BillingTab({
                 value={depositMethodId}
                 onChange={setDepositMethodId}
                 options={activePaymentMethods.map((pm) => ({ label: pm.name, value: pm.id }))}
+              />
+            </FieldLabel>
+            <FieldLabel label="ملاحظة">
+              <Input
+                style={{ width: 180 }}
+                placeholder="ملاحظة (اختياري)"
+                value={depositComment}
+                onChange={(e) => setDepositComment(e.target.value)}
               />
             </FieldLabel>
             <Button

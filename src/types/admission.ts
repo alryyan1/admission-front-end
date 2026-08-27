@@ -69,6 +69,7 @@ export interface AdmissionDeposit {
   amount: string
   payment_method_id: number | null
   payment_method?: PaymentMethod | null
+  comment: string | null
   paid_at: string
 }
 
@@ -201,12 +202,14 @@ export interface Invoice {
 
 export interface CashierAdmission {
   id: number
+  admission_number: string | null
   admission_date: string
   patient: Patient
   bed?: Bed
   services_total: number
   deposits_total: number
   balance_due: number
+  operations?: Operation[]
 }
 
 export interface CashierDepositsByPaymentMethod {
