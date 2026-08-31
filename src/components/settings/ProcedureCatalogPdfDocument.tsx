@@ -113,7 +113,7 @@ export function ProcedureCatalogPdfDocument({ assets, categories, procedures }: 
           </View>
         )}
 
-        <PdfLetterheadFooter assets={assets} />
+        <PdfLetterheadFooter assets={assets} showStamp={false} />
       </Page>
     </Document>
   )

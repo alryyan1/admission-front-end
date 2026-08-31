@@ -115,11 +115,13 @@ export function PdfLetterheadHeader({
 export function PdfLetterheadFooter({
   assets,
   fallbackAddress,
+  showStamp: allowStamp = true,
 }: {
   assets: PdfFacilityAssets
   fallbackAddress?: string
+  showStamp?: boolean
 }) {
-  const showStamp = assets.useStamp && !!assets.stampSrc
+  const showStamp = allowStamp && assets.useStamp && !!assets.stampSrc
   const address = assets.facilityAddress || fallbackAddress || ''
 
   return (

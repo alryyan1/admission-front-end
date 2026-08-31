@@ -53,6 +53,7 @@ function EditableNumberCell({
 
   return (
     <InputNumber
+      className="amount-input"
       size="small"
       style={{ width: 110 }}
       min={min}
@@ -245,10 +246,23 @@ export function BillingTab({
               />
             </FieldLabel>
             <FieldLabel label="الكمية">
-              <InputNumber style={{ width: 110 }} min={1} value={quantity} onChange={(v) => setQuantity(v)} />
+              <InputNumber
+                style={{ width: 110 }}
+                min={1}
+                value={quantity}
+                onChange={(v) => setQuantity(v)}
+                onPressEnter={handleAddService}
+              />
             </FieldLabel>
             <FieldLabel label="سعر الوحدة">
-              <InputNumber style={{ width: 112 }} min={0} value={unitPrice} onChange={(v) => setUnitPrice(v)} />
+              <InputNumber
+                className="amount-input"
+                style={{ width: 112 }}
+                min={0}
+                value={unitPrice}
+                onChange={(v) => setUnitPrice(v)}
+                onPressEnter={handleAddService}
+              />
             </FieldLabel>
             <Button
               type="primary"
@@ -274,7 +288,7 @@ export function BillingTab({
         <Card title="الدفعات">
           <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
             <FieldLabel label="المبلغ">
-              <InputNumber style={{ width: 112 }} min={0} value={depositAmount} onChange={(v) => setDepositAmount(v)} />
+              <InputNumber className="amount-input" style={{ width: 112 }} min={0} value={depositAmount} onChange={(v) => setDepositAmount(v)} />
             </FieldLabel>
             <FieldLabel label="طريقة الدفع">
               <Select

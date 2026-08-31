@@ -221,7 +221,7 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
           emptyText="لا يوجد سجل تنويمات"
         />
 
-        <PdfLetterheadFooter assets={assets} />
+        <PdfLetterheadFooter assets={assets} showStamp={false} />
       </Page>
     </Document>
   )

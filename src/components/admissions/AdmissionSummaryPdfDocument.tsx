@@ -17,8 +17,6 @@ import type {
   AdmissionDeposit,
   DoctorOrder,
   Operation,
-  OperationPriority,
-  OperationStatus,
   RequestedService,
   VitalSign,
 } from '@/types/admission'
@@ -39,19 +37,6 @@ const ADMISSION_TYPE_LABEL: Record<string, string> = {
 const ORDER_STATUS_LABEL: Record<string, string> = {
   active: 'نشط',
   discontinued: 'موقوف',
-}
-
-const OPERATION_STATUS_LABEL: Record<OperationStatus, string> = {
-  scheduled: 'مجدولة',
-  in_progress: 'جارية',
-  completed: 'مكتملة',
-  cancelled: 'ملغاة',
-}
-
-const OPERATION_PRIORITY_LABEL: Record<OperationPriority, string> = {
-  emergency: 'طارئة',
-  urgent: 'عاجلة',
-  scheduled: 'مجدولة',
 }
 
 const styles = StyleSheet.create({
@@ -163,13 +148,14 @@ export function AdmissionSummaryPdfDocument({ assets, admission }: AdmissionSumm
 
   const services = admission.requested_services ?? []
   const deposits = admission.deposits ?? []
-  const totalServices = services.reduce((sum, s) => sum + Number(s.total_price), 0)
-  const totalDeposits = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
-  const balanceDue = totalServices - totalDeposits
-
   const vitals = admission.vital_signs ?? []
   const orders = admission.doctor_orders ?? []
   const operations = admission.operations ?? []
+
+  const totalServices = services.reduce((sum, s) => sum + Number(s.total_price), 0)
+  const totalOperations = operations.reduce((sum, op) => sum + (op.price != null ? Number(op.price) : 0), 0)
+  const totalDeposits = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
+  const balanceDue = totalServices + totalOperations - totalDeposits
 
   const hasMedicalBackground = !!(
     patient?.allergies ||
@@ -320,13 +306,11 @@ export function AdmissionSummaryPdfDocument({ assets, admission }: AdmissionSumm
         <Text style={styles.sectionTitle}>{ar('العمليات الجراحية')}</Text>
         <PdfTable<Operation>
           columns={[
-            { header: 'رقم العملية', width: '12%', render: (o) => o.operation_number ?? '—' },
-            { header: 'الإجراء', width: '26%', render: (o) => o.procedure?.name_ar ?? '—' },
-            { header: 'الجراح', width: '16%', render: (o) => o.surgeon?.name ?? '—' },
-            { header: 'غرفة العمليات', width: '14%', render: (o) => o.operation_room?.room_number ?? '—' },
-            { header: 'الموعد', width: '18%', render: (o) => formatDateTime(o.scheduled_at) },
-            { header: 'الأولوية', width: '7%', render: (o) => OPERATION_PRIORITY_LABEL[o.priority] },
-            { header: 'الحالة', width: '7%', render: (o) => OPERATION_STATUS_LABEL[o.status] },
+            { header: 'رقم العملية', width: '14%', render: (o) => o.operation_number ?? '—' },
+            { header: 'الإجراء', width: '34%', render: (o) => o.procedure?.name_ar ?? '—' },
+            { header: 'الجراح', width: '20%', render: (o) => o.surgeon?.name ?? '—' },
+            { header: 'السعر', width: '14%', render: (o) => (o.price != null ? formatNumber(Number(o.price)) : '—') },
+            { header: 'تاريخ العملية', width: '18%', render: (o) => formatDateTime(o.scheduled_at) },
           ]}
           rows={operations}
           emptyText="لا توجد عمليات مجدولة"
@@ -363,6 +347,12 @@ export function AdmissionSummaryPdfDocument({ assets, admission }: AdmissionSumm
             <Text style={styles.totalsLabel}>{ar('إجمالي الخدمات')}</Text>
             <Text style={styles.totalsValue}>{formatNumber(totalServices)}</Text>
           </View>
+          {totalOperations > 0 && (
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>{ar('إجمالي العمليات')}</Text>
+              <Text style={styles.totalsValue}>{formatNumber(totalOperations)}</Text>
+            </View>
+          )}
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>{ar('إجمالي الدفعات')}</Text>
             <Text style={styles.totalsValue}>{formatNumber(totalDeposits)}</Text>
@@ -373,7 +363,7 @@ export function AdmissionSummaryPdfDocument({ assets, admission }: AdmissionSumm
           </View>
         </View>
 
-        <PdfLetterheadFooter assets={assets} />
+        <PdfLetterheadFooter assets={assets} showStamp={false} />
       </Page>
     </Document>
   )

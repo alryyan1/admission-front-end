@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip, Divider } from 'antd'
+import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { getAdmissions } from '@/services/admissionService'
@@ -21,11 +21,11 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
   cancelled: 'ملغاة',
 }
 
-const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
-  normal: { label: 'عادية', color: 'default' },
-  vip: { label: 'VIP', color: 'gold' },
-  operation: { label: 'عمليات', color: 'red' },
-  ward: { label: 'عنبر', color: 'cyan' },
+const ROOM_TYPE_LABEL: Record<Room['room_type'], string> = {
+  normal: 'عادية',
+  vip: 'VIP',
+  operation: 'عمليات',
+  ward: 'عنبر',
 }
 
 const STATUS_TABS: { key: AdmissionStatus; label: string }[] = [
@@ -79,37 +79,25 @@ export function AdmissionsPage() {
       render: (_, admission) => (
         <Flex align="center" gap={6}>
           {admission.patient?.name}
-          {!!admission.operations_count && <Tag color="volcano">عملية</Tag>}
+          {!!admission.operations_count && <Tag>عملية</Tag>}
         </Flex>
       ),
     },
     {
       title: 'الطابق',
       key: 'floor',
-      render: (_, admission) =>
-        admission.bed?.room?.ward?.floor?.name ? (
-          <Tag color="purple">{admission.bed.room.ward.floor.name}</Tag>
-        ) : (
-          '—'
-        ),
+      render: (_, admission) => admission.bed?.room?.ward?.floor?.name ?? '—',
     },
     {
       title: 'الجناح',
       key: 'ward',
-      render: (_, admission) =>
-        admission.bed?.room?.ward?.name ? <Tag color="blue">{admission.bed.room.ward.name}</Tag> : '—',
+      render: (_, admission) => admission.bed?.room?.ward?.name ?? '—',
     },
     {
       title: 'نوع الغرفة',
       key: 'room_type',
       render: (_, admission) =>
-        admission.bed?.room?.room_type ? (
-          <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color}>
-            {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
-          </Tag>
-        ) : (
-          '—'
-        ),
+        admission.bed?.room?.room_type ? ROOM_TYPE_LABEL[admission.bed.room.room_type] : '—',
     },
     {
       title: 'الغرفة / السرير',
@@ -118,13 +106,7 @@ export function AdmissionsPage() {
         const roomNumber = admission.bed?.room?.room_number
         const bedNumber = admission.bed?.bed_number
         if (!roomNumber && !bedNumber) return '—'
-        return (
-          <Flex align="center">
-            {roomNumber && <Tag color="green">غرفة {roomNumber}</Tag>}
-            {roomNumber && bedNumber && <Divider vertical />}
-            {bedNumber && <Tag color="orange">سرير {bedNumber}</Tag>}
-          </Flex>
-        )
+        return [roomNumber && `غرفة ${roomNumber}`, bedNumber && `سرير ${bedNumber}`].filter(Boolean).join(' / ')
       },
     },
     {
@@ -143,7 +125,7 @@ export function AdmissionsPage() {
       render: (_, admission) => {
         const isShortStay = admission.bed?.room?.is_short_stay
         if (isShortStay) {
-          return <Tag color="blue">إقامة قصيرة </Tag>
+          return 'إقامة قصيرة'
         }
         console.log('isShortStay', isShortStay, admission.bed?.room?.is_short_stay)
         const end = admission.discharge_date ? dayjs(admission.discharge_date) : dayjs()

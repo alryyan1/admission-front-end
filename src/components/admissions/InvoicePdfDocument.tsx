@@ -71,6 +71,7 @@ export interface InvoicePdfDocumentProps {
   admissionId: number
   services: InvoiceLineItem[]
   servicesTotal: number
+  operationsTotal?: number
   depositsTotal?: number
   balanceDue?: number
   total: number
@@ -85,6 +86,7 @@ export function InvoicePdfDocument({
   admissionId,
   services,
   servicesTotal,
+  operationsTotal,
   depositsTotal,
   balanceDue,
   total,
@@ -133,6 +135,12 @@ export function InvoicePdfDocument({
             <Text style={styles.totalsLabel}>{ar('إجمالي الخدمات')}</Text>
             <Text style={styles.totalsValue}>{formatNumber(servicesTotal)}</Text>
           </View>
+          {operationsTotal != null && operationsTotal > 0 && (
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>{ar('إجمالي العمليات')}</Text>
+              <Text style={styles.totalsValue}>{formatNumber(operationsTotal)}</Text>
+            </View>
+          )}
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>{ar('الإجمالي الكلي')}</Text>
             <Text style={styles.totalsValue}>{formatNumber(total)}</Text>

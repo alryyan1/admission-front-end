@@ -69,8 +69,8 @@ const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }>
 
 const TAB_ITEMS = [
   { key: 'overview', label: 'نظرة عامة' },
-  { key: 'vitals', label: 'العلامات الحيوية' },
-  { key: 'orders', label: 'أوامر الأطباء' },
+  // { key: 'vitals', label: 'العلامات الحيوية' },
+  // { key: 'orders', label: 'أوامر الأطباء' },
   { key: 'billing', label: 'الفوترة' },
   { key: 'statement', label: 'كشف الحساب' },
   { key: 'operations', label: 'العمليات' },
@@ -225,8 +225,12 @@ export function AdmissionDetailPage() {
   }
 
   const totalServices = (admission.requested_services ?? []).reduce((sum, s) => sum + Number(s.total_price), 0)
+  const totalOperations = (admission.operations ?? []).reduce(
+    (sum, op) => sum + (op.price != null ? Number(op.price) : 0),
+    0,
+  )
   const totalDeposits = (admission.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
-  const dueBalance = totalServices - totalDeposits
+  const dueBalance = totalServices + totalOperations - totalDeposits
 
   async function handleOpenSummaryPdf() {
     if (!admission) return
@@ -447,6 +451,7 @@ export function AdmissionDetailPage() {
       {tab === 'statement' && (
         <AccountStatementTab
           services={admission.requested_services ?? []}
+          operations={admission.operations ?? []}
           deposits={admission.deposits ?? []}
           patientName={admission.patient?.name ?? ''}
           admissionId={admission.id}
@@ -459,6 +464,7 @@ export function AdmissionDetailPage() {
           loading={admissionQuery.isFetching}
           onSchedule={(payload) => operationMutation.mutateAsync(payload)}
           onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
+          onTeamChanged={invalidateAdmission}
           isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
         />
       )}

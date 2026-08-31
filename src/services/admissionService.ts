@@ -8,7 +8,6 @@ import type {
   DoctorOrder,
   Invoice,
   Operation,
-  OperationPriority,
   OperationSupply,
   OperationTeamMember,
   RequestedService,
@@ -171,15 +170,9 @@ export async function addOperation(
   admissionId: number,
   payload: {
     surgeon_id: number
-    operation_room_id?: number | null
     procedure_id: number
-    priority?: OperationPriority
-    diagnosis?: string
-    expected_duration_minutes?: number
-    anesthesia_type?: string
-    requested_by_doctor_id?: number
+    price: number | null
     scheduled_at: string | null
-    notes?: string
   },
 ): Promise<Operation> {
   const { data } = await apiClient.post<Operation>(`/admissions/${admissionId}/operations`, payload)
@@ -190,60 +183,12 @@ export async function updateOperation(
   operationId: number,
   payload: Partial<{
     surgeon_id: number
-    operation_room_id: number | null
     procedure_id: number
-    priority: OperationPriority
-    diagnosis: string | null
-    expected_duration_minutes: number | null
-    anesthesia_type: string | null
-    requested_by_doctor_id: number | null
+    price: number | null
     scheduled_at: string | null
-    notes: string
   }>,
 ): Promise<Operation> {
   const { data } = await apiClient.patch<Operation>(`/operations/${operationId}`, payload)
-  return data
-}
-
-export async function prepareOperation(
-  operationId: number,
-  payload: {
-    consent_obtained: boolean
-    fasting_confirmed: boolean
-    site_marked: boolean
-    preop_vitals_checked: boolean
-    preop_notes?: string | null
-  },
-): Promise<Operation> {
-  const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/prepare`, payload)
-  return data
-}
-
-export async function startOperation(operationId: number): Promise<Operation> {
-  const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/start`)
-  return data
-}
-
-export async function completeOperation(
-  operationId: number,
-  payload?: {
-    notes?: string
-    findings?: string
-    complications?: string
-    blood_loss_ml?: number
-    outcome?: string
-    report_notes?: string
-  },
-): Promise<Operation> {
-  const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/complete`, payload)
-  return data
-}
-
-export async function cancelOperation(
-  operationId: number,
-  payload?: { cancellation_reason?: string },
-): Promise<Operation> {
-  const { data } = await apiClient.patch<Operation>(`/operations/${operationId}/cancel`, payload)
   return data
 }
 

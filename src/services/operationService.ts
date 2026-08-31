@@ -1,8 +1,7 @@
 import apiClient from '@/services/api'
-import type { Operation, OperationStatus } from '@/types/admission'
+import type { Operation } from '@/types/admission'
 
 export interface OperationFilters {
-  status?: OperationStatus
   surgeon_id?: number
   date?: string
   search?: string

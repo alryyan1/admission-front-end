@@ -111,15 +111,15 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
               هذه الغرفة مخصصة للإقامات القصيرة. جميع الأسرة داخلها تسمح بإقامة 12 أو 24 ساعة فقط.
             </p>
             <Form.Item name="price_12_hours" label="السعر لـ 12 ساعة">
-              <Input type="number" placeholder="غير محدد بعد" />
+              <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
             </Form.Item>
             <Form.Item name="price_24_hours" label="السعر لـ 24 ساعة">
-              <Input type="number" placeholder="غير محدد بعد" />
+              <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
             </Form.Item>
           </>
         ) : (
           <Form.Item name="price_per_day" label="السعر لليوم">
-            <Input type="number" placeholder="غير محدد بعد" />
+            <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
           </Form.Item>
         )}
       </Form>

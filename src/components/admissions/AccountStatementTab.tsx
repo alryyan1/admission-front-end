@@ -7,12 +7,13 @@ import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { AccountStatementPdfDocument } from '@/components/admissions/AccountStatementPdfDocument'
-import type { AdmissionDeposit, RequestedService } from '@/types/admission'
+import type { AdmissionDeposit, Operation, RequestedService } from '@/types/admission'
 
 const { Text } = Typography
 
 interface AccountStatementTabProps {
   services: RequestedService[]
+  operations: Operation[]
   deposits: AdmissionDeposit[]
   patientName: string
   admissionId: number
@@ -27,7 +28,13 @@ interface StatementRow {
   balance: number
 }
 
-export function AccountStatementTab({ services, deposits, patientName, admissionId }: AccountStatementTabProps) {
+export function AccountStatementTab({
+  services,
+  operations,
+  deposits,
+  patientName,
+  admissionId,
+}: AccountStatementTabProps) {
   const { assets: pdfAssets } = useFacilityPdfAssets()
   const [isGenerating, setIsGenerating] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -47,6 +54,15 @@ export function AccountStatementTab({ services, deposits, patientName, admission
       debit: Number(s.total_price),
       credit: 0,
     })),
+    ...operations
+      .filter((op) => op.price != null)
+      .map((op) => ({
+        key: `operation-${op.id}`,
+        date: op.scheduled_at ?? '',
+        description: `عملية: ${op.procedure?.name_ar ?? `#${op.operation_number ?? op.id}`}`,
+        debit: Number(op.price),
+        credit: 0,
+      })),
     ...deposits.map((d) => ({
       key: `deposit-${d.id}`,
       date: d.paid_at,
@@ -129,7 +145,7 @@ export function AccountStatementTab({ services, deposits, patientName, admission
 
         <Flex vertical gap={4}>
           <Flex justify="space-between">
-            <Text type="secondary">إجمالي المدين (الخدمات)</Text>
+            <Text type="secondary">إجمالي المدين (الخدمات والعمليات)</Text>
             <Text>{formatNumber(totalDebit)}</Text>
           </Flex>
           <Flex justify="space-between">

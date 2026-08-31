@@ -1,4 +1,4 @@
-import type { Bed, Room } from '@/types/facility'
+import type { Bed } from '@/types/facility'
 import type { Doctor, Patient } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
 
@@ -84,8 +84,6 @@ export interface RequestedService {
   created_at: string
 }
 
-export type OperationStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
-
 export interface TeamRole {
   id: number
   slug: string | null
@@ -105,8 +103,13 @@ export interface OperationTeamMember {
   name: string | null
   role_id: number
   notes: string | null
+  entitlement_amount: string | null
+  payment_method_id: number | null
+  entitlement_paid_at: string | null
   doctor?: Doctor | null
   role?: TeamRole | null
+  payment_method?: PaymentMethod | null
+  operation?: Operation
 }
 
 export interface OperationSupply {
@@ -117,8 +120,6 @@ export interface OperationSupply {
   unit: string | null
   notes: string | null
 }
-
-export type OperationPriority = 'emergency' | 'urgent' | 'scheduled'
 
 export interface ProcedureCategory {
   id: number
@@ -140,35 +141,12 @@ export interface Operation {
   id: number
   admission_id: number
   surgeon_id: number
-  operation_room_id: number | null
   operation_number: string | null
   procedure_id: number
-  priority: OperationPriority
-  diagnosis: string | null
-  expected_duration_minutes: number | null
-  anesthesia_type: string | null
-  requested_by_doctor_id: number | null
+  /** Price of the operation (decimal string, e.g. "75000.00"). */
+  price: string | null
   scheduled_at: string | null
-  started_at: string | null
-  ended_at: string | null
-  status: OperationStatus
-  notes: string | null
-  consent_obtained: boolean
-  fasting_confirmed: boolean
-  site_marked: boolean
-  preop_vitals_checked: boolean
-  preop_notes: string | null
-  prepared_at: string | null
-  findings: string | null
-  complications: string | null
-  blood_loss_ml: number | null
-  outcome: string | null
-  report_notes: string | null
-  cancellation_reason: string | null
-  cancelled_at: string | null
   surgeon?: Doctor
-  requested_by_doctor?: Doctor | null
-  operation_room?: Room
   admission?: Admission
   team_members?: OperationTeamMember[]
   supplies?: OperationSupply[]
@@ -207,6 +185,7 @@ export interface CashierAdmission {
   patient: Patient
   bed?: Bed
   services_total: number
+  operations_total: number
   deposits_total: number
   balance_due: number
   operations?: Operation[]
@@ -229,11 +208,24 @@ export interface CashierOverview {
   admissions: CashierAdmission[]
 }
 
+/** A billable line on the invoice preview — a requested service or a priced operation. */
+export interface AdmissionInvoiceLineItem {
+  id: number | string
+  name: string
+  quantity: number
+  unit_price: number
+  total_price: number
+  is_auto_added: boolean
+  is_operation: boolean
+  created_at: string
+}
+
 export interface AdmissionInvoice {
   admission_id: number
   patient: Patient
-  requested_services: RequestedService[]
+  requested_services: AdmissionInvoiceLineItem[]
   services_total: number
+  operations_total: number
   total: number
   deposits: AdmissionDeposit[]
   deposits_total: number

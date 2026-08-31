@@ -1,48 +1,19 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Select, Input, Table, Tag, Typography, Flex, Space } from 'antd'
+import { ConfigProvider, Card, Button, Input, Table, Tag, Typography, Flex, Space, Badge } from 'antd'
+import { EditOutlined, TeamOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { formatDateTime } from '@/lib/utils'
 import { getAllOperations } from '@/services/operationService'
-import type { Operation, OperationPriority, OperationStatus } from '@/types/admission'
+import { updateOperation } from '@/services/admissionService'
+import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
+import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
+import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
+import type { Operation } from '@/types/admission'
 
 const { Title, Text } = Typography
-
-const STATUS_LABELS: Record<OperationStatus, string> = {
-  scheduled: 'مجدولة',
-  in_progress: 'جارية',
-  completed: 'مكتملة',
-  cancelled: 'ملغاة',
-}
-
-const STATUS_COLORS: Record<OperationStatus, string> = {
-  scheduled: 'default',
-  in_progress: 'gold',
-  completed: 'success',
-  cancelled: 'error',
-}
-
-const PRIORITY_LABELS: Record<OperationPriority, string> = {
-  emergency: 'طارئة',
-  urgent: 'عاجلة',
-  scheduled: 'مجدولة',
-}
-
-const PRIORITY_COLORS: Record<OperationPriority, string> = {
-  emergency: 'error',
-  urgent: 'warning',
-  scheduled: 'default',
-}
-
-const STATUS_OPTIONS = [
-  { label: 'الكل', value: 'all' },
-  { label: 'مجدولة', value: 'scheduled' },
-  { label: 'جارية', value: 'in_progress' },
-  { label: 'مكتملة', value: 'completed' },
-  { label: 'ملغاة', value: 'cancelled' },
-]
 
 function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -58,18 +29,35 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 export function OperationsPage() {
   const antTheme = useAntTheme()
   const navigate = useNavigate()
-  const [status, setStatus] = useState<OperationStatus | 'all'>('all')
+  const queryClient = useQueryClient()
   const [date, setDate] = useState('')
   const [search, setSearch] = useState('')
 
+  const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
+  const [teamOperationId, setTeamOperationId] = useState<number | null>(null)
+
   const operationsQuery = useQuery({
-    queryKey: ['operations', status, date, search],
+    queryKey: ['operations', date, search],
     queryFn: () =>
       getAllOperations({
-        status: status === 'all' ? undefined : status,
         date: date || undefined,
         search: search || undefined,
       }),
+  })
+
+  const teamOperation =
+    teamOperationId != null
+      ? (operationsQuery.data?.data ?? []).find((op) => op.id === teamOperationId) ?? null
+      : null
+
+  function invalidate() {
+    queryClient.invalidateQueries({ queryKey: ['operations'] })
+  }
+
+  const updateMutation = useMutation({
+    mutationFn: (vars: { operationId: number; payload: Parameters<typeof updateOperation>[1] }) =>
+      updateOperation(vars.operationId, vars.payload),
+    onSuccess: invalidate,
   })
 
   const columns: ColumnsType<Operation> = [
@@ -85,18 +73,47 @@ export function OperationsPage() {
         </Space>
       ),
     },
-    {
-      title: 'الأولوية',
-      key: 'priority',
-      render: (_, op) => <Tag color={PRIORITY_COLORS[op.priority]}>{PRIORITY_LABELS[op.priority]}</Tag>,
-    },
     { title: 'الجراح', key: 'surgeon', render: (_, op) => op.surgeon?.name ?? '—' },
-    { title: 'غرفة العمليات', key: 'room', render: (_, op) => op.operation_room?.room_number ?? '—' },
-    { title: 'الموعد', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
     {
-      title: 'الحالة',
-      key: 'status',
-      render: (_, op) => <Tag color={STATUS_COLORS[op.status]}>{STATUS_LABELS[op.status]}</Tag>,
+      title: 'السعر',
+      key: 'price',
+      render: (_, op) => (
+        <OperationPriceCell
+          operation={op}
+          onCommit={(price) => updateMutation.mutate({ operationId: op.id, payload: { price } })}
+        />
+      ),
+    },
+    { title: 'تاريخ العملية', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, op) => (
+        <Space size={4}>
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={(e) => {
+              e.stopPropagation()
+              setEditingOperation(op)
+            }}
+          >
+            تعديل
+          </Button>
+          <Badge count={op.team_members?.length ?? 0} size="small" offset={[-4, 2]}>
+            <Button
+              size="small"
+              icon={<TeamOutlined />}
+              onClick={(e) => {
+                e.stopPropagation()
+                setTeamOperationId(op.id)
+              }}
+            >
+              الفريق الطبي
+            </Button>
+          </Badge>
+        </Space>
+      ),
     },
   ]
 
@@ -108,15 +125,7 @@ export function OperationsPage() {
 
       <Card style={{ marginBottom: 16 }}>
         <Flex wrap="wrap" gap={12}>
-          <FieldLabel label="الحالة">
-            <Select
-              style={{ width: 160 }}
-              value={status}
-              onChange={(v) => setStatus(v as OperationStatus | 'all')}
-              options={STATUS_OPTIONS}
-            />
-          </FieldLabel>
-          <FieldLabel label="التاريخ">
+          <FieldLabel label="تاريخ العملية">
             <Input type="date" style={{ width: 160 }} value={date} onChange={(e) => setDate(e.target.value)} />
           </FieldLabel>
           <FieldLabel label="بحث">
@@ -143,6 +152,30 @@ export function OperationsPage() {
           })}
         />
       </Card>
+
+      <ScheduleOperationModal
+        open={!!editingOperation}
+        operation={editingOperation}
+        onClose={() => setEditingOperation(null)}
+        onSchedule={async () => {
+          throw new Error('not supported here')
+        }}
+        onUpdate={async (operationId, payload) => {
+          await updateMutation.mutateAsync({ operationId, payload })
+          setEditingOperation(null)
+        }}
+        isSubmitting={updateMutation.isPending}
+      />
+
+      {teamOperation && (
+        <OperationTeamModal
+          open={!!teamOperation}
+          onClose={() => setTeamOperationId(null)}
+          operationId={teamOperation.id}
+          existingMembers={teamOperation.team_members ?? []}
+          onAdded={invalidate}
+        />
+      )}
     </ConfigProvider>
   )
 }

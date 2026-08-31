@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { toast } from 'sonner'
+import { notifyUnauthenticated } from '@/services/authEvents'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
 export const BACKEND_URL = API_BASE_URL.replace(/\/api$/, '')
@@ -23,27 +24,21 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-let isRedirectingToLogin = false
-
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthEndpoint =
       error.config?.url?.includes('/login') || error.config?.url?.includes('/register')
 
-    if (
-      error.response?.data?.message === 'Unauthenticated.' &&
-      !isAuthEndpoint &&
-      !error.config?.skipAuthRedirect &&
-      !isRedirectingToLogin
-    ) {
-      isRedirectingToLogin = true
-      localStorage.removeItem('authToken')
-      localStorage.removeItem('authUser')
-      toast.error('انتهت جلستك، يرجى تسجيل الدخول مجدداً')
-      setTimeout(() => {
-        window.location.href = '/login'
-      }, 1500)
+    const isUnauthenticated =
+      error.response?.status === 401 || error.response?.data?.message === 'Unauthenticated.'
+
+    if (isUnauthenticated && !isAuthEndpoint) {
+      // Let AuthContext clear the session and let the router redirect via <Navigate>.
+      // The caller can opt out (e.g. the boot-time token check) with skipAuthHandler.
+      if (!error.config?.skipAuthHandler) {
+        notifyUnauthenticated()
+      }
       return Promise.reject(error)
     }
 

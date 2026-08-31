@@ -94,6 +94,7 @@ export function ServiceFormModal({ open, onClose, service, categories, onSubmit,
         <Col xs={24} md={12}>
           <FieldLabel label="السعر">
             <InputNumber
+              className="amount-input"
               style={{ width: '100%' }}
               min={0}
               value={price}

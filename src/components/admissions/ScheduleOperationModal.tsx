@@ -2,63 +2,29 @@ import { useEffect, useRef, useState } from 'react'
 import type { ElementRef } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Modal, Row, Col, Select, Input, InputNumber, Typography, Space } from 'antd'
-import dayjs from 'dayjs'
+import dayjs, { APP_TIMEZONE } from '@/lib/dayjs'
 import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
-import { getOperationRooms } from '@/services/facilityService'
 import { getProcedures } from '@/services/procedureService'
-import type { Operation, OperationPriority } from '@/types/admission'
+import type { Operation } from '@/types/admission'
 
 const { Text } = Typography
-const { TextArea } = Input
+
+export interface OperationFormPayload {
+  surgeon_id: number
+  procedure_id: number
+  price: number | null
+  scheduled_at: string | null
+}
 
 interface ScheduleOperationModalProps {
   open: boolean
   onClose: () => void
   operation?: Operation | null
-  onSchedule: (payload: {
-    surgeon_id: number
-    operation_room_id?: number | null
-    procedure_id: number
-    priority?: OperationPriority
-    diagnosis?: string
-    expected_duration_minutes?: number
-    anesthesia_type?: string
-    requested_by_doctor_id?: number
-    scheduled_at: string | null
-    notes?: string
-  }) => Promise<unknown>
-  onUpdate?: (
-    operationId: number,
-    payload: Partial<{
-      surgeon_id: number
-      operation_room_id: number | null
-      procedure_id: number
-      priority: OperationPriority
-      diagnosis: string | null
-      expected_duration_minutes: number | null
-      anesthesia_type: string | null
-      requested_by_doctor_id: number | null
-      scheduled_at: string | null
-      notes: string
-    }>,
-  ) => Promise<unknown>
+  onSchedule: (payload: OperationFormPayload) => Promise<unknown>
+  onUpdate?: (operationId: number, payload: Partial<OperationFormPayload>) => Promise<unknown>
   isSubmitting: boolean
 }
-
-const PRIORITY_OPTIONS: { label: string; value: OperationPriority }[] = [
-  { label: 'طارئة', value: 'emergency' },
-  { label: 'عاجلة', value: 'urgent' },
-  { label: 'مجدولة', value: 'scheduled' },
-]
-
-const ANESTHESIA_OPTIONS = [
-  { label: 'عام', value: 'عام' },
-  { label: 'نصفي (سبينال)', value: 'نصفي' },
-  { label: 'موضعي', value: 'موضعي' },
-  { label: 'تخدير واعٍ', value: 'تخدير واعٍ' },
-  { label: 'أخرى', value: 'أخرى' },
-]
 
 function FieldLabel({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
@@ -81,15 +47,9 @@ export function ScheduleOperationModal({
   isSubmitting,
 }: ScheduleOperationModalProps) {
   const [procedureId, setProcedureId] = useState<number | undefined>(undefined)
-  const [priority, setPriority] = useState<OperationPriority>('scheduled')
   const [surgeonId, setSurgeonId] = useState<number | undefined>(undefined)
-  const [requestedByDoctorId, setRequestedByDoctorId] = useState<number | undefined>(undefined)
-  const [operationRoomId, setOperationRoomId] = useState<number | undefined>(undefined)
+  const [price, setPrice] = useState<number | null>(null)
   const [scheduledAt, setScheduledAt] = useState('')
-  const [expectedDuration, setExpectedDuration] = useState<number | null>(null)
-  const [anesthesiaType, setAnesthesiaType] = useState<string | undefined>(undefined)
-  const [diagnosis, setDiagnosis] = useState('')
-  const [notes, setNotes] = useState('')
   const procedureSelectRef = useRef<ElementRef<typeof Select>>(null)
   const surgeonSelectRef = useRef<ElementRef<typeof Select>>(null)
   const surgeonDropdownOpenRef = useRef(false)
@@ -102,52 +62,33 @@ export function ScheduleOperationModal({
     queryFn: () => getDoctors(undefined, surgeonRoleId),
     enabled: surgeonRoleId !== undefined,
   })
-  const operationRoomsQuery = useQuery({ queryKey: ['rooms', 'operation'], queryFn: getOperationRooms })
 
   const procedureOptions = groupProceduresByCategory(proceduresQuery.data ?? [])
 
   useEffect(() => {
     if (!open) {
       setProcedureId(undefined)
-      setPriority('scheduled')
       setSurgeonId(undefined)
-      setRequestedByDoctorId(undefined)
-      setOperationRoomId(undefined)
+      setPrice(null)
       setScheduledAt('')
-      setExpectedDuration(null)
-      setAnesthesiaType(undefined)
-      setDiagnosis('')
-      setNotes('')
       return
     }
     if (operation) {
       setProcedureId(operation.procedure_id)
-      setPriority(operation.priority)
       setSurgeonId(operation.surgeon_id)
-      setRequestedByDoctorId(operation.requested_by_doctor_id ?? undefined)
-      setOperationRoomId(operation.operation_room_id ?? undefined)
-      setScheduledAt(operation.scheduled_at ? dayjs(operation.scheduled_at).format('YYYY-MM-DDTHH:mm') : '')
-      setExpectedDuration(operation.expected_duration_minutes)
-      setAnesthesiaType(operation.anesthesia_type ?? undefined)
-      setDiagnosis(operation.diagnosis ?? '')
-      setNotes(operation.notes ?? '')
+      setPrice(operation.price != null ? Number(operation.price) : null)
+      setScheduledAt(operation.scheduled_at ? dayjs(operation.scheduled_at).tz().format('YYYY-MM-DDTHH:mm') : '')
     }
   }, [open, operation])
 
   async function handleSubmit() {
     if (!procedureId || !surgeonId) return
     try {
-      const payload = {
+      const payload: OperationFormPayload = {
         procedure_id: procedureId,
         surgeon_id: surgeonId,
-        operation_room_id: operationRoomId,
-        priority,
-        scheduled_at: scheduledAt || null,
-        expected_duration_minutes: expectedDuration ?? undefined,
-        anesthesia_type: anesthesiaType,
-        requested_by_doctor_id: requestedByDoctorId,
-        diagnosis: diagnosis || undefined,
-        notes: notes || undefined,
+        price: price ?? null,
+        scheduled_at: scheduledAt ? dayjs.tz(scheduledAt, APP_TIMEZONE).toISOString() : null,
       }
       if (operation) {
         await onUpdate?.(operation.id, payload)
@@ -164,7 +105,7 @@ export function ScheduleOperationModal({
       open={open}
       onCancel={onClose}
       title={operation ? 'تعديل العملية' : 'طلب عملية جديدة'}
-      width={640}
+      width={520}
       okText={operation ? 'حفظ التعديلات' : 'طلب العملية'}
       cancelText="إلغاء"
       onOk={handleSubmit}
@@ -193,12 +134,7 @@ export function ScheduleOperationModal({
           </FieldLabel>
         </Col>
 
-        <Col xs={24} md={8}>
-          <FieldLabel label="الأولوية">
-            <Select style={{ width: '100%' }} value={priority} onChange={setPriority} options={PRIORITY_OPTIONS} />
-          </FieldLabel>
-        </Col>
-        <Col xs={24} md={8}>
+        <Col span={24}>
           <FieldLabel label="الجراح" required>
             <Select
               ref={surgeonSelectRef}
@@ -221,73 +157,23 @@ export function ScheduleOperationModal({
             />
           </FieldLabel>
         </Col>
-        <Col xs={24} md={8}>
-          <FieldLabel label="الطبيب المسؤول (اختياري)">
-            <Select
-              style={{ width: '100%' }}
-              allowClear
-              showSearch
-              placeholder="اختر طبيباً"
-              value={requestedByDoctorId}
-              onChange={(v) => setRequestedByDoctorId(v ?? undefined)}
-              optionFilterProp="label"
-              options={(doctorsQuery.data ?? []).map((d) => ({ label: d.name, value: d.id }))}
-            />
-          </FieldLabel>
-        </Col>
 
-        <Col xs={24} md={8}>
-          <FieldLabel label="غرفة العمليات (اختياري)">
-            <Select
-              style={{ width: '100%' }}
-              allowClear
-              placeholder="اختياري"
-              value={operationRoomId}
-              onChange={(v) => setOperationRoomId(v ?? undefined)}
-              options={(operationRoomsQuery.data ?? []).map((room) => ({
-                label: `غرفة ${room.room_number} — ${room.ward?.name}`,
-                value: room.id,
-              }))}
-            />
-          </FieldLabel>
-        </Col>
-        <Col xs={24} md={8}>
-          <FieldLabel label="الموعد">
-            <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
-          </FieldLabel>
-        </Col>
-        <Col xs={24} md={8}>
-          <FieldLabel label="المدة المتوقعة (دقيقة)">
+        <Col xs={24} md={12}>
+          <FieldLabel label="سعر العملية">
             <InputNumber
               style={{ width: '100%' }}
-              min={1}
-              value={expectedDuration}
-              onChange={(value) => setExpectedDuration(typeof value === 'number' ? value : null)}
+              min={0}
+              step={1000}
+              placeholder="0"
+              value={price}
+              onChange={(value) => setPrice(typeof value === 'number' ? value : null)}
             />
           </FieldLabel>
         </Col>
 
         <Col xs={24} md={12}>
-          <FieldLabel label="نوع التخدير">
-            <Select
-              style={{ width: '100%' }}
-              allowClear
-              placeholder="اختياري"
-              value={anesthesiaType}
-              onChange={(v) => setAnesthesiaType(v ?? undefined)}
-              options={ANESTHESIA_OPTIONS}
-            />
-          </FieldLabel>
-        </Col>
-
-        <Col span={24}>
-          <FieldLabel label="التشخيص / سبب العملية">
-            <TextArea value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} autoSize={{ minRows: 1, maxRows: 3 }} />
-          </FieldLabel>
-        </Col>
-        <Col span={24}>
-          <FieldLabel label="ملاحظات الطبيب">
-            <TextArea value={notes} onChange={(e) => setNotes(e.target.value)} autoSize={{ minRows: 1, maxRows: 3 }} />
+          <FieldLabel label="تاريخ العملية">
+            <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </FieldLabel>
         </Col>
       </Row>

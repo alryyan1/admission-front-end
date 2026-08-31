@@ -102,7 +102,7 @@ export function AccountStatementPdfDocument({
 
         <View style={styles.totalsBlock}>
           <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>{ar('إجمالي المدين (الخدمات)')}</Text>
+            <Text style={styles.totalsLabel}>{ar('إجمالي المدين (الخدمات والعمليات)')}</Text>
             <Text style={styles.totalsValue}>{formatNumber(totalDebit)}</Text>
           </View>
           <View style={styles.totalsRow}>
@@ -115,7 +115,7 @@ export function AccountStatementPdfDocument({
           </View>
         </View>
 
-        <PdfLetterheadFooter assets={assets} />
+        <PdfLetterheadFooter assets={assets} showStamp={false} />
       </Page>
     </Document>
   )

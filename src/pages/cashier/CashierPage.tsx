@@ -20,7 +20,7 @@ import {
   Progress,
   Popover,
 } from 'antd'
-import { PieChartOutlined, FileDoneOutlined, FileTextOutlined, MedicineBoxOutlined, PrinterOutlined } from '@ant-design/icons'
+import { PieChartOutlined, FileDoneOutlined, FileTextOutlined, PrinterOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
@@ -41,17 +41,10 @@ import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { StatTile } from '@/components/statistics/StatTile'
 import { InvoicePdfDocument } from '@/components/admissions/InvoicePdfDocument'
-import type { CashierAdmission, OperationStatus, OperationTeamMember } from '@/types/admission'
+import type { CashierAdmission, OperationTeamMember } from '@/types/admission'
 
 const { Title } = Typography
 const { RangePicker } = DatePicker
-
-const OPERATION_STATUS_LABELS: Record<OperationStatus, string> = {
-  scheduled: 'مجدولة',
-  in_progress: 'جارية',
-  completed: 'مكتملة',
-  cancelled: 'ملغاة',
-}
 
 export function CashierPage() {
   const antTheme = useAntTheme()
@@ -204,6 +197,7 @@ export function CashierPage() {
           admissionId={invoice.admission_id}
           services={invoice.requested_services}
           servicesTotal={invoice.services_total}
+          operationsTotal={invoice.operations_total}
           depositsTotal={invoice.deposits_total}
           balanceDue={invoice.balance_due}
           total={invoice.total}
@@ -309,39 +303,30 @@ export function CashierPage() {
     { title: 'المريض', key: 'patient', render: (_, a) => a.patient?.name ?? '—' },
     { title: 'تاريخ الدخول', key: 'admission_date', render: (_, a) => formatDate(a.admission_date) },
     {
-      title: 'الإجمالي / المدفوع / المتبقي',
-      key: 'financials',
+      title: 'الإجمالي',
+      key: 'services_total',
       align: 'end',
       render: (_, a) => (
-        <Space size={8} wrap style={{ justifyContent: 'flex-end' }}>
-          <Typography.Text type="secondary">{formatNumber(a.services_total)}</Typography.Text>
-          <Typography.Text type="secondary">/</Typography.Text>
-          <Typography.Text style={{ color: '#16a34a' }}>{formatNumber(a.deposits_total)}</Typography.Text>
-          <Typography.Text type="secondary">/</Typography.Text>
-          <Typography.Text strong style={{ color: a.balance_due > 0 ? '#dc2626' : '#16a34a' }}>
-            {formatNumber(a.balance_due)}
-          </Typography.Text>
-        </Space>
+        <Typography.Text type="secondary">{formatNumber(a.services_total + a.operations_total)}</Typography.Text>
       ),
     },
     {
-      title: 'عملية',
-      key: 'operation',
-      render: (_, a) => {
-        const operation = a.operations?.find((op) => op.status !== 'cancelled') ?? a.operations?.[0]
-        if (!operation) return <Tag>لا يوجد</Tag>
-        return (
-          <Space size={4}>
-            <Tag icon={<MedicineBoxOutlined />} color={operation.status === 'completed' ? 'success' : operation.status === 'in_progress' ? 'gold' : 'processing'}>
-              {OPERATION_STATUS_LABELS[operation.status]}
-            </Tag>
-            <Button size="small" onClick={() => setTeamManageOperationId(operation.id)}>
-              إدارة العملية
-            </Button>
-          </Space>
-        )
-      },
+      title: 'المدفوع',
+      key: 'deposits_total',
+      align: 'end',
+      render: (_, a) => <Typography.Text style={{ color: '#16a34a' }}>{formatNumber(a.deposits_total)}</Typography.Text>,
     },
+    {
+      title: 'المتبقي',
+      key: 'balance_due',
+      align: 'end',
+      render: (_, a) => (
+        <Typography.Text strong style={{ color: a.balance_due > 0 ? '#dc2626' : '#16a34a' }}>
+          {formatNumber(a.balance_due)}
+        </Typography.Text>
+      ),
+    },
+
     {
       title: '',
       key: 'actions',
@@ -378,7 +363,7 @@ export function CashierPage() {
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Title level={3} style={{ margin: 0 }}>
-          شاشة المحاسب
+          الإيرادات
         </Title>
         <Space>
           <RangePicker
@@ -471,6 +456,7 @@ export function CashierPage() {
               المبلغ
             </Typography.Text>
             <InputNumber
+              className="amount-input"
               style={{ width: '100%' }}
               min={0}
               value={depositAmount}

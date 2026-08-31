@@ -1,81 +1,33 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Card, Button, Table, Tag, Typography, Flex, Space } from 'antd'
-import { EditOutlined } from '@ant-design/icons'
+import { Card, Button, Table, Tag, Typography, Flex, Space, Badge } from 'antd'
+import { EditOutlined, TeamOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDateTime } from '@/lib/utils'
-import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
-import type { Operation, OperationPriority, OperationStatus } from '@/types/admission'
+import { ScheduleOperationModal, type OperationFormPayload } from '@/components/admissions/ScheduleOperationModal'
+import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
+import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
+import type { Operation } from '@/types/admission'
 
 const { Text } = Typography
 
 interface OperationsTabProps {
   operations: Operation[]
   loading?: boolean
-  onSchedule: (payload: {
-    surgeon_id: number
-    operation_room_id?: number | null
-    procedure_id: number
-    priority?: OperationPriority
-    diagnosis?: string
-    expected_duration_minutes?: number
-    anesthesia_type?: string
-    requested_by_doctor_id?: number
-    scheduled_at: string | null
-    notes?: string
-  }) => Promise<unknown>
-  onUpdate: (
-    operationId: number,
-    payload: Partial<{
-      surgeon_id: number
-      operation_room_id: number | null
-      procedure_id: number
-      priority: OperationPriority
-      diagnosis: string | null
-      expected_duration_minutes: number | null
-      anesthesia_type: string | null
-      requested_by_doctor_id: number | null
-      scheduled_at: string | null
-      notes: string
-    }>,
-  ) => Promise<unknown>
+  onSchedule: (payload: OperationFormPayload) => Promise<unknown>
+  onUpdate: (operationId: number, payload: Partial<OperationFormPayload>) => Promise<unknown>
+  onTeamChanged?: () => void
   isSubmitting: boolean
 }
 
-const STATUS_LABELS: Record<OperationStatus, string> = {
-  scheduled: 'مجدولة',
-  in_progress: 'جارية',
-  completed: 'مكتملة',
-  cancelled: 'ملغاة',
-}
-
-const STATUS_COLORS: Record<OperationStatus, string> = {
-  scheduled: 'default',
-  in_progress: 'gold',
-  completed: 'success',
-  cancelled: 'error',
-}
-
-const PRIORITY_LABELS: Record<OperationPriority, string> = {
-  emergency: 'طارئة',
-  urgent: 'عاجلة',
-  scheduled: 'مجدولة',
-}
-
-const PRIORITY_COLORS: Record<OperationPriority, string> = {
-  emergency: 'error',
-  urgent: 'warning',
-  scheduled: 'default',
-}
-
-export function OperationsTab({ operations, loading, onSchedule, onUpdate, isSubmitting }: OperationsTabProps) {
-  const navigate = useNavigate()
+export function OperationsTab({ operations, loading, onSchedule, onUpdate, onTeamChanged, isSubmitting }: OperationsTabProps) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
+  const [teamOperationId, setTeamOperationId] = useState<number | null>(null)
+
+  const teamOperation = teamOperationId != null ? operations.find((op) => op.id === teamOperationId) ?? null : null
 
   const columns: ColumnsType<Operation> = [
     { title: 'رقم العملية', dataIndex: 'operation_number', key: 'operation_number', render: (v) => v ?? '—' },
-
     {
       title: 'الإجراء',
       key: 'procedure',
@@ -87,38 +39,41 @@ export function OperationsTab({ operations, loading, onSchedule, onUpdate, isSub
       ),
     },
     { title: 'الجراح', key: 'surgeon', render: (_, op) => op.surgeon?.name ?? '—' },
-    { title: 'غرفة العمليات', key: 'room', render: (_, op) => op.operation_room?.room_number ?? '—' },
-    { title: 'الموعد', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
     {
-      title: 'الأولوية',
-      key: 'priority',
-      render: (_, op) => <Tag color={PRIORITY_COLORS[op.priority]}>{PRIORITY_LABELS[op.priority]}</Tag>,
+      title: 'السعر',
+      key: 'price',
+      render: (_, op) => (
+        <OperationPriceCell operation={op} onCommit={(price) => onUpdate(op.id, { price })} />
+      ),
     },
-    {
-      title: 'الحالة',
-      key: 'status',
-      render: (_, op) => <Tag color={STATUS_COLORS[op.status]}>{STATUS_LABELS[op.status]}</Tag>,
-    },
+    { title: 'تاريخ العملية', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
     {
       title: '',
       key: 'actions',
       render: (_, op) => (
         <Space size={4}>
-          {op.status === 'scheduled' && (
+          <Button
+            size="small"
+            icon={<EditOutlined />}
+            onClick={(e) => {
+              e.stopPropagation()
+              setEditingOperation(op)
+            }}
+          >
+            تعديل
+          </Button>
+          <Badge count={op.team_members?.length ?? 0} size="small" offset={[-4, 2]}>
             <Button
               size="small"
-              icon={<EditOutlined />}
+              icon={<TeamOutlined />}
               onClick={(e) => {
                 e.stopPropagation()
-                setEditingOperation(op)
+                setTeamOperationId(op.id)
               }}
             >
-              تعديل
+              أعضاء الفريق الطبي
             </Button>
-          )}
-          <Button size="small" onClick={(e) => { e.stopPropagation(); navigate(`/operations/${op.id}`) }}>
-             إدارة العملية
-          </Button>
+          </Badge>
         </Space>
       ),
     },
@@ -143,7 +98,7 @@ export function OperationsTab({ operations, loading, onSchedule, onUpdate, isSub
           locale={{ emptyText: 'لا توجد عمليات مجدولة بعد' }}
           onRow={(op) => ({
             className: 'cursor-pointer',
-            onClick: () => navigate(`/operations/${op.id}`),
+            onClick: () => setTeamOperationId(op.id),
           })}
         />
       </Card>
@@ -165,6 +120,16 @@ export function OperationsTab({ operations, loading, onSchedule, onUpdate, isSub
         }}
         isSubmitting={isSubmitting}
       />
+
+      {teamOperation && (
+        <OperationTeamModal
+          open={!!teamOperation}
+          onClose={() => setTeamOperationId(null)}
+          operationId={teamOperation.id}
+          existingMembers={teamOperation.team_members ?? []}
+          onAdded={onTeamChanged}
+        />
+      )}
     </Space>
   )
 }

@@ -97,6 +97,7 @@ export function ExpenseFormModal({ open, onClose, expense, onSubmit, isSubmittin
         <Col span={12}>
           <FieldLabel label="المبلغ">
             <InputNumber
+              className="amount-input"
               style={{ width: '100%' }}
               min={0}
               value={amount}

@@ -20,9 +20,9 @@ import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
 import { PatientsPage } from '@/pages/patients/PatientsPage'
 import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
-import { OperationDetailPage } from '@/pages/operations/OperationDetailPage'
 import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
 import { CashierPage } from '@/pages/cashier/CashierPage'
+import { AccountantPage } from '@/pages/accountant/AccountantPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
@@ -47,13 +47,13 @@ export const router = createBrowserRouter([
               { path: '/patients', element: <PatientsPage /> },
               { path: '/patients/:patientId', element: <PatientDetailPage /> },
               { path: '/operations', element: <OperationsPage /> },
-              { path: '/operations/:operationId', element: <OperationDetailPage /> },
               { path: '/statistics', element: <StatisticsPage /> },
               {
                 element: <RequireRole roles={['admin', 'cashier']} />,
                 children: [
                   { path: '/cashier', element: <CashierPage /> },
                   { path: '/expenses', element: <ExpensesPage /> },
+                  { path: '/accountant', element: <AccountantPage /> },
                 ],
               },
               {

@@ -6,29 +6,10 @@ import { DateRangeFilter } from '@/components/statistics/DateRangeFilter'
 import { formatNumber } from '@/lib/utils'
 import type { OperationsStatistics, TopSurgeon } from '@/types/statistics'
 
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: 'مجدولة',
-  in_progress: 'جارية',
-  completed: 'مكتملة',
-  cancelled: 'ملغاة',
-}
-
-interface StatusCountRow {
-  status: string
-  count: number
-}
-
-const statusColumns: ColumnsType<StatusCountRow> = [
-  { title: 'الحالة', dataIndex: 'status', key: 'status', render: (v) => STATUS_LABELS[v] ?? v },
-  { title: 'العدد', dataIndex: 'count', key: 'count', render: (v) => formatNumber(v) },
-]
-
 const surgeonColumns: ColumnsType<TopSurgeon> = [
   { title: 'الجراح', dataIndex: 'name', key: 'name', render: (v) => v ?? '—' },
   { title: 'التخصص', dataIndex: 'specialist', key: 'specialist', render: (v) => v ?? '—' },
   { title: 'إجمالي العمليات', dataIndex: 'total', key: 'total', render: (v) => formatNumber(v) },
-  { title: 'مكتملة', dataIndex: 'completed_count', key: 'completed_count', render: (v) => formatNumber(v) },
-  { title: 'ملغاة', dataIndex: 'cancelled_count', key: 'cancelled_count', render: (v) => formatNumber(v) },
 ]
 
 interface OperationsTabProps {
@@ -42,23 +23,12 @@ interface OperationsTabProps {
 export function OperationsTab({ data, from, to, onFromChange, onToChange }: OperationsTabProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3">
         <StatTile label="عمليات مجدولة اليوم" value={formatNumber(data.today.scheduled)} />
-        <StatTile label="عمليات مكتملة اليوم" value={formatNumber(data.today.completed)} />
-        <StatTile label="عمليات ملغاة اليوم" value={formatNumber(data.today.cancelled)} />
+        <StatTile label="عمليات ضمن الفترة" value={formatNumber(data.total_in_range)} />
       </div>
 
       <DateRangeFilter from={from} to={to} onFromChange={onFromChange} onToChange={onToChange} />
-
-      <Card>
-        <h2 className="mb-3 text-sm font-semibold">العمليات حسب الحالة (ضمن الفترة)</h2>
-        <Table
-          rowKey="status"
-          columns={statusColumns}
-          dataSource={Object.entries(data.status_counts).map(([status, count]) => ({ status, count }))}
-          pagination={false}
-        />
-      </Card>
 
       <Card>
         <h2 className="mb-3 text-sm font-semibold">العمليات حسب الجراح</h2>

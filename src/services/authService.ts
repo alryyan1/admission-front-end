@@ -14,3 +14,15 @@ export async function fetchCurrentUser(): Promise<AuthUser> {
   const { data } = await apiClient.get<AuthUser>('/user')
   return data
 }
+
+/**
+ * Verify the stored token at app start. Skips the global 401 handler and the
+ * error toast so a stale token results in a silent redirect to the login page.
+ */
+export async function verifyStoredToken(): Promise<AuthUser> {
+  const { data } = await apiClient.get<AuthUser>('/user', {
+    skipAuthHandler: true,
+    suppressToast: true,
+  })
+  return data
+}

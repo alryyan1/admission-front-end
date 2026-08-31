@@ -8,7 +8,7 @@ import { formatDate, formatNumber } from '@/lib/utils'
 import { amountToArabicWords } from '@/lib/numberToArabicWords'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { InvoicePdfDocument } from '@/components/admissions/InvoicePdfDocument'
-import type { AdmissionInvoice, Invoice, InvoiceStatus, RequestedService } from '@/types/admission'
+import type { AdmissionInvoice, AdmissionInvoiceLineItem, Invoice, InvoiceStatus } from '@/types/admission'
 
 const { Title, Text } = Typography
 
@@ -92,6 +92,7 @@ export function InvoiceTab({
           admissionId={invoice.admission_id}
           services={invoice.requested_services}
           servicesTotal={invoice.services_total}
+          operationsTotal={invoice.operations_total}
           depositsTotal={invoice.deposits_total}
           balanceDue={invoice.balance_due}
           total={invoice.total}
@@ -142,8 +143,8 @@ export function InvoiceTab({
     iframeRef.current?.contentWindow?.print()
   }
 
-  const serviceColumns: ColumnsType<RequestedService> = [
-    { title: 'الخدمة', key: 'name', render: (_, s) => `${s.name} × ${s.quantity}` },
+  const serviceColumns: ColumnsType<AdmissionInvoiceLineItem> = [
+    { title: 'البند', key: 'name', render: (_, s) => `${s.name} × ${s.quantity}` },
     { title: 'الإجمالي', key: 'total', align: 'end', render: (_, s) => formatNumber(s.total_price) },
   ]
 
@@ -198,7 +199,7 @@ export function InvoiceTab({
         </Flex>
 
         <Title level={5} style={{ marginBottom: 8 }}>
-          الخدمات
+          البنود
         </Title>
         <Table
           rowKey="id"
@@ -206,11 +207,14 @@ export function InvoiceTab({
           dataSource={invoice.requested_services}
           pagination={false}
           size="small"
-          locale={{ emptyText: 'لا توجد خدمات' }}
+          locale={{ emptyText: 'لا توجد بنود' }}
         />
 
         <div style={{ marginTop: 8 }}>
-          <SummaryRow label="إجمالي الخدمات" value={formatNumber(invoice.services_total)} bold />
+          <SummaryRow label="إجمالي الخدمات" value={formatNumber(invoice.services_total)} />
+          {invoice.operations_total > 0 && (
+            <SummaryRow label="إجمالي العمليات" value={formatNumber(invoice.operations_total)} />
+          )}
         </div>
 
         <Divider style={{ margin: '12px 0' }} />

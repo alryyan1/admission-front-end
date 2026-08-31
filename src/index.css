@@ -107,3 +107,12 @@
   color: var(--foreground) !important;
   font-weight: 600 !important;
 }
+
+/* Money / amount inputs are always left-to-right, even inside the RTL layout.
+   Add the `amount-input` class to any InputNumber/Input that holds a currency value. */
+.amount-input,
+.amount-input input,
+.amount-input .ant-input-number-input {
+  direction: ltr !important;
+  text-align: left !important;
+}

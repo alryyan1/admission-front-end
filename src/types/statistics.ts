@@ -17,6 +17,10 @@ export interface OccupancyStatistics {
     total_beds: number
     occupied_beds: number
     available_beds: number
+    available_short_stay_beds: number
+    available_rooms: number
+    short_stay_rooms_total: number
+    regular_rooms_total: number
     maintenance_beds: number
     occupancy_rate: number
   }
@@ -47,6 +51,9 @@ export interface FinancialStatistics {
   paid_total: number
   outstanding_total: number
   deposits_total: number
+  entitlements_total: number
+  expenses_total: number
+  net_total: number
   services_total: number
   daily_revenue: DailyRevenue[]
   deposits_by_method: Record<string, number>
@@ -76,17 +83,13 @@ export interface TopSurgeon {
   name: string | null
   specialist: string | null
   total: number
-  completed_count: number
-  cancelled_count: number
 }
 
 export interface OperationsStatistics {
   range: DateRange
   today: {
     scheduled: number
-    completed: number
-    cancelled: number
   }
-  status_counts: Record<string, number>
+  total_in_range: number
   by_surgeon: TopSurgeon[]
 }
