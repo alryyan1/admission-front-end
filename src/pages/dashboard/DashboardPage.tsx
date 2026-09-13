@@ -16,7 +16,7 @@ import { formatNumber } from '@/lib/utils'
 const { RangePicker } = DatePicker
 
 export function DashboardPage() {
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([dayjs(), dayjs()])
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs]>([dayjs().startOf('month'), dayjs().endOf('month')])
   const dateFrom = dateRange[0].format('YYYY-MM-DD')
   const dateTo = dateRange[1].format('YYYY-MM-DD')
 
@@ -43,7 +43,7 @@ export function DashboardPage() {
         <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
           <div>
             <h1 className="text-xl font-semibold">لوحة التحكم</h1>
-            <p className="text-sm text-muted-foreground">نظرة عامة على الإشغال وحالات التنويم والعمليات اليوم.</p>
+            <p className="text-sm text-muted-foreground">نظرة عامة على الإشغال وحالات التنويم والعمليات خلال الفترة المحددة.</p>
           </div>
           <RangePicker
             value={dateRange}
@@ -62,6 +62,19 @@ export function DashboardPage() {
         <PageLoader />
       ) : (
         <>
+           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <StatTile
+              label="إيرادات الإقامة القصيرة"
+              value={formatNumber(financialsQuery.data?.short_stay_total ?? 0)}
+            />
+            <StatTile label="إيرادات الغرف" value={formatNumber(financialsQuery.data?.rooms_total ?? 0)} />
+            <StatTile label="إيرادات الخدمات" value={formatNumber(financialsQuery.data?.services_total ?? 0)} />
+            <StatTile label="إيرادات العمليات" value={formatNumber(financialsQuery.data?.operations_total ?? 0)} />
+            <StatTile
+              label="استحقاقات الفريق الطبي"
+              value={formatNumber(financialsQuery.data?.entitlements_total ?? 0)}
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile
               label="المرضى المنومون حالياً"
@@ -72,15 +85,7 @@ export function DashboardPage() {
               value={formatNumber(occupancyQuery.data?.summary.available_short_stay_beds ?? 0)}
             />
             <StatTile label="غرف متاحة" value={formatNumber(occupancyQuery.data?.summary.available_rooms ?? 0)} />
-            <StatTile label="عمليات مجدولة اليوم" value={formatNumber(operationsQuery.data?.today.scheduled ?? 0)} />
-            <StatTile
-              label="غرف إقامة قصيرة"
-              value={formatNumber(occupancyQuery.data?.summary.short_stay_rooms_total ?? 0)}
-            />
-            <StatTile
-              label="غرف إقامة عادية"
-              value={formatNumber(occupancyQuery.data?.summary.regular_rooms_total ?? 0)}
-            />
+     
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -93,6 +98,8 @@ export function DashboardPage() {
               valueClassName={(financialsQuery.data?.net_total ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}
             />
           </div>
+
+       
 
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
             <div>

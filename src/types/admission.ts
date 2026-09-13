@@ -10,11 +10,11 @@ export interface Admission {
   patient_id: number
   bed_id: number
   admitting_doctor_id: number | null
+  referred_by_doctor_id: number | null
   admission_number: string | null
   admission_type: AdmissionType | null
   admission_date: string
   discharge_date: string | null
-  admission_duration_hours: 12 | 24 | null
   status: AdmissionStatus
   diagnosis: string | null
   admission_notes: string | null
@@ -24,6 +24,7 @@ export interface Admission {
   patient?: Patient
   bed?: Bed
   admitting_doctor?: Doctor | null
+  referred_by_doctor?: Doctor | null
   vital_signs?: VitalSign[]
   doctor_orders?: DoctorOrder[]
   deposits?: AdmissionDeposit[]
@@ -31,6 +32,8 @@ export interface Admission {
   invoices?: Invoice[]
   operations?: Operation[]
   operations_count?: number
+  /** Live services + priced operations minus deposits, as computed by the admissions index endpoint. */
+  balance_due?: number
 }
 
 export interface VitalSign {

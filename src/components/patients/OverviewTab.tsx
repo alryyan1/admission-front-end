@@ -1,5 +1,7 @@
-import { Card, Descriptions } from 'antd'
+import { Avatar, Card, CardContent, CardHeader, Divider } from '@mui/material'
+import { UserOutlined } from '@ant-design/icons'
 import type { Patient } from '@/types/patient'
+import { DetailGrid } from '@/components/patients/DetailGrid'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { usePatientFieldUpdate } from '@/hooks/usePatientFieldUpdate'
 
@@ -24,79 +26,89 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
   ].filter(Boolean)
 
   return (
-    <Card size="small" title="البيانات الأساسية">
-      <Descriptions
-        column={2}
-        size="small"
-        items={[
-          { key: 'id', label: 'رقم الملف', children: patient.id },
-          {
-            key: 'name',
-            label: 'الاسم',
-            children: (
-              <InlineEditableField
-                editable={editable}
-                value={patient.name}
-                onSave={(v) => saveField('name', String(v ?? ''))}
-              />
-            ),
-          },
-          {
-            key: 'gender',
-            label: 'الجنس',
-            children: (
-              <InlineEditableField
-                editable={editable}
-                type="select"
-                options={GENDER_OPTIONS}
-                value={patient.gender}
-                displayValue={patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'}
-                onSave={(v) => saveField('gender', v as string | null)}
-              />
-            ),
-          },
-          {
-            key: 'age',
-            label: 'العمر (سنوات)',
-            children: (
-              <InlineEditableField
-                editable={editable}
-                type="number"
-                value={patient.age_year}
-                displayValue={ageParts.length ? ageParts.join(' — ') : '—'}
-                onSave={(v) => saveField('age_year', v as number | null)}
-              />
-            ),
-          },
-          {
-            key: 'phone',
-            label: 'الهاتف',
-            children: (
-              <InlineEditableField
-                editable={editable}
-                value={patient.phone}
-                onSave={(v) => saveField('phone', v as string | null)}
-              />
-            ),
-          },
-          {
-            key: 'address',
-            label: 'العنوان',
-            children: (
-              <InlineEditableField
-                editable={editable}
-                value={patient.address}
-                onSave={(v) => saveField('address', v as string | null)}
-              />
-            ),
-          },
-          {
-            key: 'source',
-            label: 'مصدر الملف',
-            children: patient.is_local_only ? 'محلي' : 'مستورد من جودة الطبية',
-          },
-        ]}
+    <Card variant="outlined">
+      <CardHeader
+        avatar={
+          <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+            <UserOutlined style={{ fontSize: 16 }} />
+          </Avatar>
+        }
+        title="البيانات الأساسية"
+        slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 700 } } }}
       />
+      <Divider />
+      <CardContent>
+        <DetailGrid
+          items={[
+            { key: 'id', label: 'رقم الملف', value: patient.id },
+            {
+              key: 'name',
+              label: 'الاسم',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  value={patient.name}
+                  onSave={(v) => saveField('name', String(v ?? ''))}
+                />
+              ),
+            },
+            {
+              key: 'gender',
+              label: 'الجنس',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  type="select"
+                  options={GENDER_OPTIONS}
+                  value={patient.gender}
+                  displayValue={patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'}
+                  onSave={(v) => saveField('gender', v as string | null)}
+                />
+              ),
+            },
+            {
+              key: 'age',
+              label: 'العمر (سنوات)',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  type="number"
+                  value={patient.age_year}
+                  displayValue={ageParts.length ? ageParts.join(' — ') : '—'}
+                  onSave={(v) => saveField('age_year', v as number | null)}
+                />
+              ),
+            },
+            {
+              key: 'phone',
+              label: 'الهاتف',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  value={patient.phone}
+                  onSave={(v) => saveField('phone', v as string | null)}
+                />
+              ),
+            },
+            {
+              key: 'address',
+              label: 'العنوان',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  value={patient.address}
+                  onSave={(v) => saveField('address', v as string | null)}
+                />
+              ),
+            },
+            {
+              key: 'source',
+              label: 'مصدر الملف',
+              value: patient.is_local_only ? 'محلي' : 'مستورد من جودة الطبية',
+            },
+          ]}
+        />
+      </CardContent>
     </Card>
   )
 }

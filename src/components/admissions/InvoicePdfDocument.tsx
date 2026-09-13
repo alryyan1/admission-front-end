@@ -78,6 +78,10 @@ export interface InvoicePdfDocumentProps {
   isFinal?: boolean
   invoiceNumber?: string
   issuedAt?: string | null
+  /** Header for the items column (default: "الخدمة"). */
+  itemsLabel?: string
+  /** Hide the per-category subtotal rows and show only a single "الإجمالي" line. */
+  hideSubtotals?: boolean
 }
 
 export function InvoicePdfDocument({
@@ -93,6 +97,8 @@ export function InvoicePdfDocument({
   isFinal,
   invoiceNumber,
   issuedAt,
+  itemsLabel,
+  hideSubtotals,
 }: InvoicePdfDocumentProps) {
   ensurePdfFontRegistered()
 
@@ -120,44 +126,46 @@ export function InvoicePdfDocument({
         </View>
 
         <View style={styles.tableHeader}>
-          <Text style={[styles.cellName, styles.headerCell]}>{ar('الخدمة')}</Text>
-          <Text style={[styles.cellNum, styles.headerCell]}>{ar('الإجمالي')}</Text>
+          <Text style={[styles.cellName, styles.headerCell]}>{ar(itemsLabel ?? 'الخدمة')}</Text>
+          <Text style={[styles.cellNum, styles.headerCell]}>{ar(hideSubtotals ? 'السعر' : 'الإجمالي')}</Text>
         </View>
         {services.map((s) => (
           <View key={s.id} style={styles.row}>
-            <Text style={styles.cellName}>{ar(`${s.name} × ${s.quantity}`)}</Text>
+            <Text style={styles.cellName}>{ar(hideSubtotals ? s.name : `${s.name} × ${s.quantity}`)}</Text>
             <Text style={styles.cellNum}>{formatNumber(s.total_price)}</Text>
           </View>
         ))}
 
-        <View style={styles.totalsBlock}>
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>{ar('إجمالي الخدمات')}</Text>
-            <Text style={styles.totalsValue}>{formatNumber(servicesTotal)}</Text>
+        {!hideSubtotals && (
+          <View style={styles.totalsBlock}>
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>{ar('إجمالي الخدمات')}</Text>
+              <Text style={styles.totalsValue}>{formatNumber(servicesTotal)}</Text>
+            </View>
+            {operationsTotal != null && operationsTotal > 0 && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>{ar('إجمالي العمليات')}</Text>
+                <Text style={styles.totalsValue}>{formatNumber(operationsTotal)}</Text>
+              </View>
+            )}
+            <View style={styles.totalsRow}>
+              <Text style={styles.totalsLabel}>{ar('الإجمالي الكلي')}</Text>
+              <Text style={styles.totalsValue}>{formatNumber(total)}</Text>
+            </View>
+            {depositsTotal != null && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>{ar('الدفعات المسددة')}</Text>
+                <Text style={styles.totalsValue}>{formatNumber(depositsTotal)}</Text>
+              </View>
+            )}
+            {balanceDue != null && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.balanceLabel}>{ar('المبلغ المتبقي')}</Text>
+                <Text style={styles.balanceValue}>{formatNumber(balanceDue)}</Text>
+              </View>
+            )}
           </View>
-          {operationsTotal != null && operationsTotal > 0 && (
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>{ar('إجمالي العمليات')}</Text>
-              <Text style={styles.totalsValue}>{formatNumber(operationsTotal)}</Text>
-            </View>
-          )}
-          <View style={styles.totalsRow}>
-            <Text style={styles.totalsLabel}>{ar('الإجمالي الكلي')}</Text>
-            <Text style={styles.totalsValue}>{formatNumber(total)}</Text>
-          </View>
-          {depositsTotal != null && (
-            <View style={styles.totalsRow}>
-              <Text style={styles.totalsLabel}>{ar('الدفعات المسددة')}</Text>
-              <Text style={styles.totalsValue}>{formatNumber(depositsTotal)}</Text>
-            </View>
-          )}
-          {balanceDue != null && (
-            <View style={styles.totalsRow}>
-              <Text style={styles.balanceLabel}>{ar('المبلغ المتبقي')}</Text>
-              <Text style={styles.balanceValue}>{formatNumber(balanceDue)}</Text>
-            </View>
-          )}
-        </View>
+        )}
 
         <View style={styles.wordsBlock}>
           <Text style={styles.wordsLabel}>{ar('المبلغ كتابة')}</Text>

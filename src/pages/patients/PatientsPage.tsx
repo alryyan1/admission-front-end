@@ -38,7 +38,7 @@ export function PatientsPage() {
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Title level={3} style={{ margin: '0 0 16px' }}>
-        المرضى
+        سجل المرضى
       </Title>
 
       <Input

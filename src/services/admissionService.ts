@@ -15,6 +15,17 @@ import type {
   VitalSign,
 } from '@/types/admission'
 
+/** Relative paths to the server-rendered PDF endpoints (see {@link usePdfPreview}). */
+export const admissionPdfPaths = {
+  depositReceipt: (admissionId: number, depositId: number) =>
+    `/admissions/${admissionId}/deposits/${depositId}/receipt.pdf`,
+  preliminaryInvoice: (admissionId: number) => `/admissions/${admissionId}/invoice.pdf`,
+  finalInvoice: (invoiceId: number) => `/invoices/${invoiceId}/invoice.pdf`,
+  accountStatement: (admissionId: number) => `/admissions/${admissionId}/account-statement.pdf`,
+  admissionSummary: (admissionId: number) => `/admissions/${admissionId}/summary.pdf`,
+  operationInvoice: (operationId: number) => `/operations/${operationId}/invoice.pdf`,
+}
+
 export async function getAdmissions(
   filters?: {
     status?: AdmissionStatus
@@ -39,11 +50,24 @@ export async function createAdmission(payload: {
   patient_id: number
   bed_id: number
   admitting_doctor_id?: number | null
-  admission_duration_hours?: 12 | 24
+  referred_by_doctor_id?: number | null
   diagnosis?: string
   admission_notes?: string
 }): Promise<Admission> {
   const { data } = await apiClient.post<Admission>('/admissions', payload)
+  return data
+}
+
+export async function updateAdmission(
+  id: number,
+  payload: Partial<{
+    admitting_doctor_id: number | null
+    referred_by_doctor_id: number | null
+    diagnosis: string | null
+    admission_notes: string | null
+  }>,
+): Promise<Admission> {
+  const { data } = await apiClient.patch<Admission>(`/admissions/${id}`, payload)
   return data
 }
 

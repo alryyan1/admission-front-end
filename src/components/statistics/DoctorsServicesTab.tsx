@@ -77,7 +77,7 @@ export function DoctorsServicesTab({ data, from, to, onFromChange, onToChange }:
 
         <div className="col-span-12 md:col-span-6">
           <Card>
-            <h2 className="mb-3 text-sm font-semibold">الخدمات الأكثر طلباً</h2>
+            <h2 className="mb-3 text-sm font-semibold">الخدمات والعمليات الأكثر إيراداً</h2>
             {data.top_services.length > 0 ? (
               <ResponsiveContainer width="100%" height={Math.max(data.top_services.length * 36, 120)}>
                 <BarChart data={data.top_services} layout="vertical" margin={{ left: 24 }}>

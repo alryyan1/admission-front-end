@@ -50,11 +50,6 @@ export function OverviewTab({ admission }: OverviewTabProps) {
                 label: 'تاريخ الخروج',
                 children: admission.discharge_date ? formatDateTime(admission.discharge_date) : '—',
               },
-              {
-                key: 'duration',
-                label: 'مدة الإقامة (ساعات)',
-                children: admission.admission_duration_hours ?? '—',
-              },
             ]}
           />
         </Card>

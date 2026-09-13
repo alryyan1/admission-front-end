@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { InputNumber } from 'antd'
+import { TextField } from '@mui/material'
 import type { Operation } from '@/types/admission'
 
 interface OperationPriceCellProps {
@@ -22,17 +22,20 @@ export function OperationPriceCell({ operation, onCommit }: OperationPriceCellPr
   }
 
   return (
-    <InputNumber
+    <TextField
+      className="amount-input"
+      type="number"
       size="small"
-      style={{ width: 120 }}
-      min={0}
-      step={1000}
       placeholder="السعر"
-      value={draft}
-      onChange={(v) => setDraft(typeof v === 'number' ? v : null)}
+      value={draft ?? ''}
+      onChange={(e) => setDraft(e.target.value === '' ? null : Number(e.target.value))}
       onBlur={commit}
-      onPressEnter={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
+      }}
       onClick={(e) => e.stopPropagation()}
+      slotProps={{ htmlInput: { min: 0, step: 1000 } }}
+      sx={{ width: 120 }}
     />
   )
 }

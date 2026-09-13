@@ -1,5 +1,7 @@
-import { Card, Descriptions, Row, Col } from 'antd'
+import { Avatar, Box, Card, CardContent, CardHeader, Divider } from '@mui/material'
+import { AlertOutlined, FileTextOutlined, HeartOutlined, ScissorOutlined } from '@ant-design/icons'
 import type { BloodType, Patient } from '@/types/patient'
+import { DetailGrid } from '@/components/patients/DetailGrid'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { usePatientFieldUpdate } from '@/hooks/usePatientFieldUpdate'
 
@@ -23,17 +25,26 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
 
   return (
-    <Row gutter={[12, 12]}>
-      <Col xs={24} md={12}>
-        <Card size="small" title="فصيلة الدم">
-          <Descriptions
-            column={1}
-            size="small"
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1.5 }}>
+      <Card variant="outlined">
+        <CardHeader
+          avatar={
+            <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+              <HeartOutlined style={{ fontSize: 16 }} />
+            </Avatar>
+          }
+          title="فصيلة الدم"
+          slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 700 } } }}
+        />
+        <Divider />
+        <CardContent>
+          <DetailGrid
+            columns={1}
             items={[
               {
                 key: 'blood_type',
                 label: 'فصيلة الدم',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="select"
@@ -45,19 +56,28 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               },
             ]}
           />
-        </Card>
-      </Col>
+        </CardContent>
+      </Card>
 
-      <Col xs={24} md={12}>
-        <Card size="small" title="الحساسية والأمراض">
-          <Descriptions
-            column={1}
-            size="small"
+      <Card variant="outlined">
+        <CardHeader
+          avatar={
+            <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+              <AlertOutlined style={{ fontSize: 16 }} />
+            </Avatar>
+          }
+          title="الحساسية والأمراض"
+          slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 700 } } }}
+        />
+        <Divider />
+        <CardContent>
+          <DetailGrid
+            columns={1}
             items={[
               {
                 key: 'allergies',
                 label: 'الحساسية للأدوية أو الأطعمة',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -69,7 +89,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               {
                 key: 'chronic',
                 label: 'الأمراض المزمنة',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -80,19 +100,28 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               },
             ]}
           />
-        </Card>
-      </Col>
+        </CardContent>
+      </Card>
 
-      <Col xs={24} md={12}>
-        <Card size="small" title="الأدوية والعمليات السابقة">
-          <Descriptions
-            column={1}
-            size="small"
+      <Card variant="outlined">
+        <CardHeader
+          avatar={
+            <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+              <ScissorOutlined style={{ fontSize: 16 }} />
+            </Avatar>
+          }
+          title="الأدوية والعمليات السابقة"
+          slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 700 } } }}
+        />
+        <Divider />
+        <CardContent>
+          <DetailGrid
+            columns={1}
             items={[
               {
                 key: 'medications',
                 label: 'الأدوية المستخدمة حالياً',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -104,7 +133,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               {
                 key: 'surgeries',
                 label: 'العمليات السابقة',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -115,19 +144,28 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               },
             ]}
           />
-        </Card>
-      </Col>
+        </CardContent>
+      </Card>
 
-      <Col xs={24} md={12}>
-        <Card size="small" title="التاريخ المرضي والملاحظات">
-          <Descriptions
-            column={1}
-            size="small"
+      <Card variant="outlined">
+        <CardHeader
+          avatar={
+            <Avatar sx={{ bgcolor: 'primary.main', width: 32, height: 32 }}>
+              <FileTextOutlined style={{ fontSize: 16 }} />
+            </Avatar>
+          }
+          title="التاريخ المرضي والملاحظات"
+          slotProps={{ title: { variant: 'subtitle1', sx: { fontWeight: 700 } } }}
+        />
+        <Divider />
+        <CardContent>
+          <DetailGrid
+            columns={1}
             items={[
               {
                 key: 'history',
                 label: 'التاريخ المرضي',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -139,7 +177,7 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               {
                 key: 'notes',
                 label: 'ملاحظات طبية مهمة',
-                children: (
+                value: (
                   <InlineEditableField
                     editable={editable}
                     type="textarea"
@@ -150,8 +188,8 @@ export function MedicalInfoTab({ patient, editable }: MedicalInfoTabProps) {
               },
             ]}
           />
-        </Card>
-      </Col>
-    </Row>
+        </CardContent>
+      </Card>
+    </Box>
   )
 }

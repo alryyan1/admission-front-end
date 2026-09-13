@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -28,14 +27,8 @@ import {
   createLocalPatient,
   getDoctors,
 } from '@/services/patientService'
-import { getTeamRoles } from '@/services/teamRoleService'
 import { createAdmission } from '@/services/admissionService'
 import type { Patient, JawdaPatientResult, Doctor } from '@/types/patient'
-
-const DURATION_OPTIONS = [
-  { value: 12 as const, label: '12 ساعة' },
-  { value: 24 as const, label: '24 ساعة' },
-]
 
 type PatientSearchOption =
   | { kind: 'local'; patient: Patient }
@@ -44,7 +37,6 @@ type PatientSearchOption =
 
 export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
 
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search, 400)
@@ -56,9 +48,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
   const [doctorSearch, setDoctorSearch] = useState('')
   const debouncedDoctorSearch = useDebouncedValue(doctorSearch, 400)
-  const [durationHours, setDurationHours] = useState<12 | 24 | ''>('')
-  const [diagnosis, setDiagnosis] = useState('')
-  const [notes, setNotes] = useState('')
+  const [referralDoctor, setReferralDoctor] = useState<Doctor | null>(null)
+  const [referralDoctorSearch, setReferralDoctorSearch] = useState('')
+  const debouncedReferralDoctorSearch = useDebouncedValue(referralDoctorSearch, 400)
 
   const [createPatientOpen, setCreatePatientOpen] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
@@ -70,14 +62,25 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const wardInputRef = useRef<HTMLInputElement>(null)
   const roomInputRef = useRef<HTMLInputElement>(null)
   const bedInputRef = useRef<HTMLInputElement>(null)
-  const durationInputRef = useRef<HTMLInputElement>(null)
   const doctorInputRef = useRef<HTMLInputElement>(null)
-  const diagnosisInputRef = useRef<HTMLInputElement>(null)
-  const notesInputRef = useRef<HTMLTextAreaElement>(null)
+  const referralDoctorInputRef = useRef<HTMLInputElement>(null)
   const newPatientNameInputRef = useRef<HTMLInputElement>(null)
+  const newPatientPhoneInputRef = useRef<HTMLInputElement>(null)
+  const newPatientGenderInputRef = useRef<HTMLInputElement>(null)
+  const newPatientAgeInputRef = useRef<HTMLInputElement>(null)
 
   function focusField(ref: React.RefObject<HTMLElement | null>) {
     setTimeout(() => ref.current?.focus(), 50)
+  }
+
+  /** Enter moves to the next field instead of submitting the form. */
+  function advanceOnEnter(nextRef: React.RefObject<HTMLElement | null>) {
+    return (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        nextRef.current?.focus()
+      }
+    }
   }
 
   const localResultsQuery = useQuery({
@@ -108,12 +111,15 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryFn: () => getAvailableBeds(roomId as number),
     enabled: open && roomId !== '',
   })
-  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles, enabled: open })
-  const surgeonRoleId = teamRolesQuery.data?.find((r) => r.slug === 'surgeon')?.id
   const doctorsQuery = useQuery({
-    queryKey: ['doctors', debouncedDoctorSearch, surgeonRoleId],
-    queryFn: () => getDoctors(debouncedDoctorSearch, surgeonRoleId),
-    enabled: open && surgeonRoleId !== undefined,
+    queryKey: ['doctors', debouncedDoctorSearch],
+    queryFn: () => getDoctors(debouncedDoctorSearch),
+    enabled: open,
+  })
+  const referralDoctorsQuery = useQuery({
+    queryKey: ['doctors', 'referral', debouncedReferralDoctorSearch],
+    queryFn: () => getDoctors(debouncedReferralDoctorSearch),
+    enabled: open,
   })
 
   const importMutation = useMutation({
@@ -138,12 +144,11 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
 
   const admitMutation = useMutation({
     mutationFn: createAdmission,
-    onSuccess: (admission) => {
+    onSuccess: () => {
       toast.success('تم تنويم المريض بنجاح')
       queryClient.invalidateQueries({ queryKey: ['admissions'] })
       queryClient.invalidateQueries({ queryKey: ['floors'] })
       resetAndClose()
-      navigate(`/admissions/${admission.id}?tab=billing`)
     },
   })
 
@@ -156,9 +161,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setBedId('')
     setSelectedDoctor(null)
     setDoctorSearch('')
-    setDurationHours('')
-    setDiagnosis('')
-    setNotes('')
+    setReferralDoctor(null)
+    setReferralDoctorSearch('')
     setCreatePatientOpen(false)
     setNewPatientName('')
     setNewPatientPhone('')
@@ -186,18 +190,14 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   }
 
   const selectedBed = bedsQuery.data?.find((bed) => bed.id === bedId)
-  const isShortStayBed = selectedBed?.room?.is_short_stay ?? false
 
   function handleSubmit() {
     if (!selectedPatient || !bedId) return
-    if (isShortStayBed && !durationHours) return
     admitMutation.mutate({
       patient_id: selectedPatient.id,
       bed_id: Number(bedId),
       admitting_doctor_id: selectedDoctor ? selectedDoctor.id : null,
-      admission_duration_hours: isShortStayBed ? (durationHours as 12 | 24) : undefined,
-      diagnosis: diagnosis || undefined,
-      admission_notes: notes || undefined,
+      referred_by_doctor_id: referralDoctor ? referralDoctor.id : null,
     })
   }
 
@@ -212,15 +212,14 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const selectedFloor = floorsQuery.data?.find((floor) => floor.id === floorId) ?? null
   const selectedWard = wardsQuery.data?.find((ward) => ward.id === wardId) ?? null
   const selectedRoom = roomsQuery.data?.find((room) => room.id === roomId) ?? null
-  const selectedDuration = DURATION_OPTIONS.find((option) => option.value === durationHours) ?? null
 
   return (
     <>
     <Dialog open={open} onClose={resetAndClose} fullWidth maxWidth="sm" disableEnforceFocus={createPatientOpen}>
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         تنويم مريض جديد
-        <Button size="small" onClick={() => openCreatePatientDialog(search)}>
-          + مريض جديد
+        <Button variant="contained" onClick={() => openCreatePatientDialog(search)}>
+          + تسجيل جديد
         </Button>
       </DialogTitle>
 
@@ -320,7 +319,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setWardId('')
                 setRoomId('')
                 setBedId('')
-                setDurationHours('')
                 if (floor) focusField(wardInputRef)
               }}
               renderInput={(params) => <TextField {...params} label="الطابق" inputRef={floorInputRef} />}
@@ -338,7 +336,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 setWardId(ward ? ward.id : '')
                 setRoomId('')
                 setBedId('')
-                setDurationHours('')
                 if (ward) focusField(roomInputRef)
               }}
               renderInput={(params) => <TextField {...params} label="القسم" inputRef={wardInputRef} />}
@@ -357,7 +354,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               onChange={(_, room) => {
                 setRoomId(room ? room.id : '')
                 setBedId('')
-                setDurationHours('')
                 if (room) focusField(bedInputRef)
               }}
               renderInput={(params) => <TextField {...params} label="العنبر/الغرفة" inputRef={roomInputRef} />}
@@ -373,28 +369,11 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               value={selectedBed ?? null}
               onChange={(_, bed) => {
                 setBedId(bed ? bed.id : '')
-                setDurationHours('')
-                if (bed) focusField(bed.room?.is_short_stay ? durationInputRef : doctorInputRef)
+                if (bed) focusField(doctorInputRef)
               }}
               renderInput={(params) => <TextField {...params} label="السرير" inputRef={bedInputRef} />}
             />
           </Box>
-
-          {isShortStayBed && (
-            <Autocomplete
-              fullWidth
-              size="small"
-              options={DURATION_OPTIONS}
-              getOptionLabel={(option) => option.label}
-              isOptionEqualToValue={(option, value) => option.value === value.value}
-              value={selectedDuration}
-              onChange={(_, option) => {
-                setDurationHours(option ? option.value : '')
-                if (option) focusField(doctorInputRef)
-              }}
-              renderInput={(params) => <TextField {...params} label="مدة الإقامة القصيرة" inputRef={durationInputRef} />}
-            />
-          )}
 
           <Autocomplete
             fullWidth
@@ -409,7 +388,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             onInputChange={(_, value) => setDoctorSearch(value)}
             onChange={(_, doctor) => {
               setSelectedDoctor(doctor)
-              if (doctor) focusField(diagnosisInputRef)
+              if (doctor) focusField(referralDoctorInputRef)
             }}
             renderInput={(params) => (
               <TextField
@@ -432,31 +411,37 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             )}
           />
 
-          <TextField
-            id="diagnosis"
-            label="التشخيص"
+          <Autocomplete
             fullWidth
             size="small"
-            value={diagnosis}
-            onChange={(e) => setDiagnosis(e.target.value)}
-            inputRef={diagnosisInputRef}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                notesInputRef.current?.focus()
-              }
-            }}
-          />
-          <TextField
-            id="admission-notes"
-            label="ملاحظات الدخول"
-            fullWidth
-            multiline
-            rows={2}
-            size="small"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            inputRef={notesInputRef}
+            options={referralDoctorsQuery.data ?? []}
+            filterOptions={(options) => options}
+            loading={referralDoctorsQuery.isFetching}
+            getOptionLabel={(doctor) => doctor.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            value={referralDoctor}
+            inputValue={referralDoctorSearch}
+            onInputChange={(_, value) => setReferralDoctorSearch(value)}
+            onChange={(_, doctor) => setReferralDoctor(doctor)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="الطبيب المحوِّل"
+                inputRef={referralDoctorInputRef}
+                slotProps={{
+                  ...params.slotProps,
+                  input: {
+                    ...params.slotProps.input,
+                    endAdornment: (
+                      <>
+                        {referralDoctorsQuery.isFetching ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.slotProps.input.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            )}
           />
         </Stack>
       </DialogContent>
@@ -466,7 +451,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!selectedPatient || !bedId || (isShortStayBed && !durationHours) || admitMutation.isPending}
+          disabled={!selectedPatient || !bedId || admitMutation.isPending}
         >
           تنويم
         </Button>
@@ -499,26 +484,32 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             size="small"
             value={newPatientName}
             onChange={(e) => setNewPatientName(e.target.value)}
+            onKeyDown={advanceOnEnter(newPatientPhoneInputRef)}
           />
           <TextField
+            inputRef={newPatientPhoneInputRef}
             label="رقم الهاتف"
             fullWidth
             size="small"
             value={newPatientPhone}
             onChange={(e) => setNewPatientPhone(e.target.value)}
+            onKeyDown={advanceOnEnter(newPatientGenderInputRef)}
           />
           <TextField
             select
+            inputRef={newPatientGenderInputRef}
             label="الجنس"
             fullWidth
             size="small"
             value={newPatientGender}
             onChange={(e) => setNewPatientGender(e.target.value as 'male' | 'female' | '')}
+            onKeyDown={advanceOnEnter(newPatientAgeInputRef)}
           >
             <MenuItem value="male">ذكر</MenuItem>
-            <MenuItem defaultValue={'female'} value="female">أنثى</MenuItem>
+            <MenuItem value="female">أنثى</MenuItem>
           </TextField>
           <TextField
+            inputRef={newPatientAgeInputRef}
             label="العمر (سنوات)"
             type="number"
             fullWidth

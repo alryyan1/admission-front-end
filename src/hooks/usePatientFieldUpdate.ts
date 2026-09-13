@@ -10,6 +10,7 @@ export function usePatientFieldUpdate(patientId: number) {
     mutationFn: (payload: UpdatePatientPayload) => updatePatient(patientId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['patient', patientId] })
+      queryClient.invalidateQueries({ queryKey: ['admissions'] })
     },
     onError: () => {
       toast.error('تعذر حفظ التعديل')

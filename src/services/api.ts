@@ -24,6 +24,26 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
+// A single 401 can be a transient blip rather than proof the token is dead —
+// e.g. one of several requests fired in parallel. Before tearing down the
+// session we re-check with a dedicated call, shared across concurrent 401s
+// so a burst of failures only triggers one verification instead of one per
+// request.
+let sessionRecheck: Promise<boolean> | null = null
+
+function isSessionStillValid(): Promise<boolean> {
+  if (!sessionRecheck) {
+    sessionRecheck = apiClient
+      .get('/user', { skipAuthHandler: true, suppressToast: true })
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        sessionRecheck = null
+      })
+  }
+  return sessionRecheck
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -37,7 +57,9 @@ apiClient.interceptors.response.use(
       // Let AuthContext clear the session and let the router redirect via <Navigate>.
       // The caller can opt out (e.g. the boot-time token check) with skipAuthHandler.
       if (!error.config?.skipAuthHandler) {
-        notifyUnauthenticated()
+        void isSessionStillValid().then((stillValid) => {
+          if (!stillValid) notifyUnauthenticated()
+        })
       }
       return Promise.reject(error)
     }

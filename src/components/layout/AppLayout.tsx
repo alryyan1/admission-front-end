@@ -29,9 +29,9 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/', label: 'لوحة التحكم' },
-  { to: '/admissions', label: 'حالات التنويم' },
-  { to: '/patients', label: 'المرضى' },
-  { to: '/facility-map', label: 'خريطة المستشفى' },
+  { to: '/admissions', label: 'المرضى المنومون' },
+  { to: '/patients', label: 'سجل المرضى' },
+  { to: '/facility-map', label: 'الغرف' },
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
   { to: '/cashier', label: 'الإيرادات', roles: ['admin', 'cashier'] },

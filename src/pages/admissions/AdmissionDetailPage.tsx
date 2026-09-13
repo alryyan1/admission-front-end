@@ -1,23 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { pdf } from '@react-pdf/renderer'
-import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, Badge, theme as antdThemeApi, Divider, Modal, Popover } from 'antd'
-import {
-  FileTextOutlined,
-  BankOutlined,
-  ApartmentOutlined,
-  HomeOutlined,
-  UserOutlined,
-  BorderOutlined,
-  PrinterOutlined,
-  EnvironmentOutlined,
-} from '@ant-design/icons'
+import { ConfigProvider, Card, Button, Tag, Tabs, Typography, Flex, Avatar, Badge, theme as antdThemeApi, Divider, Modal, Tooltip, Input } from 'antd'
+import { FileTextOutlined, UserOutlined, PrinterOutlined } from '@ant-design/icons'
 import { useAntTheme } from '@/lib/antdTheme'
 import { formatNumber } from '@/lib/utils'
-import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
-import { AdmissionSummaryPdfDocument } from '@/components/admissions/AdmissionSummaryPdfDocument'
+import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { useTheme, ADMISSION_HEADER_FONT_SIZE_PX } from '@/contexts/ThemeContext'
 import {
   getAdmission,
@@ -38,6 +28,7 @@ import {
   markInvoicePaid,
   addOperation,
   updateOperation,
+  admissionPdfPaths,
 } from '@/services/admissionService'
 import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
@@ -47,8 +38,8 @@ import { AccountStatementTab } from '@/components/admissions/AccountStatementTab
 import { InvoiceTab } from '@/components/admissions/InvoiceTab'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { PageLoader } from '@/components/common/PageLoader'
+import { PatientLocationButton } from '@/components/admissions/PatientLocationButton'
 import type { AdmissionStatus } from '@/types/admission'
-import type { Room } from '@/types/facility'
 
 const { Text } = Typography
 
@@ -60,21 +51,13 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
 
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 
-const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
-  normal: { label: 'عادية', color: 'default' },
-  vip: { label: 'VIP', color: 'gold' },
-  operation: { label: 'عمليات', color: 'red' },
-  ward: { label: 'عنبر', color: 'cyan' },
-}
-
 const TAB_ITEMS = [
-  { key: 'overview', label: 'نظرة عامة' },
   // { key: 'vitals', label: 'العلامات الحيوية' },
   // { key: 'orders', label: 'أوامر الأطباء' },
   { key: 'billing', label: 'الفوترة' },
   { key: 'statement', label: 'كشف الحساب' },
   { key: 'operations', label: 'العمليات' },
-  { key: 'invoice', label: 'الفاتورة' },
+  { key: 'overview', label: 'نظرة عامة' },
 ]
 
 export function AdmissionDetailPage() {
@@ -85,19 +68,17 @@ export function AdmissionDetailPage() {
   const id = Number(admissionId)
   const queryClient = useQueryClient()
   const [searchParams, setSearchParams] = useSearchParams()
-  const tab = searchParams.get('tab') ?? 'overview'
+  const tabParam = searchParams.get('tab') ?? 'billing'
+  const tab = TAB_ITEMS.some((item) => item.key === tabParam) ? tabParam : 'billing'
   const setTab = (key: string) => setSearchParams(key === 'overview' ? {} : { tab: key }, { replace: true })
 
-  const { assets: pdfAssets } = useFacilityPdfAssets()
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false)
-  const [summaryPreviewUrl, setSummaryPreviewUrl] = useState<string | null>(null)
-  const summaryIframeRef = useRef<HTMLIFrameElement>(null)
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [dischargeModalOpen, setDischargeModalOpen] = useState(false)
+  const [dischargeSummary, setDischargeSummary] = useState('')
 
-  useEffect(() => {
-    return () => {
-      if (summaryPreviewUrl) URL.revokeObjectURL(summaryPreviewUrl)
-    }
-  }, [summaryPreviewUrl])
+  const summaryPdf = usePdfPreview()
 
   const admissionQuery = useQuery({
     queryKey: ['admissions', id],
@@ -108,13 +89,13 @@ export function AdmissionDetailPage() {
   const invoiceQuery = useQuery({
     queryKey: ['admissions', id, 'invoice'],
     queryFn: () => getInvoice(id),
-    enabled: !!id && tab === 'invoice',
+    enabled: !!id && isInvoiceModalOpen,
   })
 
   const invoicesQuery = useQuery({
     queryKey: ['admissions', id, 'invoices'],
     queryFn: () => getInvoices(id),
-    enabled: !!id && tab === 'invoice',
+    enabled: !!id && isInvoiceModalOpen,
   })
 
   function invalidateAdmission() {
@@ -232,28 +213,6 @@ export function AdmissionDetailPage() {
   const totalDeposits = (admission.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
   const dueBalance = totalServices + totalOperations - totalDeposits
 
-  async function handleOpenSummaryPdf() {
-    if (!admission) return
-    setIsGeneratingSummary(true)
-    try {
-      const blob = await pdf(<AdmissionSummaryPdfDocument assets={pdfAssets} admission={admission} />).toBlob()
-      setSummaryPreviewUrl(URL.createObjectURL(blob))
-    } catch {
-      toast.error('تعذر إنشاء ملف PDF')
-    } finally {
-      setIsGeneratingSummary(false)
-    }
-  }
-
-  function handleCloseSummaryPreview() {
-    if (summaryPreviewUrl) URL.revokeObjectURL(summaryPreviewUrl)
-    setSummaryPreviewUrl(null)
-  }
-
-  function handlePrintSummary() {
-    summaryIframeRef.current?.contentWindow?.print()
-  }
-
   const headerBgColor = (() => {
     switch (admissionHeaderBg) {
       case 'fillAlter':
@@ -270,40 +229,6 @@ export function AdmissionDetailPage() {
   })()
 
   const { name: nameFontSize, secondary: secondaryFontSize } = ADMISSION_HEADER_FONT_SIZE_PX[admissionHeaderFontSize]
-
-  const locationPopoverContent = (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 200 }}>
-      <Flex align="center" gap={6}>
-        <BankOutlined style={{ color: token.colorPrimary }} />
-        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-          {admission.bed?.room?.ward?.floor?.name ?? '—'}
-        </Text>
-      </Flex>
-      <Flex align="center" gap={6}>
-        <ApartmentOutlined style={{ color: token.colorPrimary }} />
-        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-          {admission.bed?.room?.ward?.name ?? '—'}
-        </Text>
-      </Flex>
-      <Flex align="center" gap={6} wrap="wrap">
-        <HomeOutlined style={{ color: token.colorPrimary }} />
-        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-          غرفة {admission.bed?.room?.room_number ?? '—'}
-        </Text>
-        {admission.bed?.room?.room_type && (
-          <Tag color={ROOM_TYPE_TAG[admission.bed.room.room_type].color} style={{ marginInlineEnd: 0 }}>
-            {ROOM_TYPE_TAG[admission.bed.room.room_type].label}
-          </Tag>
-        )}
-      </Flex>
-      <Flex align="center" gap={6}>
-        <BorderOutlined style={{ color: token.colorPrimary }} />
-        <Text style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-          سرير {admission.bed?.bed_number ?? '—'}
-        </Text>
-      </Flex>
-    </div>
-  )
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
@@ -346,6 +271,14 @@ export function AdmissionDetailPage() {
                 <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
                   الطبيب: {admission.admitting_doctor?.name ?? '—'}
                 </Text>
+                {admission.referred_by_doctor && (
+                  <>
+                    <Divider type="vertical" style={{ margin: 0 }} />
+                    <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
+                      محوّل من: {admission.referred_by_doctor.name}
+                    </Text>
+                  </>
+                )}
                 {admission.patient?.gender && (
                   <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
                 )}
@@ -358,43 +291,53 @@ export function AdmissionDetailPage() {
           </Flex>
 
           <Flex gap={8}>
-            <Popover content={locationPopoverContent} title="الموقع" trigger="click" placement="bottomLeft">
-              <Button size="small" icon={<EnvironmentOutlined />}>
-                الموقع
+            <PatientLocationButton bed={admission.bed} />
+            <Tooltip title="إنشاء ملف PDF بملخص التنويم (بيانات المريض والإقامة) وفتحه في نافذة جديدة للطباعة">
+              <Button
+                size="small"
+                icon={<PrinterOutlined />}
+                loading={summaryPdf.isLoading()}
+                onClick={() => summaryPdf.open(admissionPdfPaths.admissionSummary(id), 'معاينة ملخص التنويم')}
+              >
+                طباعة ملخص التنويم
               </Button>
-            </Popover>
-            <Button size="small" icon={<PrinterOutlined />} loading={isGeneratingSummary} onClick={handleOpenSummaryPdf}>
-              طباعة ملخص التنويم
-            </Button>
+            </Tooltip>
+            <Tooltip title="عرض فاتورة التنويم بكل الخدمات والمبالغ والمدفوعات في نافذة منبثقة">
+              <Button size="small" icon={<FileTextOutlined />} onClick={() => setIsInvoiceModalOpen(true)}>
+                الفاتورة
+              </Button>
+            </Tooltip>
             {admission.status === 'admitted' && (
               <>
-                <Button
-                  size="small"
-                  loading={cancelMutation.isPending}
-                  onClick={() => {
-                    const reason = window.prompt('سبب الإلغاء (اختياري):') ?? ''
-                    if (window.confirm('هل أنت متأكد من إلغاء هذا التنويم؟')) {
-                      cancelMutation.mutate(reason)
-                    }
-                  }}
-                >
-                  إلغاء التنويم
-                </Button>
-                <Button
-                  danger
-                  size="small"
-                  loading={dischargeMutation.isPending}
-                  onClick={() => {
-                    if (dueBalance > 0) {
-                      toast.error(`لا يمكن إخراج المريض، يوجد مبلغ مستحق قدره ${formatNumber(dueBalance)}`)
-                      return
-                    }
-                    const summary = window.prompt('ملخص الخروج (اختياري):') ?? ''
-                    dischargeMutation.mutate(summary)
-                  }}
-                >
-                  إخراج المريض
-                </Button>
+                <Tooltip title="إلغاء التنويم نهائياً (يُطلب سبب اختياري وتأكيد). يُستخدم عند تسجيل التنويم بالخطأ ولا يُحتسب كخروج للمريض">
+                  <Button
+                    size="small"
+                    loading={cancelMutation.isPending}
+                    onClick={() => {
+                      setCancelReason('')
+                      setCancelModalOpen(true)
+                    }}
+                  >
+                    إلغاء التنويم
+                  </Button>
+                </Tooltip>
+                <Tooltip title="إخراج المريض وإنهاء التنويم (يُطلب ملخص خروج اختياري). لا يمكن التنفيذ إذا كان هناك مبلغ مستحق غير مسدد">
+                  <Button
+                    danger
+                    size="small"
+                    loading={dischargeMutation.isPending}
+                    onClick={() => {
+                      if (dueBalance > 0) {
+                        toast.error(`لا يمكن إخراج المريض، يوجد مبلغ مستحق قدره ${formatNumber(dueBalance)}`)
+                        return
+                      }
+                      setDischargeSummary('')
+                      setDischargeModalOpen(true)
+                    }}
+                  >
+                    إخراج المريض
+                  </Button>
+                </Tooltip>
               </>
             )}
           </Flex>
@@ -432,6 +375,7 @@ export function AdmissionDetailPage() {
         <BillingTab
           services={admission.requested_services ?? []}
           deposits={admission.deposits ?? []}
+          admissionId={admission.id}
           isShortStayRoom={admission.bed?.room?.is_short_stay ?? false}
           onAddService={(payload) => serviceMutation.mutate(payload)}
           onAddDeposit={(payload) => depositMutation.mutate(payload)}
@@ -453,7 +397,6 @@ export function AdmissionDetailPage() {
           services={admission.requested_services ?? []}
           operations={admission.operations ?? []}
           deposits={admission.deposits ?? []}
-          patientName={admission.patient?.name ?? ''}
           admissionId={admission.id}
         />
       )}
@@ -469,7 +412,66 @@ export function AdmissionDetailPage() {
         />
       )}
 
-      {tab === 'invoice' && (
+      <Modal
+        open={cancelModalOpen}
+        onCancel={() => setCancelModalOpen(false)}
+        title="إلغاء التنويم"
+        okText="تأكيد الإلغاء"
+        cancelText="تراجع"
+        okButtonProps={{ danger: true }}
+        confirmLoading={cancelMutation.isPending}
+        destroyOnHidden
+        onOk={() =>
+          cancelMutation.mutate(cancelReason, {
+            onSuccess: () => setCancelModalOpen(false),
+          })
+        }
+      >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+          هل أنت متأكد من إلغاء هذا التنويم؟ لا يمكن التراجع عن هذا الإجراء.
+        </Text>
+        <Input.TextArea
+          rows={3}
+          placeholder="سبب الإلغاء (اختياري)"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+        />
+      </Modal>
+
+      <Modal
+        open={dischargeModalOpen}
+        onCancel={() => setDischargeModalOpen(false)}
+        title="إخراج المريض"
+        okText="تأكيد الإخراج"
+        cancelText="تراجع"
+        okButtonProps={{ danger: true }}
+        confirmLoading={dischargeMutation.isPending}
+        destroyOnHidden
+        onOk={() =>
+          dischargeMutation.mutate(dischargeSummary, {
+            onSuccess: () => setDischargeModalOpen(false),
+          })
+        }
+      >
+        <Text type="secondary" style={{ display: 'block', marginBottom: 8 }}>
+          سيتم إنهاء التنويم وإخلاء السرير.
+        </Text>
+        <Input.TextArea
+          rows={3}
+          placeholder="ملخص الخروج (اختياري)"
+          value={dischargeSummary}
+          onChange={(e) => setDischargeSummary(e.target.value)}
+        />
+      </Modal>
+
+      <Modal
+        open={isInvoiceModalOpen}
+        onCancel={() => setIsInvoiceModalOpen(false)}
+        width={640}
+        title="الفاتورة"
+        destroyOnHidden
+        footer={null}
+      >
         <InvoiceTab
           invoice={invoiceQuery.data}
           isLoading={invoiceQuery.isLoading}
@@ -478,32 +480,9 @@ export function AdmissionDetailPage() {
           onMarkPaid={(invoiceId) => markPaidMutation.mutate(invoiceId)}
           isGenerating={generateInvoiceMutation.isPending}
         />
-      )}
-
-      <Modal
-        open={!!summaryPreviewUrl}
-        onCancel={handleCloseSummaryPreview}
-        width={860}
-        title="معاينة ملخص التنويم"
-        destroyOnHidden
-        footer={[
-          <Button key="close" onClick={handleCloseSummaryPreview}>
-            إغلاق
-          </Button>,
-          <Button key="print" type="primary" icon={<PrinterOutlined />} onClick={handlePrintSummary}>
-            طباعة
-          </Button>,
-        ]}
-      >
-        {summaryPreviewUrl && (
-          <iframe
-            ref={summaryIframeRef}
-            src={summaryPreviewUrl}
-            title="معاينة ملخص التنويم"
-            style={{ width: '100%', height: 640, border: 'none' }}
-          />
-        )}
       </Modal>
+
+      <PdfPreviewModal url={summaryPdf.url} title={summaryPdf.title} onClose={summaryPdf.close} />
     </ConfigProvider>
   )
 }

@@ -23,9 +23,10 @@ interface OperationsTabProps {
 export function OperationsTab({ data, from, to, onFromChange, onToChange }: OperationsTabProps) {
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <StatTile label="عمليات مجدولة اليوم" value={formatNumber(data.today.scheduled)} />
         <StatTile label="عمليات ضمن الفترة" value={formatNumber(data.total_in_range)} />
+        <StatTile label="إيراد العمليات ضمن الفترة" value={formatNumber(data.revenue_in_range)} />
       </div>
 
       <DateRangeFilter from={from} to={to} onFromChange={onFromChange} onToChange={onToChange} />

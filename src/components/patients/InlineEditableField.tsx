@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Input, InputNumber, Select } from 'antd'
+import { MenuItem, TextField } from '@mui/material'
 
 type FieldValue = string | number | null
 
@@ -52,39 +52,52 @@ export function InlineEditableField({
 
   if (type === 'select') {
     return (
-      <Select
-        value={draft ?? undefined}
-        options={options}
-        disabled={saving}
-        onChange={(v) => setDraft(v)}
-        onBlur={commit}
-        style={{ minWidth: 140 }}
+      <TextField
+        select
+        fullWidth
         size="small"
-      />
+        value={draft ?? ''}
+        disabled={saving}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+        sx={{ minWidth: 140 }}
+      >
+        {options?.map((option) => (
+          <MenuItem key={option.value} value={option.value}>
+            {option.label}
+          </MenuItem>
+        ))}
+      </TextField>
     )
   }
 
   if (type === 'number') {
     return (
-      <InputNumber
+      <TextField
+        type="number"
+        fullWidth
         size="small"
-        min={0}
         disabled={saving}
-        value={draft as number | null}
-        onChange={(v) => setDraft(v)}
+        value={draft ?? ''}
+        onChange={(e) => setDraft(e.target.value === '' ? null : Number(e.target.value))}
         onBlur={commit}
-        onPressEnter={commit}
         onKeyDown={(e) => {
+          if (e.key === 'Enter') commit()
           if (e.key === 'Escape') cancel()
         }}
-        style={{ minWidth: 100 }}
+        slotProps={{ htmlInput: { min: 0 } }}
+        sx={{ minWidth: 100 }}
       />
     )
   }
 
   if (type === 'textarea') {
     return (
-      <Input.TextArea
+      <TextField
+        multiline
+        fullWidth
+        minRows={1}
+        maxRows={4}
         size="small"
         disabled={saving}
         value={(draft as string) ?? ''}
@@ -97,24 +110,24 @@ export function InlineEditableField({
             commit()
           }
         }}
-        autoSize={{ minRows: 1, maxRows: 4 }}
-        style={{ minWidth: 200 }}
+        sx={{ minWidth: 200 }}
       />
     )
   }
 
   return (
-    <Input
+    <TextField
+      fullWidth
       size="small"
       disabled={saving}
       value={(draft as string) ?? ''}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
-      onPressEnter={commit}
       onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
         if (e.key === 'Escape') cancel()
       }}
-      style={{ minWidth: 140 }}
+      sx={{ minWidth: 140 }}
     />
   )
 }

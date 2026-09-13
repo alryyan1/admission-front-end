@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { pdf } from '@react-pdf/renderer'
-import { toast } from 'sonner'
-import { Card, Table, Typography, Flex, Divider, Button, Modal } from 'antd'
-import { FileDown, Printer } from 'lucide-react'
+import { Card, Table, Typography, Flex, Divider, Button } from 'antd'
+import { FileDown } from 'lucide-react'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
-import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
-import { AccountStatementPdfDocument } from '@/components/admissions/AccountStatementPdfDocument'
+import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
+import { admissionPdfPaths } from '@/services/admissionService'
 import type { AdmissionDeposit, Operation, RequestedService } from '@/types/admission'
 
 const { Text } = Typography
@@ -15,7 +13,6 @@ interface AccountStatementTabProps {
   services: RequestedService[]
   operations: Operation[]
   deposits: AdmissionDeposit[]
-  patientName: string
   admissionId: number
 }
 
@@ -28,23 +25,8 @@ interface StatementRow {
   balance: number
 }
 
-export function AccountStatementTab({
-  services,
-  operations,
-  deposits,
-  patientName,
-  admissionId,
-}: AccountStatementTabProps) {
-  const { assets: pdfAssets } = useFacilityPdfAssets()
-  const [isGenerating, setIsGenerating] = useState(false)
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl)
-    }
-  }, [previewUrl])
+export function AccountStatementTab({ services, operations, deposits, admissionId }: AccountStatementTabProps) {
+  const pdf = usePdfPreview()
 
   const rows = [
     ...services.map((s) => ({
@@ -90,44 +72,17 @@ export function AccountStatementTab({
     { title: 'الرصيد', key: 'balance', align: 'end', render: (_, r) => formatNumber(r.balance) },
   ]
 
-  async function handleOpenPreview() {
-    setIsGenerating(true)
-    try {
-      const blob = await pdf(
-        <AccountStatementPdfDocument
-          assets={pdfAssets}
-          patientName={patientName}
-          admissionId={admissionId}
-          rows={statementRows}
-          totalDebit={totalDebit}
-          totalCredit={totalCredit}
-          balanceDue={balanceDue}
-        />,
-      ).toBlob()
-      setPreviewUrl(URL.createObjectURL(blob))
-    } catch {
-      toast.error('تعذر إنشاء ملف PDF')
-    } finally {
-      setIsGenerating(false)
-    }
-  }
-
-  function handleClosePreview() {
-    if (previewUrl) URL.revokeObjectURL(previewUrl)
-    setPreviewUrl(null)
-  }
-
-  function handlePrint() {
-    iframeRef.current?.contentWindow?.print()
-  }
-
   return (
     <>
       <Card
         title="كشف الحساب"
         style={{ maxWidth: 768 }}
         extra={
-          <Button icon={<FileDown className="h-4 w-4" />} onClick={handleOpenPreview} loading={isGenerating}>
+          <Button
+            icon={<FileDown className="h-4 w-4" />}
+            loading={pdf.isLoading()}
+            onClick={() => pdf.open(admissionPdfPaths.accountStatement(admissionId), 'معاينة كشف الحساب')}
+          >
             تصدير PDF
           </Button>
         }
@@ -163,30 +118,7 @@ export function AccountStatementTab({
         </Flex>
       </Card>
 
-      <Modal
-        open={!!previewUrl}
-        onCancel={handleClosePreview}
-        width={860}
-        title="معاينة كشف الحساب"
-        destroyOnHidden
-        footer={[
-          <Button key="close" onClick={handleClosePreview}>
-            إغلاق
-          </Button>,
-          <Button key="print" type="primary" icon={<Printer className="h-4 w-4" />} onClick={handlePrint}>
-            طباعة
-          </Button>,
-        ]}
-      >
-        {previewUrl && (
-          <iframe
-            ref={iframeRef}
-            src={previewUrl}
-            title="معاينة كشف الحساب"
-            style={{ width: '100%', height: 640, border: 'none' }}
-          />
-        )}
-      </Modal>
+      <PdfPreviewModal url={pdf.url} title={pdf.title} onClose={pdf.close} />
     </>
   )
 }

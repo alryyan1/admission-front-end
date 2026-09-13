@@ -1,15 +1,18 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Button, Typography, Tabs, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip } from 'antd'
+import { ConfigProvider, Card, Button, Typography, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip, theme as antdThemeApi } from 'antd'
+import { CalendarOutlined, TeamOutlined, TableOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { getAdmissions } from '@/services/admissionService'
 import { getRooms, getBeds } from '@/services/facilityService'
 import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
+import { AdmissionNumberRail } from '@/components/admissions/AdmissionNumberRail'
+import { AdmissionWorkArea } from '@/components/admissions/AdmissionWorkArea'
+import { AdmissionInfoPanel } from '@/components/admissions/AdmissionInfoPanel'
+import { PatientLocationButton } from '@/components/admissions/PatientLocationButton'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Admission, AdmissionStatus } from '@/types/admission'
-import type { Room } from '@/types/facility'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const { Title } = Typography
@@ -21,24 +24,58 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
   cancelled: 'ملغاة',
 }
 
-const ROOM_TYPE_LABEL: Record<Room['room_type'], string> = {
-  normal: 'عادية',
-  vip: 'VIP',
-  operation: 'عمليات',
-  ward: 'عنبر',
+const STATUS_COLOR: Record<AdmissionStatus, string> = {
+  admitted: 'green',
+  discharged: 'blue',
+  cancelled: 'red',
 }
 
-const STATUS_TABS: { key: AdmissionStatus; label: string }[] = [
-  { key: 'admitted', label: 'نشطة' },
-  { key: 'discharged', label: 'مخرّجة' },
-  { key: 'cancelled', label: 'ملغاة' },
-]
+const ARABIC_WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
+
+function formatArabicDayHeader(date: Dayjs): string {
+  return `${ARABIC_WEEKDAYS[date.day()]}  - ${date.format('YYYY-MM-DD')}`
+}
+
+interface DayHeaderRow {
+  isDayHeader: true
+  key: string
+  label: string
+  count: number
+}
+
+type AdmissionRow = Admission | DayHeaderRow
+
+function isDayHeaderRow(row: AdmissionRow): row is DayHeaderRow {
+  return (row as DayHeaderRow).isDayHeader === true
+}
+
+function groupAdmissionsByDay(admissions: Admission[]): AdmissionRow[] {
+  const sorted = [...admissions].sort(
+    (a, b) => dayjs(b.admission_date).valueOf() - dayjs(a.admission_date).valueOf(),
+  )
+
+  const rows: AdmissionRow[] = []
+  let currentGroup: DayHeaderRow | null = null
+
+  for (const admission of sorted) {
+    const day = dayjs(admission.admission_date)
+    const dayKey = day.format('YYYY-MM-DD')
+    if (currentGroup?.key !== `day-${dayKey}`) {
+      currentGroup = { isDayHeader: true, key: `day-${dayKey}`, label: formatArabicDayHeader(day), count: 0 }
+      rows.push(currentGroup)
+    }
+    currentGroup.count += 1
+    rows.push(admission)
+  }
+
+  return rows
+}
 
 export function AdmissionsPage() {
   const antTheme = useAntTheme()
-  const navigate = useNavigate()
-  const [status, setStatus] = useState<AdmissionStatus>('admitted')
+  const { token } = antdThemeApi.useToken()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [activeAdmissionId, setActiveAdmissionId] = useState<number | null>(null)
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
     dayjs().startOf('month'),
     dayjs().endOf('month'),
@@ -47,6 +84,17 @@ export function AdmissionsPage() {
   const debouncedSearch = useDebouncedValue(search)
   const [roomId, setRoomId] = useState<number | null>(null)
   const [bedId, setBedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== '+') return
+      const target = e.target as HTMLElement
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+      setDialogOpen(true)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   const from = dateRange?.[0]?.startOf('day').toISOString()
   const to = dateRange?.[1]?.endOf('day').toISOString()
@@ -59,10 +107,9 @@ export function AdmissionsPage() {
   })
 
   const admissionsQuery = useQuery({
-    queryKey: ['admissions', status, from, to, debouncedSearch, roomId, bedId],
+    queryKey: ['admissions', from, to, debouncedSearch, roomId, bedId],
     queryFn: () =>
       getAdmissions({
-        status,
         from,
         to,
         search: debouncedSearch || undefined,
@@ -71,71 +118,102 @@ export function AdmissionsPage() {
       }),
   })
 
-  const columns: ColumnsType<Admission> = [
-    { title: 'رقم التنويم', dataIndex: 'id', key: 'id', render: (v) => v ?? '—' },
+  const columnCount = 6
+
+  const columns: ColumnsType<AdmissionRow> = [
+    {
+      title: 'رقم التنويم',
+      dataIndex: 'admission_number',
+      key: 'admission_number',
+      render: (v, row) => {
+        if (isDayHeaderRow(row)) {
+          return {
+            children: (
+              <Flex align="center" gap={8}>
+                <CalendarOutlined style={{ color: token.colorPrimary }} />
+                <span style={{ fontWeight: 600, color: token.colorTextHeading }}>{row.label}</span>
+                <Tag icon={<TeamOutlined />} color="blue" style={{ marginInlineStart: 'auto' }}>
+                  {row.count} مريض
+                </Tag>
+              </Flex>
+            ),
+            props: { colSpan: columnCount },
+          }
+        }
+        return {
+          children: (
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                width: 44,
+                height: 44,
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: 8,
+                fontWeight: 600,
+              }}
+            >
+              {v ?? '—'}
+            </Flex>
+          ),
+          props: {},
+        }
+      },
+    },
     {
       title: 'المريض',
       key: 'patient',
-      render: (_, admission) => (
-        <Flex align="center" gap={6}>
-          {admission.patient?.name}
-          {!!admission.operations_count && <Tag>عملية</Tag>}
-        </Flex>
-      ),
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return (
+          <Flex align="center" gap={6}>
+            <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
+            {!!row.operations_count && <Tag>عملية</Tag>}
+          </Flex>
+        )
+      },
     },
     {
-      title: 'الطابق',
-      key: 'floor',
-      render: (_, admission) => admission.bed?.room?.ward?.floor?.name ?? '—',
+      title: 'الموقع',
+      key: 'location',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return <PatientLocationButton bed={row.bed} />
+      },
     },
     {
-      title: 'الجناح',
-      key: 'ward',
-      render: (_, admission) => admission.bed?.room?.ward?.name ?? '—',
-    },
-    {
-      title: 'نوع الغرفة',
-      key: 'room_type',
-      render: (_, admission) =>
-        admission.bed?.room?.room_type ? ROOM_TYPE_LABEL[admission.bed.room.room_type] : '—',
-    },
-    {
-      title: 'الغرفة / السرير',
-      key: 'bed',
-      render: (_, admission) => {
-        const roomNumber = admission.bed?.room?.room_number
-        const bedNumber = admission.bed?.bed_number
-        if (!roomNumber && !bedNumber) return '—'
-        return [roomNumber && `غرفة ${roomNumber}`, bedNumber && `سرير ${bedNumber}`].filter(Boolean).join(' / ')
+      title: 'الحالة',
+      key: 'status',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return <Tag color={STATUS_COLOR[row.status]}>{STATUS_LABEL[row.status]}</Tag>
       },
     },
     {
       title: 'الطبيب المعالج',
       key: 'doctor',
-      render: (_, admission) => admission.admitting_doctor?.name ?? '—',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return row.admitting_doctor?.name ?? '—'
+      },
     },
-    {
-      title: 'تاريخ الدخول',
-      key: 'admission_date',
-      render: (_, admission) => dayjs(admission.admission_date).format('YYYY-MM-DD HH:mm A'),
-    },
+
     {
       title: 'عدد الأيام',
       key: 'days',
-      render: (_, admission) => {
-        const isShortStay = admission.bed?.room?.is_short_stay
-        if (isShortStay) {
-          return 'إقامة قصيرة'
-        }
-        console.log('isShortStay', isShortStay, admission.bed?.room?.is_short_stay)
-        const end = admission.discharge_date ? dayjs(admission.discharge_date) : dayjs()
-        const hoursElapsed = Math.max(0, end.diff(dayjs(admission.admission_date), 'hour'))
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        const end = row.discharge_date ? dayjs(row.discharge_date) : dayjs()
+        const hoursElapsed = Math.max(0, end.diff(dayjs(row.admission_date), 'hour'))
         const days = Math.floor(hoursElapsed / 24)
-        const dayProgress = Math.round(((hoursElapsed % 24) / 24) * 100)
+        const remainingHours = hoursElapsed % 24
+        const dayProgress = Math.round((remainingHours / 24) * 100)
         return (
           <Flex vertical gap={2} style={{ minWidth: 110 }}>
-            <span>{days} يوم</span>
-            <Tooltip title={`${dayProgress}% من اليوم ${days + 1}`}>
+            <span>
+              {days} يوم و {remainingHours} ساعة
+            </span>
+            <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
               <Progress percent={dayProgress} size="small" showInfo={false} />
             </Tooltip>
           </Flex>
@@ -145,26 +223,34 @@ export function AdmissionsPage() {
 
   ]
 
+  const tableData = groupAdmissionsByDay(admissionsQuery.data?.data ?? [])
+  const sortedAdmissions = [...(admissionsQuery.data?.data ?? [])].sort(
+    (a, b) => dayjs(b.admission_date).valueOf() - dayjs(a.admission_date).valueOf(),
+  )
+  const activeAdmission = sortedAdmissions.find((a) => a.id === activeAdmissionId) ?? null
+
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Flex align="center" gap={10}>
           <Title level={3} style={{ margin: 0 }}>
-            حالات التنويم
+            المرضى المنومون
           </Title>
           <Tag color="blue">{admissionsQuery.data?.data.length ?? 0} حالة</Tag>
         </Flex>
-        <Button type="primary" onClick={() => setDialogOpen(true)}>
-          + تنويم جديد
-        </Button>
+        <Flex align="center" gap={8}>
+          {activeAdmission && (
+            <Button icon={<TableOutlined />} onClick={() => setActiveAdmissionId(null)}>
+              العودة إلى الجدول
+            </Button>
+          )}
+          <Button type="primary" onClick={() => setDialogOpen(true)}>
+            + تنويم جديد
+          </Button>
+        </Flex>
       </Flex>
 
-      <Flex justify="space-between" align="center" gap={1}>
-        <Tabs
-          activeKey={status}
-          onChange={(key) => setStatus(key as AdmissionStatus)}
-          items={STATUS_TABS.map((tab) => ({ key: tab.key, label: tab.label }))}
-        />
+      <Flex justify="end" style={{marginBottom:'5px'}} align="center" gap={1}>
         <Flex align="center" gap={5} wrap="nowrap">
           <Input
             style={{ maxWidth: 240 }}
@@ -223,19 +309,39 @@ export function AdmissionsPage() {
         </Flex>
       </Flex>
 
-      <Card>
-        <Table
-          rowKey="id"
-          loading={admissionsQuery.isLoading}
-          columns={columns}
-          dataSource={admissionsQuery.data?.data ?? []}
-          pagination={false}
-          onRow={(admission) => ({
-            className: 'cursor-pointer',
-            onClick: () => navigate(`/admissions/${admission.id}`),
-          })}
-        />
-      </Card>
+      {activeAdmission ? (
+        <Flex align="start" gap={16} wrap="wrap">
+          <AdmissionNumberRail
+            admissions={sortedAdmissions}
+            activeId={activeAdmissionId}
+            onSelect={setActiveAdmissionId}
+          />
+          <div style={{ flex: '1 1 420px', minWidth: 0 }}>
+            <AdmissionWorkArea admission={activeAdmission} />
+          </div>
+          <div style={{ flex: '0 1 340px', minWidth: 300 }}>
+            <AdmissionInfoPanel admission={activeAdmission} onClear={() => setActiveAdmissionId(null)} />
+          </div>
+        </Flex>
+      ) : (
+        <Card>
+          <Table<AdmissionRow>
+            rowKey={(row) => (isDayHeaderRow(row) ? row.key : row.id)}
+            loading={admissionsQuery.isLoading}
+            columns={columns}
+            dataSource={tableData}
+            pagination={false}
+            onRow={(row) =>
+              isDayHeaderRow(row)
+                ? {}
+                : {
+                    className: 'cursor-pointer',
+                    onClick: () => setActiveAdmissionId(row.id),
+                  }
+            }
+          />
+        </Card>
+      )}
 
       <NewAdmissionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
     </ConfigProvider>

@@ -55,6 +55,10 @@ export interface FinancialStatistics {
   expenses_total: number
   net_total: number
   services_total: number
+  short_stay_total: number
+  rooms_total: number
+  operations_total: number
+  charges_total: number
   daily_revenue: DailyRevenue[]
   deposits_by_method: Record<string, number>
 }
@@ -91,5 +95,6 @@ export interface OperationsStatistics {
     scheduled: number
   }
   total_in_range: number
+  revenue_in_range: number
   by_surgeon: TopSurgeon[]
 }

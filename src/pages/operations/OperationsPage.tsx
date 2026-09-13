@@ -10,6 +10,7 @@ import { getAllOperations } from '@/services/operationService'
 import { updateOperation } from '@/services/admissionService'
 import { ScheduleOperationModal } from '@/components/admissions/ScheduleOperationModal'
 import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
+import { OperationInvoiceButton } from '@/components/admissions/OperationInvoiceButton'
 import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
 import type { Operation } from '@/types/admission'
 
@@ -89,7 +90,7 @@ export function OperationsPage() {
       title: '',
       key: 'actions',
       render: (_, op) => (
-        <Space size={4}>
+        <Space size={4} wrap>
           <Button
             size="small"
             icon={<EditOutlined />}
@@ -100,6 +101,7 @@ export function OperationsPage() {
           >
             تعديل
           </Button>
+          <OperationInvoiceButton operation={op} />
           <Badge count={op.team_members?.length ?? 0} size="small" offset={[-4, 2]}>
             <Button
               size="small"
@@ -173,6 +175,7 @@ export function OperationsPage() {
           onClose={() => setTeamOperationId(null)}
           operationId={teamOperation.id}
           existingMembers={teamOperation.team_members ?? []}
+          operationPrice={teamOperation.price}
           onAdded={invalidate}
         />
       )}

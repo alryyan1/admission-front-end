@@ -1,14 +1,27 @@
 import { useState } from 'react'
-import { Card, Button, Table, Tag, Typography, Flex, Space, Badge } from 'antd'
+import {
+  Card,
+  CardHeader,
+  CardContent,
+  Stack,
+  Button,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Typography,
+  Tooltip,
+  Badge,
+  Chip,
+} from '@mui/material'
 import { EditOutlined, TeamOutlined } from '@ant-design/icons'
-import type { ColumnsType } from 'antd/es/table'
 import { formatDateTime } from '@/lib/utils'
 import { ScheduleOperationModal, type OperationFormPayload } from '@/components/admissions/ScheduleOperationModal'
 import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
+import { OperationInvoiceButton } from '@/components/admissions/OperationInvoiceButton'
 import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
 import type { Operation } from '@/types/admission'
-
-const { Text } = Typography
 
 interface OperationsTabProps {
   operations: Operation[]
@@ -19,89 +32,99 @@ interface OperationsTabProps {
   isSubmitting: boolean
 }
 
-export function OperationsTab({ operations, loading, onSchedule, onUpdate, onTeamChanged, isSubmitting }: OperationsTabProps) {
+/** Operations management card, mirroring {@link AdmissionServicesCard}'s layout. */
+export function OperationsTab({
+  operations,
+  loading,
+  onSchedule,
+  onUpdate,
+  onTeamChanged,
+  isSubmitting,
+}: OperationsTabProps) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
   const [teamOperationId, setTeamOperationId] = useState<number | null>(null)
 
   const teamOperation = teamOperationId != null ? operations.find((op) => op.id === teamOperationId) ?? null : null
 
-  const columns: ColumnsType<Operation> = [
-    { title: 'رقم العملية', dataIndex: 'operation_number', key: 'operation_number', render: (v) => v ?? '—' },
-    {
-      title: 'الإجراء',
-      key: 'procedure',
-      render: (_, op) => (
-        <Space size={4}>
-          <Text strong>{op.procedure?.name_ar ?? '—'}</Text>
-          {op.procedure?.category && <Tag>{op.procedure.category.name}</Tag>}
-        </Space>
-      ),
-    },
-    { title: 'الجراح', key: 'surgeon', render: (_, op) => op.surgeon?.name ?? '—' },
-    {
-      title: 'السعر',
-      key: 'price',
-      render: (_, op) => (
-        <OperationPriceCell operation={op} onCommit={(price) => onUpdate(op.id, { price })} />
-      ),
-    },
-    { title: 'تاريخ العملية', key: 'scheduled_at', render: (_, op) => formatDateTime(op.scheduled_at) },
-    {
-      title: '',
-      key: 'actions',
-      render: (_, op) => (
-        <Space size={4}>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={(e) => {
-              e.stopPropagation()
-              setEditingOperation(op)
-            }}
-          >
-            تعديل
-          </Button>
-          <Badge count={op.team_members?.length ?? 0} size="small" offset={[-4, 2]}>
-            <Button
-              size="small"
-              icon={<TeamOutlined />}
-              onClick={(e) => {
-                e.stopPropagation()
-                setTeamOperationId(op.id)
-              }}
-            >
-              أعضاء الفريق الطبي
-            </Button>
-          </Badge>
-        </Space>
-      ),
-    },
-  ]
-
   return (
-    <Space direction="vertical" size={16} style={{ width: '100%' }}>
-      <Flex justify="end">
-        <Button type="primary" onClick={() => setScheduleOpen(true)}>
-          + طلب عملية جديدة
-        </Button>
-      </Flex>
+    <Card>
+      <CardHeader title="العمليات" />
+      <CardContent>
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+          <Button variant="contained" onClick={() => setScheduleOpen(true)}>
+            + طلب عملية جديدة
+          </Button>
+        </Stack>
 
-      <Card size="small">
-        <Table
-          size="small"
-          rowKey="id"
-          columns={columns}
-          dataSource={operations}
-          loading={loading}
-          pagination={false}
-          locale={{ emptyText: 'لا توجد عمليات مجدولة بعد' }}
-          onRow={(op) => ({
-            className: 'cursor-pointer',
-            onClick: () => setTeamOperationId(op.id),
-          })}
-        />
-      </Card>
+        <Table size="small">
+          <TableHead>
+            <TableRow>
+              <TableCell>رقم العملية</TableCell>
+              <TableCell>الإجراء</TableCell>
+              <TableCell>الجراح</TableCell>
+              <TableCell>السعر</TableCell>
+              <TableCell />
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {operations.length === 0 && !loading && (
+              <TableRow>
+                <TableCell colSpan={6}>
+                  <Typography variant="body2" color="text.secondary">
+                    لا توجد عمليات مجدولة بعد
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+            {operations.map((op) => (
+              <TableRow key={op.id} hover sx={{ cursor: 'pointer' }} onClick={() => setTeamOperationId(op.id)}>
+                <TableCell>{op.operation_number ?? '—'}</TableCell>
+                <TableCell>
+                  <Stack direction="row" spacing={0.75} alignItems="center">
+                    <span>{op.procedure?.name_ar ?? '—'}</span>
+                  </Stack>
+                </TableCell>
+                <TableCell>{op.surgeon?.name ?? '—'}</TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
+                  <OperationPriceCell operation={op} onCommit={(price) => onUpdate(op.id, { price })} />
+                </TableCell>
+                <TableCell align="right">
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      startIcon={<EditOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setEditingOperation(op)
+                      }}
+                    >
+                      تعديل
+                    </Button>
+                    <OperationInvoiceButton operation={op} />
+                    <Tooltip title="أعضاء الفريق الطبي">
+                      <Badge badgeContent={op.team_members?.length ?? 0} color="primary">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<TeamOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setTeamOperationId(op.id)
+                          }}
+                        >
+                          الفريق
+                        </Button>
+                      </Badge>
+                    </Tooltip>
+                  </Stack>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </CardContent>
 
       <ScheduleOperationModal
         open={scheduleOpen || !!editingOperation}
@@ -127,9 +150,10 @@ export function OperationsTab({ operations, loading, onSchedule, onUpdate, onTea
           onClose={() => setTeamOperationId(null)}
           operationId={teamOperation.id}
           existingMembers={teamOperation.team_members ?? []}
+          operationPrice={teamOperation.price}
           onAdded={onTeamChanged}
         />
       )}
-    </Space>
+    </Card>
   )
 }
