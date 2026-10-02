@@ -376,6 +376,7 @@ export function AdmissionDetailPage() {
           services={admission.requested_services ?? []}
           deposits={admission.deposits ?? []}
           admissionId={admission.id}
+          patientBalance={dueBalance}
           isShortStayRoom={admission.bed?.room?.is_short_stay ?? false}
           onAddService={(payload) => serviceMutation.mutate(payload)}
           onAddDeposit={(payload) => depositMutation.mutate(payload)}

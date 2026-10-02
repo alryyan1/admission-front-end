@@ -1,22 +1,24 @@
 import { useEffect, useState } from 'react'
+import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigProvider, Card, Button, Typography, Table, Tag, Flex, DatePicker, Input, Select, Progress, Tooltip, theme as antdThemeApi } from 'antd'
-import { CalendarOutlined, TeamOutlined, TableOutlined } from '@ant-design/icons'
+import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Tooltip, theme as antdThemeApi } from 'antd'
+import { CalendarOutlined, TeamOutlined, TableOutlined, CalculatorOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
+import { formatNumber } from '@/lib/utils'
 import { getAdmissions } from '@/services/admissionService'
-import { getRooms, getBeds } from '@/services/facilityService'
 import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
+import { RevenueCalculatorDialog } from '@/components/admissions/RevenueCalculatorDialog'
 import { AdmissionNumberRail } from '@/components/admissions/AdmissionNumberRail'
 import { AdmissionWorkArea } from '@/components/admissions/AdmissionWorkArea'
 import { AdmissionInfoPanel } from '@/components/admissions/AdmissionInfoPanel'
 import { PatientLocationButton } from '@/components/admissions/PatientLocationButton'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import type { AdmissionsFiltersContext } from '@/components/layout/AppLayout'
 import type { Admission, AdmissionStatus } from '@/types/admission'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const { Title } = Typography
-const { RangePicker } = DatePicker
 
 const STATUS_LABEL: Record<AdmissionStatus, string> = {
   admitted: 'نشطة',
@@ -49,6 +51,10 @@ function isDayHeaderRow(row: AdmissionRow): row is DayHeaderRow {
   return (row as DayHeaderRow).isDayHeader === true
 }
 
+function defaultDateRange(): [Dayjs, Dayjs] {
+  return [dayjs().startOf('month'), dayjs().endOf('month')]
+}
+
 function groupAdmissionsByDay(admissions: Admission[]): AdmissionRow[] {
   const sorted = [...admissions].sort(
     (a, b) => dayjs(b.admission_date).valueOf() - dayjs(a.admission_date).valueOf(),
@@ -74,16 +80,15 @@ function groupAdmissionsByDay(admissions: Admission[]): AdmissionRow[] {
 export function AdmissionsPage() {
   const antTheme = useAntTheme()
   const { token } = antdThemeApi.useToken()
+  const { dateRange, setDateRange, dateRangeClearedBySearch, setDateRangeClearedBySearch, roomId, bedId } =
+    useOutletContext<AdmissionsFiltersContext>()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [activeAdmissionId, setActiveAdmissionId] = useState<number | null>(null)
-  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>([
-    dayjs().startOf('month'),
-    dayjs().endOf('month'),
-  ])
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
-  const [roomId, setRoomId] = useState<number | null>(null)
-  const [bedId, setBedId] = useState<number | null>(null)
+  const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -96,29 +101,54 @@ export function AdmissionsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
+  // Consumes a one-shot ?search=/?admission_id= from the top app bar's global search,
+  // clearing the default date range so the match isn't hidden outside the current month.
+  useEffect(() => {
+    const urlSearch = searchParams.get('search')
+    const urlAdmissionId = searchParams.get('admission_id')
+    if (urlSearch === null && urlAdmissionId === null) return
+
+    setDateRange(null)
+    setDateRangeClearedBySearch(true)
+    if (urlSearch !== null) {
+      setSearch(urlSearch)
+      setAdmissionIdFilter(undefined)
+    } else if (urlAdmissionId !== null) {
+      const parsed = Number(urlAdmissionId)
+      setAdmissionIdFilter(Number.isNaN(parsed) ? undefined : parsed)
+      setSearch('')
+    }
+    setSearchParams({}, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
+
+  // Once the search that cleared the date range is itself cleared, restore the
+  // default "this month" view instead of silently staying on all-time results.
+  useEffect(() => {
+    if (!dateRangeClearedBySearch || dateRange !== null) return
+    if (search.trim() === '' && admissionIdFilter === undefined) {
+      setDateRange(defaultDateRange())
+      setDateRangeClearedBySearch(false)
+    }
+  }, [search, admissionIdFilter, dateRangeClearedBySearch, dateRange, setDateRange, setDateRangeClearedBySearch])
+
   const from = dateRange?.[0]?.startOf('day').toISOString()
   const to = dateRange?.[1]?.endOf('day').toISOString()
 
-  const roomsQuery = useQuery({ queryKey: ['rooms'], queryFn: () => getRooms() })
-  const bedsQuery = useQuery({
-    queryKey: ['beds', roomId],
-    queryFn: () => getBeds(roomId ?? undefined),
-    enabled: !!roomId,
-  })
-
   const admissionsQuery = useQuery({
-    queryKey: ['admissions', from, to, debouncedSearch, roomId, bedId],
+    queryKey: ['admissions', from, to, debouncedSearch, admissionIdFilter, roomId, bedId],
     queryFn: () =>
       getAdmissions({
         from,
         to,
         search: debouncedSearch || undefined,
+        admission_id: admissionIdFilter,
         room_id: roomId ?? undefined,
         bed_id: bedId ?? undefined,
       }),
   })
 
-  const columnCount = 6
+  const columnCount = 9
 
   const columns: ColumnsType<AdmissionRow> = [
     {
@@ -220,7 +250,31 @@ export function AdmissionsPage() {
         )
       },
     },
-
+    {
+      title: 'الإجمالي',
+      key: 'total_charges',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return formatNumber(row.total_charges ?? 0)
+      },
+    },
+    {
+      title: 'المدفوع',
+      key: 'paid_total',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return formatNumber(row.paid_total ?? 0)
+      },
+    },
+    {
+      title: 'المتبقي',
+      key: 'balance_due',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        const balance = row.balance_due ?? 0
+        return <Tag color={balance > 0 ? 'red' : 'green'}>{formatNumber(balance)}</Tag>
+      },
+    },
   ]
 
   const tableData = groupAdmissionsByDay(admissionsQuery.data?.data ?? [])
@@ -233,9 +287,7 @@ export function AdmissionsPage() {
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Flex align="center" gap={10}>
-          <Title level={3} style={{ margin: 0 }}>
-            المرضى المنومون
-          </Title>
+        
           <Tag color="blue">{admissionsQuery.data?.data.length ?? 0} حالة</Tag>
         </Flex>
         <Flex align="center" gap={8}>
@@ -244,68 +296,12 @@ export function AdmissionsPage() {
               العودة إلى الجدول
             </Button>
           )}
+          <Button icon={<CalculatorOutlined />} onClick={() => setCalculatorOpen(true)}>
+            الحاسبة
+          </Button>
           <Button type="primary" onClick={() => setDialogOpen(true)}>
             + تنويم جديد
           </Button>
-        </Flex>
-      </Flex>
-
-      <Flex justify="end" style={{marginBottom:'5px'}} align="center" gap={1}>
-        <Flex align="center" gap={5} wrap="nowrap">
-          <Input
-            style={{ maxWidth: 240 }}
-            placeholder="بحث باسم المريض..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            allowClear
-          />
-          <RangePicker
-            value={dateRange}
-            onChange={(values) => setDateRange(values as [Dayjs, Dayjs] | null)}
-            format="YYYY-MM-DD"
-            allowClear
-            placeholder={['من تاريخ', 'إلى تاريخ']}
-          />
-          <Select
-            style={{ width: 400 }}
-            placeholder="الغرفة"
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            loading={roomsQuery.isLoading}
-            value={roomId ?? undefined}
-            onChange={(value) => {
-              setRoomId(value ?? null)
-              setBedId(null)
-            }}
-            options={[...(roomsQuery.data ?? [])]
-              .sort((a, b) => {
-                const floorCompare = (a.ward?.floor?.id ?? 0) - (b.ward?.floor?.id ?? 0)
-                if (floorCompare !== 0) return floorCompare
-                const wardCompare = (a.ward?.id ?? 0) - (b.ward?.id ?? 0)
-                if (wardCompare !== 0) return wardCompare
-                return a.room_number.localeCompare(b.room_number)
-              })
-              .map((room) => ({
-                value: room.id,
-                label: [room.ward?.floor?.name, room.ward?.name, `غرفة ${room.room_number}`]
-                  .filter(Boolean)
-                  .join(' — '),
-              }))}
-          />
-          <Select
-            style={{ width: 160 }}
-            placeholder="السرير"
-            allowClear
-            disabled={!roomId}
-            loading={bedsQuery.isLoading}
-            value={bedId ?? undefined}
-            onChange={(value) => setBedId(value ?? null)}
-            options={(bedsQuery.data ?? []).map((bed) => ({
-              value: bed.id,
-              label: `سرير ${bed.bed_number}`,
-            }))}
-          />
         </Flex>
       </Flex>
 
@@ -324,7 +320,6 @@ export function AdmissionsPage() {
           </div>
         </Flex>
       ) : (
-        <Card>
           <Table<AdmissionRow>
             rowKey={(row) => (isDayHeaderRow(row) ? row.key : row.id)}
             loading={admissionsQuery.isLoading}
@@ -333,17 +328,17 @@ export function AdmissionsPage() {
             pagination={false}
             onRow={(row) =>
               isDayHeaderRow(row)
-                ? {}
+                ? { style: { backgroundColor: token.colorFillAlter } }
                 : {
                     className: 'cursor-pointer',
                     onClick: () => setActiveAdmissionId(row.id),
                   }
             }
           />
-        </Card>
       )}
 
       <NewAdmissionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      <RevenueCalculatorDialog open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
     </ConfigProvider>
   )
 }

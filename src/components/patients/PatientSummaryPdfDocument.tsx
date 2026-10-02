@@ -146,7 +146,7 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
         <Text style={styles.sectionTitle}>{ar('بيانات المريض')}</Text>
         <View style={styles.grid}>
           <GridItem label="الاسم" value={patient.name} />
-          <GridItem label="الجنس" value={patient.gender ? (GENDER_LABEL[patient.gender] ?? patient.gender) : '—'} />
+          <GridItem label="النوع" value={patient.gender ? (GENDER_LABEL[patient.gender] ?? patient.gender) : '—'} />
           <GridItem label="العمر" value={ageValue} />
           <GridItem label="فصيلة الدم" value={patient.blood_type ?? '—'} />
           <GridItem label="الهاتف" value={patient.phone ?? '—'} />

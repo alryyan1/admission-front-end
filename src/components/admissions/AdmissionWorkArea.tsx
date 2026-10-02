@@ -44,6 +44,20 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
   const isShortStayRoom = admission.bed?.room?.is_short_stay ?? false
   const servicesCount = admissionQuery.data?.requested_services?.length ?? 0
   const operationsCount = admissionQuery.data?.operations?.length ?? 0
+  const isFileOpeningFeeAdded = (admissionQuery.data?.requested_services ?? []).some(
+    (service) => service.name === chartOpeningQuery.data?.service?.name_ar,
+  )
+
+  const totalServices = (admissionQuery.data?.requested_services ?? []).reduce(
+    (sum, s) => sum + Number(s.total_price),
+    0,
+  )
+  const totalOperations = (admissionQuery.data?.operations ?? []).reduce(
+    (sum, op) => sum + (op.price != null ? Number(op.price) : 0),
+    0,
+  )
+  const totalDeposits = (admissionQuery.data?.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
+  const dueBalance = totalServices + totalOperations - totalDeposits
 
   function invalidateAfterChange() {
     queryClient.invalidateQueries({ queryKey: ['admissions'] })
@@ -114,7 +128,12 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
         <Flex gap={8} justify="flex-end" style={{ marginBottom: 12 }}>
           <Button
             onClick={handleAddFileOpeningFee}
-            disabled={serviceMutation.isPending || chartOpeningQuery.isLoading || !chartOpeningQuery.data?.service}
+            disabled={
+              serviceMutation.isPending ||
+              chartOpeningQuery.isLoading ||
+              !chartOpeningQuery.data?.service ||
+              isFileOpeningFeeAdded
+            }
           >
             رسوم فتح الملف
           </Button>
@@ -154,6 +173,7 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
         {activeTab === 'services' && (
           <AdmissionServicesCard
             services={admissionQuery.data?.requested_services ?? []}
+            isLoading={admissionQuery.isLoading}
             isShortStayRoom={isShortStayRoom}
             onAddService={(payload) => serviceMutation.mutate(payload)}
             onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
@@ -184,6 +204,7 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
         onClose={() => setPaymentsOpen(false)}
         deposits={admissionQuery.data?.deposits ?? []}
         admissionId={admission.id}
+        patientBalance={dueBalance}
         onAddDeposit={(payload) => depositMutation.mutate(payload)}
         onRemoveDeposit={(depositId) => removeDepositMutation.mutate(depositId)}
         isSubmittingDeposit={depositMutation.isPending}

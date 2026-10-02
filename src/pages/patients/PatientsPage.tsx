@@ -28,7 +28,7 @@ export function PatientsPage() {
     { title: 'الاسم', dataIndex: 'name', key: 'name' },
     { title: 'الهاتف', dataIndex: 'phone', key: 'phone', render: (v) => v ?? '—' },
     {
-      title: 'الجنس',
+      title: 'النوع',
       key: 'gender',
       render: (_, patient) => (patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'),
     },

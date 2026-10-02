@@ -3,7 +3,16 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Card, Button, Tag, Flex, Typography, Descriptions, Divider, Input, Statistic, Tooltip, theme as antdThemeApi } from 'antd'
-import { CloseOutlined, EditOutlined, LogoutOutlined, CloseCircleOutlined, FileTextOutlined, PrinterOutlined } from '@ant-design/icons'
+import {
+  CloseOutlined,
+  EditOutlined,
+  LogoutOutlined,
+  CloseCircleOutlined,
+  FileTextOutlined,
+  FileDoneOutlined,
+  AccountBookOutlined,
+  ProfileOutlined,
+} from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
@@ -101,7 +110,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
               <Text strong style={{ fontSize: 18 }}>
                 {admission.patient?.name}
               </Text>
-              <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
               <Button
                 size="small"
                 type="text"
@@ -109,9 +117,10 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 onClick={() => setEditPatientOpen(true)}
                 title="تعديل بيانات المريض"
               />
+              <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
             </Flex>
             <Text type="secondary">
-              رقم التنويم: {admission.admission_number ?? '—'} — دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}
+               رقم الملف: {admission.id ?? '—'} — دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}
             </Text>
           </Flex>
           <Button type="text" icon={<CloseOutlined />} onClick={onClear} />
@@ -126,22 +135,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           {admission.referred_by_doctor && (
             <Descriptions.Item label="محول من">{admission.referred_by_doctor.name}</Descriptions.Item>
           )}
-          {admission.patient?.phone && <Descriptions.Item label="هاتف المريض">{admission.patient.phone}</Descriptions.Item>}
-          {(admission.patient?.age_year != null || admission.patient?.gender) && (
-            <Descriptions.Item label="العمر / الجنس">
-              {[
-                admission.patient?.age_year != null ? `${admission.patient.age_year} سنة` : null,
-                admission.patient?.gender,
-              ]
-                .filter(Boolean)
-                .join(' — ') || '—'}
-            </Descriptions.Item>
-          )}
-          {admission.patient?.blood_type && (
-            <Descriptions.Item label="فصيلة الدم">
-              <Tag color="red">{admission.patient.blood_type}</Tag>
-            </Descriptions.Item>
-          )}
           <Descriptions.Item label="مدة الإقامة">
             {(() => {
               const end = admission.discharge_date ? dayjs(admission.discharge_date) : dayjs()
@@ -151,6 +144,36 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           </Descriptions.Item>
           {admission.diagnosis && <Descriptions.Item label="التشخيص">{admission.diagnosis}</Descriptions.Item>}
         </Descriptions>
+
+        {(admission.patient?.phone || admission.patient?.age_year != null || admission.patient?.gender || admission.patient?.blood_type) && (
+          <>
+            <Divider style={{ margin: '8px 0' }} titlePlacement="right" plain>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                بيانات المريض
+              </Text>
+            </Divider>
+            <Descriptions size="small" column={1} bordered={false}>
+              {admission.patient?.phone && (
+                <Descriptions.Item label="هاتف المريض">{admission.patient.phone}</Descriptions.Item>
+              )}
+              {(admission.patient?.age_year != null || admission.patient?.gender) && (
+                <Descriptions.Item label="العمر / النوع">
+                  {[
+                    admission.patient?.age_year != null ? `${admission.patient.age_year} سنة` : null,
+                    admission.patient?.gender,
+                  ]
+                    .filter(Boolean)
+                    .join(' — ') || '—'}
+                </Descriptions.Item>
+              )}
+              {admission.patient?.blood_type && (
+                <Descriptions.Item label="فصيلة الدم">
+                  <Tag color="red">{admission.patient.blood_type}</Tag>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </>
+        )}
 
         <Flex gap={8} style={{ margin: '12px 0' }}>
           <Card size="small" style={{ flex: 1, textAlign: 'center' }} styles={{ body: { padding: 8 } }}>
@@ -252,7 +275,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           </Tooltip>
           <Tooltip title="طباعة الفاتورة المبدئية">
             <Button
-              icon={<PrinterOutlined />}
+              icon={<FileDoneOutlined />}
               loading={summaryPdf.isLoading('preliminary')}
               onClick={() =>
                 summaryPdf.open(admissionPdfPaths.preliminaryInvoice(admission.id), 'معاينة الفاتورة المبدئية', 'preliminary')
@@ -261,7 +284,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           </Tooltip>
           <Tooltip title="طباعة كشف الحساب">
             <Button
-              icon={<PrinterOutlined />}
+              icon={<AccountBookOutlined />}
               loading={summaryPdf.isLoading('statement')}
               onClick={() =>
                 summaryPdf.open(admissionPdfPaths.accountStatement(admission.id), 'معاينة كشف الحساب', 'statement')
@@ -270,7 +293,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           </Tooltip>
           <Tooltip title="طباعة ملخص التنويم">
             <Button
-              icon={<PrinterOutlined />}
+              icon={<ProfileOutlined />}
               loading={summaryPdf.isLoading('summary')}
               onClick={() =>
                 summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملخص التنويم', 'summary')

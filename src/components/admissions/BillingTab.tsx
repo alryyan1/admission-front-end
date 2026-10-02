@@ -7,6 +7,7 @@ interface BillingTabProps {
   services: RequestedService[]
   deposits: AdmissionDeposit[]
   admissionId: number
+  patientBalance?: number
   isShortStayRoom: boolean
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
   onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
@@ -26,6 +27,7 @@ export function BillingTab({
   services,
   deposits,
   admissionId,
+  patientBalance,
   isShortStayRoom,
   onAddService,
   onAddDeposit,
@@ -61,6 +63,7 @@ export function BillingTab({
         <AdmissionDepositsCard
           deposits={deposits}
           admissionId={admissionId}
+          patientBalance={patientBalance}
           onAddDeposit={onAddDeposit}
           onRemoveDeposit={onRemoveDeposit}
           isSubmittingDeposit={isSubmittingDeposit}

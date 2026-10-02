@@ -24,14 +24,13 @@ export function AdmissionNumberRail({ admissions, activeId, onSelect }: Admissio
 
   return (
     <Card
-      style={{ width: 96, flexShrink: 0, position: 'sticky', top: 16 }}
-      styles={{ body: { padding: 8, maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' } }}
+      style={{ width: 96, flexShrink: 0, position: 'sticky', top: 16, height: 'calc(100vh - 160px)' }}
+      styles={{ body: { padding: 8, height: '100%', overflowY: 'auto' } }}
     >
       <Flex vertical gap={8} align="center">
         {admissions.map((admission, index) => {
           const isActive = admission.id === activeId
           const statusColor = statusColors[admission.status]
-          const showStatusColor = !isActive || admission.status !== 'admitted'
           const balanceDue = admission.balance_due ?? 0
           const day = dayjs(admission.admission_date)
           const previousDay = index > 0 ? dayjs(admissions[index - 1].admission_date) : null
@@ -45,25 +44,28 @@ export function AdmissionNumberRail({ admissions, activeId, onSelect }: Admissio
                 </Divider>
               )}
               <div style={{ position: 'relative', width: 44, height: 44, margin: '0 auto' }}>
-                <div
-                  onClick={() => onSelect(admission.id)}
-                  style={{
-                    cursor: 'pointer',
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: `1px solid ${isActive ? ACTIVE_BORDER_COLOR : statusColor}`,
-                    borderRadius: 8,
-                    fontWeight: 600,
-                    background: showStatusColor && isActive ? statusColor : 'transparent',
-                    color: showStatusColor ? (isActive ? '#fff' : statusColor) : token.colorText,
-                    transition: 'background-color 0.2s, border-color 0.2s, color 0.2s',
-                  }}
-                >
-                  {admission.admission_number ?? '—'}
-                </div>
+                <Tooltip title={admission.patient?.name} placement="left">
+                  <div
+                    onClick={() => onSelect(admission.id)}
+                    style={{
+                      cursor: 'pointer',
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: `1px solid ${statusColor}`,
+                      borderRadius: 8,
+                      fontWeight: 600,
+                      background: isActive ? statusColor : 'transparent',
+                      color: isActive ? '#fff' : statusColor,
+                      boxShadow: isActive ? `0 0 0 2px ${ACTIVE_BORDER_COLOR}` : undefined,
+                      transition: 'background-color 0.2s, border-color 0.2s, color 0.2s, box-shadow 0.2s',
+                    }}
+                  >
+                    {admission.admission_number ?? '—'}
+                  </div>
+                </Tooltip>
                 {balanceDue !== 0 && (
                   <Tooltip title={`الرصيد المستحق: ${formatNumber(balanceDue)}`}>
                     <DollarCircleFilled

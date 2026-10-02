@@ -54,7 +54,7 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
             },
             {
               key: 'gender',
-              label: 'الجنس',
+              label: 'النوع',
               value: (
                 <InlineEditableField
                   editable={editable}

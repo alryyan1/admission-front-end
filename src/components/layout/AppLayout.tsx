@@ -1,12 +1,16 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Settings, Sun, UserRound } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
+import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Search, Settings, Sun, UserRound } from 'lucide-react'
 import {
   ConfigProvider,
   Layout,
   Menu,
   Drawer,
   Button,
+  Input,
+  DatePicker,
+  Select,
   Typography,
   Grid,
   Dropdown,
@@ -16,7 +20,25 @@ import type { MenuProps } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { getRooms, getBeds } from '@/services/facilityService'
 import type { UserRole } from '@/types/auth'
+import dayjs, { type Dayjs } from 'dayjs'
+
+const { RangePicker } = DatePicker
+
+/** Provided to child routes via {@link Outlet}'s context; only {@link AdmissionsPage} reads it. */
+export interface AdmissionsFiltersContext {
+  dateRange: [Dayjs, Dayjs] | null
+  setDateRange: (range: [Dayjs, Dayjs] | null) => void
+  dateRangeClearedBySearch: boolean
+  setDateRangeClearedBySearch: (value: boolean) => void
+  roomId: number | null
+  bedId: number | null
+}
+
+function defaultDateRange(): [Dayjs, Dayjs] {
+  return [dayjs().startOf('month'), dayjs().endOf('month')]
+}
 
 const { Header, Sider, Content } = Layout
 const { Text } = Typography
@@ -29,14 +51,12 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { to: '/', label: 'لوحة التحكم' },
-  { to: '/admissions', label: 'المرضى المنومون' },
+  { to: '/admissions', label: 'سجل التنويم ' },
   { to: '/patients', label: 'سجل المرضى' },
   { to: '/facility-map', label: 'الغرف' },
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
-  { to: '/cashier', label: 'الإيرادات', roles: ['admin', 'cashier'] },
   { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
-  { to: '/accountant', label: 'استحقاقات الفريق الطبي', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [
@@ -45,14 +65,13 @@ const settingsNavItems: NavItem[] = [
   { to: '/settings/services', label: 'كتالوج الخدمات' },
   { to: '/settings/procedures', label: 'كتالوج العمليات' },
   { to: '/settings/team-roles', label: 'أدوار الفريق الطبي' },
-  { to: '/settings/roles-permissions', label: 'الأدوار والصلاحيات' },
   { to: '/settings/users', label: 'المستخدمون' },
   { to: '/settings/sessions', label: 'الجلسات النشطة' },
   { to: '/settings/activity-log', label: 'سجل النشاط' },
   { to: '/settings/backup', label: 'النسخ الاحتياطي' },
 ]
 
-const SIDER_WIDTH = 260
+const SIDER_WIDTH = 170
 const HEADER_HEIGHT = 56
 
 const sidebarMenuTheme = {
@@ -83,8 +102,32 @@ function AppLayoutContent() {
   const location = useLocation()
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [globalSearch, setGlobalSearch] = useState('')
+  const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(defaultDateRange())
+  const [dateRangeClearedBySearch, setDateRangeClearedBySearch] = useState(false)
+  const [roomId, setRoomId] = useState<number | null>(null)
+  const [bedId, setBedId] = useState<number | null>(null)
   const screens = Grid.useBreakpoint()
   const isDesktop = screens.sm ?? true
+  const isAdmissionsPage = location.pathname === '/admissions'
+
+  const roomsQuery = useQuery({ queryKey: ['rooms'], queryFn: () => getRooms(), enabled: isAdmissionsPage })
+  const bedsQuery = useQuery({
+    queryKey: ['beds', roomId],
+    queryFn: () => getBeds(roomId ?? undefined),
+    enabled: isAdmissionsPage && !!roomId,
+  })
+
+  function handleGlobalSearch() {
+    const value = globalSearch.trim()
+    if (!value) {
+      navigate('/admissions?search=')
+      return
+    }
+    const params = new URLSearchParams()
+    params.set(/^\d+$/.test(value) ? 'admission_id' : 'search', value)
+    navigate(`/admissions?${params.toString()}`)
+  }
 
   const visibleNavItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)))
 
@@ -167,9 +210,75 @@ function AppLayoutContent() {
         {!isDesktop && (
           <Button type="text" icon={<MenuIcon size={18} />} onClick={() => setMobileOpen(true)} />
         )}
-        <Text strong ellipsis style={{ flex: 1, fontSize: 16 }}>
-          نظام إدارة التنويم
-        </Text>
+     
+        {isDesktop && (
+          <Input
+            allowClear
+            placeholder="بحث باسم المريض أو رقم التنويم..."
+            prefix={<Search size={14} color={token.colorTextQuaternary} />}
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            onPressEnter={handleGlobalSearch}
+            onClear={() => navigate('/admissions?search=')}
+            style={{ flex: '0 1 320px' }}
+          />
+        )}
+        {isDesktop && isAdmissionsPage && (
+          <>
+            <RangePicker
+              value={dateRange}
+              onChange={(values) => {
+                setDateRange(values as [Dayjs, Dayjs] | null)
+                setDateRangeClearedBySearch(false)
+              }}
+              format="YYYY-MM-DD"
+              allowClear
+              placeholder={['من تاريخ', 'إلى تاريخ']}
+              style={{ width: 220 }}
+            />
+            <Select
+              style={{ width: 220 }}
+              placeholder="الغرفة"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              loading={roomsQuery.isLoading}
+              value={roomId ?? undefined}
+              onChange={(value) => {
+                setRoomId(value ?? null)
+                setBedId(null)
+              }}
+              options={[...(roomsQuery.data ?? [])]
+                .sort((a, b) => {
+                  const floorCompare = (a.ward?.floor?.id ?? 0) - (b.ward?.floor?.id ?? 0)
+                  if (floorCompare !== 0) return floorCompare
+                  const wardCompare = (a.ward?.id ?? 0) - (b.ward?.id ?? 0)
+                  if (wardCompare !== 0) return wardCompare
+                  return a.room_number.localeCompare(b.room_number)
+                })
+                .map((room) => ({
+                  value: room.id,
+                  label: [room.ward?.floor?.name, room.ward?.name, `غرفة ${room.room_number}`]
+                    .filter(Boolean)
+                    .join(' — '),
+                }))}
+            />
+            <Select
+              style={{ width: 120 }}
+              placeholder="السرير"
+              allowClear
+              disabled={!roomId}
+              loading={bedsQuery.isLoading}
+              value={bedId ?? undefined}
+              onChange={(value) => setBedId(value ?? null)}
+              options={(bedsQuery.data ?? []).map((bed) => ({
+                value: bed.id,
+                label: `سرير ${bed.bed_number}`,
+              }))}
+            />
+          </>
+        )}
+        <div style={{ flex: 1 }} />
         <Button
           type="text"
           aria-label={mode === 'dark' ? 'تفعيل الوضع الفاتح' : 'تفعيل الوضع الداكن'}
@@ -242,7 +351,18 @@ function AppLayoutContent() {
         }}
       >
         <Content style={{ padding: 24 }}>
-          <Outlet />
+          <Outlet
+            context={
+              {
+                dateRange,
+                setDateRange,
+                dateRangeClearedBySearch,
+                setDateRangeClearedBySearch,
+                roomId,
+                bedId,
+              } satisfies AdmissionsFiltersContext
+            }
+          />
         </Content>
       </Layout>
     </Layout>

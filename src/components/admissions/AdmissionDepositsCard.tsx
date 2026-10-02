@@ -15,6 +15,8 @@ const { Text } = Typography
 interface AdmissionDepositsCardProps {
   deposits: AdmissionDeposit[]
   admissionId: number
+  /** Outstanding balance (services + operations − deposits); pre-fills the amount field. */
+  patientBalance?: number
   onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
   onRemoveDeposit: (depositId: number) => void
   isSubmittingDeposit: boolean
@@ -36,6 +38,7 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 export function AdmissionDepositsCard({
   deposits,
   admissionId,
+  patientBalance,
   onAddDeposit,
   onRemoveDeposit,
   isSubmittingDeposit,
@@ -56,6 +59,13 @@ export function AdmissionDepositsCard({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePaymentMethods.length])
+
+  useEffect(() => {
+    if (depositAmount === null && patientBalance != null && patientBalance > 0) {
+      setDepositAmount(patientBalance)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patientBalance])
 
   const depositsTotal = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
 
@@ -112,7 +122,7 @@ export function AdmissionDepositsCard({
           <FieldLabel label="المبلغ">
             <InputNumber
               className="amount-input"
-              style={{ width: 112 }}
+              style={{ width: 150 }}
               min={0}
               value={depositAmount}
               onChange={(v) => setDepositAmount(v)}

@@ -4,7 +4,6 @@ import type {
   AdmissionDeposit,
   AdmissionInvoice,
   AdmissionStatus,
-  CashierOverview,
   DoctorOrder,
   Invoice,
   Operation,
@@ -33,6 +32,7 @@ export async function getAdmissions(
     from?: string
     to?: string
     search?: string
+    admission_id?: number
     room_id?: number
     bed_id?: number
   },
@@ -158,11 +158,6 @@ export async function updateRequestedService(
 
 export async function removeRequestedService(admissionId: number, requestedServiceId: number): Promise<void> {
   await apiClient.delete(`/admissions/${admissionId}/services/${requestedServiceId}`)
-}
-
-export async function getCashierOverview(filters?: { search?: string; date_from?: string; date_to?: string }): Promise<CashierOverview> {
-  const { data } = await apiClient.get<CashierOverview>('/cashier/admissions', { params: filters ?? {} })
-  return data
 }
 
 export async function getInvoice(admissionId: number): Promise<AdmissionInvoice> {

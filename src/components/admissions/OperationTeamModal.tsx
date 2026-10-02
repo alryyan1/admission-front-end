@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
   Dialog,
@@ -19,15 +19,17 @@ import {
   Typography,
 } from '@mui/material'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
-import { DoctorFormModal } from '@/components/settings/DoctorFormModal'
-import { getDoctors, createDoctor } from '@/services/patientService'
+import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
 import { addOperationTeamMember, removeOperationTeamMember } from '@/services/admissionService'
 import { updateTeamMemberEntitlement } from '@/services/accountantService'
-import type { OperationTeamMember } from '@/types/admission'
+import type { OperationTeamMember, TeamRole } from '@/types/admission'
 import type { Doctor } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
+
+/** Slugs of the core roles every operation needs, added in one click by the "الافتراضي" button. */
+const DEFAULT_TEAM_ROLE_SLUGS = ['surgeon', 'anesthesiologist', 'assistant_surgeon', 'circulating_nurse']
 
 interface OperationTeamModalProps {
   open: boolean
@@ -83,6 +85,30 @@ function EntitlementAmountCell({
   )
 }
 
+function MemberDoctorCell({
+  member,
+  doctors,
+  onCommit,
+}: {
+  member: OperationTeamMember
+  doctors: Doctor[]
+  onCommit: (doctorId: number | null) => void
+}) {
+  return (
+    <Autocomplete<Doctor>
+      size="small"
+      sx={{ minWidth: 180 }}
+      options={doctors}
+      getOptionLabel={(d) => d.name}
+      isOptionEqualToValue={(o, v) => o.id === v.id}
+      value={member.doctor ?? null}
+      onChange={(_, doctor) => onCommit(doctor?.id ?? null)}
+      noOptionsText="لا يوجد أطباء بهذا الدور"
+      renderInput={(params) => <TextField {...params} size="small" placeholder="اختر الطبيب" />}
+    />
+  )
+}
+
 const memberIdentity = (m: { doctor_id?: number | null }) => (m.doctor_id ? `doctor:${m.doctor_id}` : null)
 
 export function OperationTeamModal({
@@ -96,6 +122,7 @@ export function OperationTeamModal({
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
+  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
   const teamRoleLabel = (roleId: number | undefined) =>
     teamRolesQuery.data?.find((r) => r.id === roleId)?.name ?? '—'
 
@@ -108,17 +135,47 @@ export function OperationTeamModal({
     onError: () => toast.error('تعذر إزالة العضو'),
   })
 
+  const addDefaultTeamMutation = useMutation({
+    mutationFn: async (rolesToAdd: TeamRole[]) => {
+      for (const role of rolesToAdd) {
+        await addOperationTeamMember(operationId, { role_id: role.id, name: role.name })
+      }
+    },
+    onSuccess: () => {
+      toast.success('تمت إضافة الأدوار الأساسية')
+      onAdded?.()
+    },
+    onError: () => toast.error('تعذر إضافة بعض الأدوار الأساسية'),
+  })
+
+  function handleAddDefaultTeam() {
+    const roles = teamRolesQuery.data ?? []
+    const existingRoleIds = new Set(existingMembers.map((m) => m.role_id))
+    const rolesToAdd = DEFAULT_TEAM_ROLE_SLUGS.map((slug) => roles.find((r) => r.slug === slug)).filter(
+      (role): role is TeamRole => !!role && !existingRoleIds.has(role.id),
+    )
+
+    if (rolesToAdd.length === 0) {
+      toast.info('الأدوار الأساسية مضافة بالفعل')
+      return
+    }
+
+    addDefaultTeamMutation.mutate(rolesToAdd)
+  }
+
   const entitlementMutation = useMutation({
     mutationFn: (payload: {
       teamMemberId: number
       entitlement_amount?: number | null
       payment_method_id?: number | null
       entitlement_paid_at?: string | null
+      doctor_id?: number | null
     }) =>
       updateTeamMemberEntitlement(payload.teamMemberId, {
         entitlement_amount: payload.entitlement_amount,
         payment_method_id: payload.payment_method_id,
         entitlement_paid_at: payload.entitlement_paid_at,
+        doctor_id: payload.doctor_id,
       }),
     onSuccess: () => {
       toast.success('تم تحديث الاستحقاق')
@@ -143,7 +200,7 @@ export function OperationTeamModal({
         <Table size="small" sx={{ mt: 0.5 }}>
           <TableHead>
             <TableRow>
-              <TableCell>الدور</TableCell>
+              {/* <TableCell>الدور</TableCell> */}
               <TableCell>العضو</TableCell>
               <TableCell>الاستحقاق</TableCell>
               <TableCell>طريقة الدفع</TableCell>
@@ -167,13 +224,24 @@ export function OperationTeamModal({
                 0,
               )
               const maxAmount = price == null ? null : Math.max(0, price - othersTotal)
+              const otherDoctorIds = new Set(
+                existingMembers
+                  .filter((other) => other.id !== m.id && other.doctor_id != null)
+                  .map((other) => other.doctor_id as number),
+              )
+              const roleDoctors = (doctorsQuery.data ?? []).filter(
+                (d) => d.role_id === m.role_id && !otherDoctorIds.has(d.id),
+              )
 
               return (
                 <TableRow key={m.id}>
                   <TableCell>
-                    <Chip size="small" label={m.role?.name ?? teamRoleLabel(m.role_id)} />
+                    <MemberDoctorCell
+                      member={m}
+                      doctors={roleDoctors}
+                      onCommit={(doctorId) => entitlementMutation.mutate({ teamMemberId: m.id, doctor_id: doctorId })}
+                    />
                   </TableCell>
-                  <TableCell>{m.doctor?.name ?? m.name ?? '—'}</TableCell>
                   <TableCell>
                     <EntitlementAmountCell
                       member={m}
@@ -247,9 +315,7 @@ interface AddTeamMemberDialogProps {
 
 function AddTeamMemberDialog({ open, onClose, operationId, existingMembers, onAdded }: AddTeamMemberDialogProps) {
   const [form, setForm] = useState<MemberForm>({})
-  const [doctorModalOpen, setDoctorModalOpen] = useState(false)
 
-  const queryClient = useQueryClient()
   const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
   const defaultTeamRoleId = teamRolesQuery.data?.find((r) => r.slug === 'assistant_surgeon')?.id
@@ -272,17 +338,6 @@ function AddTeamMemberDialog({ open, onClose, operationId, existingMembers, onAd
       onClose()
     },
     onError: () => toast.error('تعذر إضافة العضو'),
-  })
-
-  const createDoctorMutation = useMutation({
-    mutationFn: createDoctor,
-    onSuccess: (newDoctor) => {
-      queryClient.setQueryData<Doctor[]>(['doctors', ''], (prev) => (prev ? [...prev, newDoctor] : [newDoctor]))
-      setForm({ role_id: newDoctor.role_id, doctor_id: newDoctor.id })
-      setDoctorModalOpen(false)
-      toast.success('تمت إضافة الطبيب')
-    },
-    onError: () => toast.error('تعذر إضافة الطبيب'),
   })
 
   function updateForm(patch: Partial<MemberForm>) {
@@ -334,9 +389,6 @@ function AddTeamMemberDialog({ open, onClose, operationId, existingMembers, onAd
             noOptionsText={`لا يوجد أطباء بدور "${teamRoleLabel(form.role_id)}"`}
             renderInput={(params) => <TextField {...params} size="small" label="الطبيب" />}
           />
-          <Button size="small" onClick={() => setDoctorModalOpen(true)}>
-            + طبيب جديد
-          </Button>
         </Box>
       </DialogContent>
       <DialogActions>
@@ -345,14 +397,6 @@ function AddTeamMemberDialog({ open, onClose, operationId, existingMembers, onAd
           إضافة
         </Button>
       </DialogActions>
-
-      <DoctorFormModal
-        open={doctorModalOpen}
-        onClose={() => setDoctorModalOpen(false)}
-        doctor={null}
-        onSubmit={(payload) => createDoctorMutation.mutate(payload)}
-        isSubmitting={createDoctorMutation.isPending}
-      />
     </Dialog>
   )
 }

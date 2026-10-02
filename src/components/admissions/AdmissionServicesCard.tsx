@@ -32,6 +32,7 @@ import type { Service } from '@/types/service'
 
 interface AdmissionServicesCardProps {
   services: RequestedService[]
+  isLoading?: boolean
   isShortStayRoom: boolean
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
   onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
@@ -91,6 +92,7 @@ function EditableNumberCell({
 /** Requested-services management card, shared by {@link BillingTab} and the admissions work area. */
 export function AdmissionServicesCard({
   services,
+  isLoading = false,
   isShortStayRoom,
   onAddService,
   onUpdateService,
@@ -147,7 +149,11 @@ export function AdmissionServicesCard({
 
   return (
     <Card>
-      <CardHeader title="الخدمات المطلوبة" />
+      <CardHeader action={
+        <Button variant="contained" onClick={() => setAddDialogOpen(true)}>
+          + إضافة خدمة
+        </Button>
+      } title="الخدمات المطلوبة" />
       <CardContent>
         {showQuickActions && (
           <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
@@ -172,12 +178,6 @@ export function AdmissionServicesCard({
           </Stack>
         )}
 
-        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <Button variant="contained" onClick={() => setAddDialogOpen(true)}>
-            + إضافة خدمة
-          </Button>
-        </Stack>
-
         <Table size="small">
           <TableHead>
             <TableRow>
@@ -189,7 +189,25 @@ export function AdmissionServicesCard({
             </TableRow>
           </TableHead>
           <TableBody>
-            {services.length === 0 && !isSubmittingService && (
+            {isLoading &&
+              Array.from({ length: 3 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell>
+                    <Skeleton variant="text" width={140} />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" width={40} />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" width={70} />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" width={70} />
+                  </TableCell>
+                  <TableCell />
+                </TableRow>
+              ))}
+            {!isLoading && services.length === 0 && !isSubmittingService && (
               <TableRow>
                 <TableCell colSpan={5}>
                   <Typography variant="body2" color="text.secondary">
@@ -198,7 +216,7 @@ export function AdmissionServicesCard({
                 </TableCell>
               </TableRow>
             )}
-            {services.map((s) => (
+            {!isLoading && services.map((s) => (
               <TableRow key={s.id}>
                 <TableCell>
                   <Stack direction="row" spacing={0.75} alignItems="center">
@@ -250,7 +268,7 @@ export function AdmissionServicesCard({
                 <TableCell />
               </TableRow>
             )}
-            {services.length > 0 && (
+            {!isLoading && services.length > 0 && (
               <TableRow>
                 <TableCell colSpan={3}>
                   <Typography variant="body2" fontWeight={700}>
@@ -305,6 +323,7 @@ export function AdmissionServicesCard({
               size="small"
               value={unitPrice ?? ''}
               onChange={(e) => setUnitPrice(e.target.value === '' ? null : Number(e.target.value))}
+              onFocus={(e) => e.target.select()}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddService()
               }}

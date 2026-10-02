@@ -7,6 +7,7 @@ interface AdmissionDepositsDialogProps {
   onClose: () => void
   deposits: AdmissionDeposit[]
   admissionId: number
+  patientBalance?: number
   onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
   onRemoveDeposit: (depositId: number) => void
   isSubmittingDeposit: boolean

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
@@ -26,7 +26,10 @@ import {
   importJawdaPatient,
   createLocalPatient,
   getDoctors,
+  createDoctor,
 } from '@/services/patientService'
+import { getTeamRoles } from '@/services/teamRoleService'
+import { getSpecialists } from '@/services/specialistService'
 import { createAdmission } from '@/services/admissionService'
 import type { Patient, JawdaPatientResult, Doctor } from '@/types/patient'
 
@@ -34,6 +37,9 @@ type PatientSearchOption =
   | { kind: 'local'; patient: Patient }
   | { kind: 'jawda'; patient: JawdaPatientResult }
   | { kind: 'create'; name: string }
+
+type DoctorSearchOption = { kind: 'doctor'; doctor: Doctor } | { kind: 'create'; name: string }
+type DoctorFieldTarget = 'admitting' | 'referral'
 
 export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -58,6 +64,12 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [newPatientGender, setNewPatientGender] = useState<'male' | 'female' | ''>('')
   const [newPatientAgeYear, setNewPatientAgeYear] = useState('')
 
+  const [quickAddDoctorOpen, setQuickAddDoctorOpen] = useState(false)
+  const [quickAddDoctorTarget, setQuickAddDoctorTarget] = useState<DoctorFieldTarget>('admitting')
+  const [newDoctorName, setNewDoctorName] = useState('')
+  const [newDoctorRoleId, setNewDoctorRoleId] = useState<number | ''>('')
+  const [newDoctorSpecialistId, setNewDoctorSpecialistId] = useState<number | ''>('')
+
   const floorInputRef = useRef<HTMLInputElement>(null)
   const wardInputRef = useRef<HTMLInputElement>(null)
   const roomInputRef = useRef<HTMLInputElement>(null)
@@ -68,6 +80,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const newPatientPhoneInputRef = useRef<HTMLInputElement>(null)
   const newPatientGenderInputRef = useRef<HTMLInputElement>(null)
   const newPatientAgeInputRef = useRef<HTMLInputElement>(null)
+  const newDoctorNameInputRef = useRef<HTMLInputElement>(null)
 
   function focusField(ref: React.RefObject<HTMLElement | null>) {
     setTimeout(() => ref.current?.focus(), 50)
@@ -121,6 +134,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryFn: () => getDoctors(debouncedReferralDoctorSearch),
     enabled: open,
   })
+  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles, enabled: quickAddDoctorOpen })
+  const specialistsQuery = useQuery({ queryKey: ['specialists'], queryFn: getSpecialists, enabled: quickAddDoctorOpen })
 
   const importMutation = useMutation({
     mutationFn: importJawdaPatient,
@@ -139,6 +154,23 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       queryClient.invalidateQueries({ queryKey: ['patients'] })
       setCreatePatientOpen(false)
       focusField(floorInputRef)
+    },
+  })
+
+  const createDoctorMutation = useMutation({
+    mutationFn: createDoctor,
+    onSuccess: (doctor) => {
+      toast.success('تم إضافة الطبيب')
+      queryClient.invalidateQueries({ queryKey: ['doctors'] })
+      if (quickAddDoctorTarget === 'admitting') {
+        setSelectedDoctor(doctor)
+        setDoctorSearch('')
+        focusField(referralDoctorInputRef)
+      } else {
+        setReferralDoctor(doctor)
+        setReferralDoctorSearch('')
+      }
+      setQuickAddDoctorOpen(false)
     },
   })
 
@@ -168,8 +200,41 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientPhone('')
     setNewPatientGender('')
     setNewPatientAgeYear('')
+    setQuickAddDoctorOpen(false)
+    setNewDoctorName('')
+    setNewDoctorRoleId('')
+    setNewDoctorSpecialistId('')
     onClose()
   }
+
+  /** Default a fresh quick-add doctor to "surgeon", the most common role, once roles are loaded. */
+  useEffect(() => {
+    if (!quickAddDoctorOpen || newDoctorRoleId !== '') return
+    const surgeonRoleId = teamRolesQuery.data?.find((role) => role.slug === 'surgeon')?.id
+    if (surgeonRoleId !== undefined) setNewDoctorRoleId(surgeonRoleId)
+  }, [quickAddDoctorOpen, newDoctorRoleId, teamRolesQuery.data])
+
+  /** Pressing "+" again while this dialog is already open jumps straight to "إضافة مريض جديد". */
+  useEffect(() => {
+    if (!open || createPatientOpen) return
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key !== '+') return
+      const target = e.target as HTMLElement
+      const isPatientSearchInput = target.id === 'patient-search'
+      if (
+        !isPatientSearchInput &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      ) {
+        return
+      }
+      e.preventDefault()
+      openCreatePatientDialog(search)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, createPatientOpen, search])
 
   function openCreatePatientDialog(name: string) {
     setNewPatientName(name.trim())
@@ -186,6 +251,23 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       phone: newPatientPhone.trim() || undefined,
       gender: newPatientGender || undefined,
       age_year: newPatientAgeYear ? Number(newPatientAgeYear) : undefined,
+    })
+  }
+
+  function openQuickAddDoctor(name: string, target: DoctorFieldTarget) {
+    setNewDoctorName(name.trim())
+    setNewDoctorRoleId('')
+    setNewDoctorSpecialistId('')
+    setQuickAddDoctorTarget(target)
+    setQuickAddDoctorOpen(true)
+  }
+
+  function handleCreateDoctorSubmit() {
+    if (!newDoctorName.trim() || !newDoctorRoleId) return
+    createDoctorMutation.mutate({
+      name: newDoctorName.trim(),
+      specialist_id: newDoctorSpecialistId || null,
+      role_id: Number(newDoctorRoleId),
     })
   }
 
@@ -212,6 +294,35 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const selectedFloor = floorsQuery.data?.find((floor) => floor.id === floorId) ?? null
   const selectedWard = wardsQuery.data?.find((ward) => ward.id === wardId) ?? null
   const selectedRoom = roomsQuery.data?.find((room) => room.id === roomId) ?? null
+
+  const canOfferCreateDoctor = debouncedDoctorSearch.trim().length >= 2 && !doctorsQuery.isFetching
+  const doctorOptions: DoctorSearchOption[] = [
+    ...(doctorsQuery.data ?? []).map((doctor) => ({ kind: 'doctor' as const, doctor })),
+    ...(canOfferCreateDoctor ? [{ kind: 'create' as const, name: doctorSearch }] : []),
+  ]
+
+  const canOfferCreateReferralDoctor =
+    debouncedReferralDoctorSearch.trim().length >= 2 && !referralDoctorsQuery.isFetching
+  const referralDoctorOptions: DoctorSearchOption[] = [
+    ...(referralDoctorsQuery.data ?? []).map((doctor) => ({ kind: 'doctor' as const, doctor })),
+    ...(canOfferCreateReferralDoctor ? [{ kind: 'create' as const, name: referralDoctorSearch }] : []),
+  ]
+
+  function renderDoctorOption(props: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key }, option: DoctorSearchOption) {
+    const { key, ...optionProps } = props
+    if (option.kind === 'create') {
+      return (
+        <li key={key} {...optionProps}>
+          <ListItemText primary={`+ إضافة "${option.name}" كطبيب جديد`} />
+        </li>
+      )
+    }
+    return (
+      <li key={key} {...optionProps}>
+        <ListItemText primary={option.doctor.name} secondary={option.doctor.specialist?.name} />
+      </li>
+    )
+  }
 
   return (
     <>
@@ -277,7 +388,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                   {...params}
                   id="patient-search"
                   label="ابحث بالاسم أو رقم الهاتف"
-                  autoFocus
+                  
                   slotProps={{
                     ...params.slotProps,
                     input: {
@@ -378,17 +489,28 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
           <Autocomplete
             fullWidth
             size="small"
-            options={doctorsQuery.data ?? []}
+            options={doctorOptions}
             filterOptions={(options) => options}
             loading={doctorsQuery.isFetching}
-            getOptionLabel={(doctor) => doctor.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            value={selectedDoctor}
+            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.doctor.name)}
+            isOptionEqualToValue={(option, value) =>
+              option.kind === 'doctor' && value.kind === 'doctor' && option.doctor.id === value.doctor.id
+            }
+            renderOption={renderDoctorOption}
+            value={selectedDoctor ? { kind: 'doctor' as const, doctor: selectedDoctor } : null}
             inputValue={doctorSearch}
             onInputChange={(_, value) => setDoctorSearch(value)}
-            onChange={(_, doctor) => {
-              setSelectedDoctor(doctor)
-              if (doctor) focusField(referralDoctorInputRef)
+            onChange={(_, option) => {
+              if (!option) {
+                setSelectedDoctor(null)
+                return
+              }
+              if (option.kind === 'create') {
+                openQuickAddDoctor(option.name, 'admitting')
+                return
+              }
+              setSelectedDoctor(option.doctor)
+              focusField(referralDoctorInputRef)
             }}
             renderInput={(params) => (
               <TextField
@@ -414,15 +536,28 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
           <Autocomplete
             fullWidth
             size="small"
-            options={referralDoctorsQuery.data ?? []}
+            options={referralDoctorOptions}
             filterOptions={(options) => options}
             loading={referralDoctorsQuery.isFetching}
-            getOptionLabel={(doctor) => doctor.name}
-            isOptionEqualToValue={(option, value) => option.id === value.id}
-            value={referralDoctor}
+            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.doctor.name)}
+            isOptionEqualToValue={(option, value) =>
+              option.kind === 'doctor' && value.kind === 'doctor' && option.doctor.id === value.doctor.id
+            }
+            renderOption={renderDoctorOption}
+            value={referralDoctor ? { kind: 'doctor' as const, doctor: referralDoctor } : null}
             inputValue={referralDoctorSearch}
             onInputChange={(_, value) => setReferralDoctorSearch(value)}
-            onChange={(_, doctor) => setReferralDoctor(doctor)}
+            onChange={(_, option) => {
+              if (!option) {
+                setReferralDoctor(null)
+                return
+              }
+              if (option.kind === 'create') {
+                openQuickAddDoctor(option.name, 'referral')
+                return
+              }
+              setReferralDoctor(option.doctor)
+            }}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -498,7 +633,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
           <TextField
             select
             inputRef={newPatientGenderInputRef}
-            label="الجنس"
+            label="النوع"
             fullWidth
             size="small"
             value={newPatientGender}
@@ -526,6 +661,77 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
           form="create-patient-form"
           variant="contained"
           disabled={!newPatientName.trim() || createPatientMutation.isPending}
+        >
+          إضافة
+        </Button>
+      </DialogActions>
+    </Dialog>
+
+    <Dialog
+      open={quickAddDoctorOpen}
+      onClose={() => setQuickAddDoctorOpen(false)}
+      fullWidth
+      maxWidth="xs"
+      slotProps={{ transition: { onEntered: () => newDoctorNameInputRef.current?.focus() } }}
+    >
+      <DialogTitle>إضافة طبيب جديد</DialogTitle>
+      <DialogContent>
+        <Stack
+          component="form"
+          id="create-doctor-form"
+          onSubmit={(e) => {
+            e.preventDefault()
+            handleCreateDoctorSubmit()
+          }}
+          spacing={2.5}
+          sx={{ pt: 1 }}
+        >
+          <TextField
+            inputRef={newDoctorNameInputRef}
+            label="اسم الطبيب"
+            fullWidth
+            size="small"
+            value={newDoctorName}
+            onChange={(e) => setNewDoctorName(e.target.value)}
+          />
+          <TextField
+            select
+            label="الدور"
+            fullWidth
+            size="small"
+            value={newDoctorRoleId}
+            onChange={(e) => setNewDoctorRoleId(e.target.value ? Number(e.target.value) : '')}
+          >
+            {(teamRolesQuery.data ?? []).map((role) => (
+              <MenuItem key={role.id} value={role.id}>
+                {role.name}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="التخصص"
+            fullWidth
+            size="small"
+            value={newDoctorSpecialistId}
+            onChange={(e) => setNewDoctorSpecialistId(e.target.value ? Number(e.target.value) : '')}
+          >
+            <MenuItem value="">بدون تخصص</MenuItem>
+            {(specialistsQuery.data ?? []).map((specialist) => (
+              <MenuItem key={specialist.id} value={specialist.id}>
+                {specialist.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={() => setQuickAddDoctorOpen(false)}>إلغاء</Button>
+        <Button
+          type="submit"
+          form="create-doctor-form"
+          variant="contained"
+          disabled={!newDoctorName.trim() || !newDoctorRoleId || createDoctorMutation.isPending}
         >
           إضافة
         </Button>

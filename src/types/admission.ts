@@ -32,6 +32,10 @@ export interface Admission {
   invoices?: Invoice[]
   operations?: Operation[]
   operations_count?: number
+  /** Live services + priced operations total, as computed by the admissions index endpoint. */
+  total_charges?: number
+  /** Sum of deposits, as computed by the admissions index endpoint. */
+  paid_total?: number
   /** Live services + priced operations minus deposits, as computed by the admissions index endpoint. */
   balance_due?: number
 }
@@ -179,36 +183,6 @@ export interface Invoice {
   paid_at: string | null
   items?: InvoiceItem[]
   created_by?: { id: number; name: string } | null
-}
-
-export interface CashierAdmission {
-  id: number
-  admission_number: string | null
-  admission_date: string
-  patient: Patient
-  bed?: Bed
-  services_total: number
-  operations_total: number
-  deposits_total: number
-  balance_due: number
-  operations?: Operation[]
-}
-
-export interface CashierDepositsByPaymentMethod {
-  payment_method_id: number | null
-  payment_method_name: string
-  total: number
-}
-
-export interface CashierOverview {
-  summary: {
-    admissions_count: number
-    admissions_with_balance: number
-    total_outstanding: number
-    deposits_today: number
-    deposits_by_payment_method: CashierDepositsByPaymentMethod[]
-  }
-  admissions: CashierAdmission[]
 }
 
 /** A billable line on the invoice preview — a requested service or a priced operation. */

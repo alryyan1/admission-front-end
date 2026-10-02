@@ -82,7 +82,7 @@ export function WardFormDialog({ open, onOpenChange, floorId, ward }: WardFormDi
         <Form.Item name="description" label="الوصف">
           <Input />
         </Form.Item>
-        <Form.Item name="gender" label="الجنس">
+        <Form.Item name="gender" label="النوع">
           <Select
             style={{ width: '100%' }}
             options={[

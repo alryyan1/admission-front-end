@@ -13,7 +13,6 @@ import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
 import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
 import { BackupPage } from '@/pages/settings/BackupPage'
 import { UsersSettingsPage } from '@/pages/settings/UsersSettingsPage'
-import { RolesPermissionsPage } from '@/pages/settings/RolesPermissionsPage'
 import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
 import { AdmissionsPage } from '@/pages/admissions/AdmissionsPage'
 import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
@@ -21,8 +20,6 @@ import { PatientsPage } from '@/pages/patients/PatientsPage'
 import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
 import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
-import { CashierPage } from '@/pages/cashier/CashierPage'
-import { AccountantPage } from '@/pages/accountant/AccountantPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
@@ -51,9 +48,7 @@ export const router = createBrowserRouter([
               {
                 element: <RequireRole roles={['admin', 'cashier']} />,
                 children: [
-                  { path: '/cashier', element: <CashierPage /> },
                   { path: '/expenses', element: <ExpensesPage /> },
-                  { path: '/accountant', element: <AccountantPage /> },
                 ],
               },
               {
@@ -65,7 +60,6 @@ export const router = createBrowserRouter([
                   { path: '/settings/doctors', element: <DoctorsSettingsPage /> },
                   { path: '/settings/team-roles', element: <TeamRolesSettingsPage /> },
                   { path: '/settings/users', element: <UsersSettingsPage /> },
-                  { path: '/settings/roles-permissions', element: <RolesPermissionsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
                   { path: '/settings/activity-log', element: <ActivityLogPage /> },
                   { path: '/settings/backup', element: <BackupPage /> },

@@ -49,14 +49,13 @@ export function OperationsTab({
 
   return (
     <Card>
-      <CardHeader title="العمليات" />
+      <CardHeader action={
+        <Button variant="contained" onClick={() => setScheduleOpen(true)}>
+          + طلب عملية جديدة
+        </Button>
+      } title="العمليات" />
       <CardContent>
-        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-          <Button variant="contained" onClick={() => setScheduleOpen(true)}>
-            + طلب عملية جديدة
-          </Button>
-        </Stack>
-
+        
         <Table size="small">
           <TableHead>
             <TableRow>
