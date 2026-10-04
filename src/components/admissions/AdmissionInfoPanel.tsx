@@ -105,11 +105,12 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
     <>
       <Card style={{ position: 'sticky', top: 16 }} className="animate-in fade-in slide-in-from-left-4 duration-300">
         <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
-          <Flex vertical gap={4}>
+          <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
+            <Text strong style={{ fontSize: 18 }}>
+              {admission.patient?.name}
+            </Text>
             <Flex align="center" gap={8}>
-              <Text strong style={{ fontSize: 18 }}>
-                {admission.patient?.name}
-              </Text>
+              <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
               <Button
                 size="small"
                 type="text"
@@ -117,7 +118,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 onClick={() => setEditPatientOpen(true)}
                 title="تعديل بيانات المريض"
               />
-              <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
             </Flex>
             <Text type="secondary">
                رقم الملف: {admission.id ?? '—'} — دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}

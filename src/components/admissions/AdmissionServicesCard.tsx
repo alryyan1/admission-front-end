@@ -41,6 +41,8 @@ interface AdmissionServicesCardProps {
   isUpdatingService: boolean
   isRemovingService: boolean
   isCalculatingAccommodationFee: boolean
+  /** When true, services can't be removed (the admission already has payments). */
+  hasPayments?: boolean
   /** Set to false when the host page renders its own "رسوم فتح الملف"/"رسوم الإقامة" quick-add buttons elsewhere (e.g. next to a payments button). Defaults to true. */
   showQuickActions?: boolean
 }
@@ -108,6 +110,7 @@ export function AdmissionServicesCard({
   isUpdatingService,
   isRemovingService,
   isCalculatingAccommodationFee,
+  hasPayments = false,
   showQuickActions = true,
 }: AdmissionServicesCardProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
@@ -252,7 +255,11 @@ export function AdmissionServicesCard({
                 </TableCell>
                 <TableCell>{formatNumber(s.total_price)}</TableCell>
                 <TableCell align="right">
-                  <ConfirmRemoveButton loading={isRemovingService} onConfirm={() => onRemoveService(s.id)} />
+                  <ConfirmRemoveButton
+                    loading={isRemovingService}
+                    disabled={hasPayments}
+                    onConfirm={() => onRemoveService(s.id)}
+                  />
                 </TableCell>
               </TableRow>
             ))}

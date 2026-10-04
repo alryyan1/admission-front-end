@@ -179,6 +179,7 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
             isUpdatingService={updateServiceMutation.isPending}
             isRemovingService={removeServiceMutation.isPending}
             isCalculatingAccommodationFee={accommodationFeeMutation.isPending}
+            hasPayments={(admissionQuery.data?.deposits?.length ?? 0) > 0}
             showQuickActions={false}
           />
         )}

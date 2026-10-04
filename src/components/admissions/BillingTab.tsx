@@ -53,6 +53,7 @@ export function BillingTab({
           isUpdatingService={isUpdatingService}
           isRemovingService={isRemovingService}
           isCalculatingAccommodationFee={isCalculatingAccommodationFee}
+          hasPayments={deposits.length > 0}
         />
       </Col>
 

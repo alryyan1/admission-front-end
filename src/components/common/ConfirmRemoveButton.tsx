@@ -6,6 +6,7 @@ interface ConfirmRemoveButtonProps {
   confirmLabel?: string
   description?: string
   loading?: boolean
+  disabled?: boolean
   onConfirm: () => void
 }
 
@@ -15,13 +16,14 @@ export function ConfirmRemoveButton({
   confirmLabel = 'حذف',
   description = 'حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
   loading,
+  disabled,
   onConfirm,
 }: ConfirmRemoveButtonProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
   return (
     <>
-      <Button size="small" color="error" loading={loading} onClick={(e) => setAnchorEl(e.currentTarget)}>
+      <Button size="small" color="error" loading={loading} disabled={disabled} onClick={(e) => setAnchorEl(e.currentTarget)}>
         {label}
       </Button>
       <Popover
