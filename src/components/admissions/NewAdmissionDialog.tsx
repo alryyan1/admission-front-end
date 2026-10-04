@@ -28,6 +28,8 @@ import {
   getDoctors,
   createDoctor,
 } from '@/services/patientService'
+import { getRoomTypes } from '@/services/roomTypeService'
+import { getRoomTypeName } from '@/lib/roomTypes'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { createSpecialist, getSpecialists } from '@/services/specialistService'
 import { createAdmission } from '@/services/admissionService'
@@ -122,6 +124,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryFn: () => getRooms(wardId as number),
     enabled: open && wardId !== '',
   })
+  const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes, enabled: open })
   const bedsQuery = useQuery({
     queryKey: ['beds', 'available', roomId],
     queryFn: () => getAvailableBeds(roomId as number),
@@ -491,7 +494,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               size="small"
               disabled={!selectedPatient || wardId === ''}
               options={roomsQuery.data ?? []}
-              getOptionLabel={(room) => `غرفة ${room.room_number}`}
+              getOptionLabel={(room) => `غرفة ${room.room_number} (${getRoomTypeName(roomTypesQuery.data, room.room_type)})`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={selectedRoom}
               onChange={(_, room) => {
