@@ -29,7 +29,7 @@ export function OperationInvoiceButton({ operation, size = 'small' }: OperationI
               pdf.open(admissionPdfPaths.operationInvoice(operation.id), 'معاينة فاتورة العملية المبدئية')
             }}
           >
-            فاتورة مبدئية
+            فاتورة 
           </Button>
         </span>
       </Tooltip>
