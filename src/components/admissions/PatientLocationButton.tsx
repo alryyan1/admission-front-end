@@ -1,15 +1,11 @@
+import { useQuery } from '@tanstack/react-query'
 import { Popover, Button, Flex, Typography, Tag, theme as antdThemeApi } from 'antd'
 import { BankOutlined, ApartmentOutlined, HomeOutlined, BorderOutlined, EnvironmentOutlined } from '@ant-design/icons'
-import type { Bed, Room } from '@/types/facility'
+import { getRoomTypes } from '@/services/roomTypeService'
+import { getRoomTypeName, getRoomTypeStyle } from '@/lib/roomTypes'
+import type { Bed } from '@/types/facility'
 
 const { Text } = Typography
-
-const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
-  normal: { label: 'عادية', color: 'default' },
-  vip: { label: 'VIP', color: 'gold' },
-  operation: { label: 'عمليات', color: 'red' },
-  ward: { label: 'عنبر', color: 'cyan' },
-}
 
 interface PatientLocationButtonProps {
   bed?: Bed | null
@@ -20,6 +16,7 @@ interface PatientLocationButtonProps {
 
 export function PatientLocationButton({ bed, size = 'small', variant = 'button' }: PatientLocationButtonProps) {
   const { token } = antdThemeApi.useToken()
+  const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes })
 
   const content = (
     <Flex vertical gap={6} style={{ minWidth: 200 }}>
@@ -35,8 +32,8 @@ export function PatientLocationButton({ bed, size = 'small', variant = 'button' 
         <HomeOutlined style={{ color: token.colorPrimary }} />
         <Text style={{ fontSize: 13, fontWeight: 600 }}>غرفة {bed?.room?.room_number ?? '—'}</Text>
         {bed?.room?.room_type && (
-          <Tag color={ROOM_TYPE_TAG[bed.room.room_type].color} style={{ marginInlineEnd: 0 }}>
-            {ROOM_TYPE_TAG[bed.room.room_type].label}
+          <Tag color={getRoomTypeStyle(bed.room.room_type).tagColor} style={{ marginInlineEnd: 0 }}>
+            {getRoomTypeName(roomTypesQuery.data, bed.room.room_type)}
           </Tag>
         )}
       </Flex>

@@ -1,7 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Modal, Form, Input, Select, Checkbox, Button } from 'antd'
+import { Modal, Form, Input, Select, Button, Checkbox } from 'antd'
 import { createRoom, updateRoom } from '@/services/facilityService'
+import { getRoomTypes } from '@/services/roomTypeService'
 import type { Room } from '@/types/facility'
 
 interface RoomFormDialogProps {
@@ -13,29 +14,25 @@ interface RoomFormDialogProps {
 
 interface RoomFormValues {
   room_number: string
-  room_type: 'normal' | 'vip' | 'operation'
+  room_type: string
   capacity: number | string
-  is_short_stay: boolean
+  auto_create_beds?: boolean
   price_per_day?: number | string
-  price_12_hours?: number | string
-  price_24_hours?: number | string
 }
 
 export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!room
   const [form] = Form.useForm<RoomFormValues>()
-  const isShortStay = Form.useWatch('is_short_stay', form) ?? room?.is_short_stay ?? false
+  const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes })
 
   const mutation = useMutation({
     mutationFn: (payload: {
       room_number: string
-      room_type: 'normal' | 'vip' | 'operation'
+      room_type: string
       capacity: number
       price_per_day: number | null
-      is_short_stay: boolean
-      price_12_hours: number | null
-      price_24_hours: number | null
+      auto_create_beds?: boolean
     }) => (isEditing ? updateRoom(room.id, payload) : createRoom({ ...payload, ward_id: wardId })),
     onSuccess: () => {
       toast.success(isEditing ? 'تم تحديث الغرفة' : 'تم إضافة الغرفة')
@@ -50,9 +47,7 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
       room_type: values.room_type,
       capacity: Number(values.capacity),
       price_per_day: values.price_per_day ? Number(values.price_per_day) : null,
-      is_short_stay: !!values.is_short_stay,
-      price_12_hours: values.price_12_hours ? Number(values.price_12_hours) : null,
-      price_24_hours: values.price_24_hours ? Number(values.price_24_hours) : null,
+      ...(isEditing ? {} : { auto_create_beds: !!values.auto_create_beds }),
     })
   }
 
@@ -78,10 +73,8 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
           room_number: room?.room_number,
           room_type: room?.room_type ?? 'normal',
           capacity: room?.capacity ?? 1,
-          is_short_stay: room?.is_short_stay ?? false,
+          auto_create_beds: false,
           price_per_day: room?.price_per_day ?? '',
-          price_12_hours: room?.price_12_hours ?? '',
-          price_24_hours: room?.price_24_hours ?? '',
         }}
         onFinish={handleFinish}
       >
@@ -91,37 +84,21 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
         <Form.Item name="room_type" label="نوع الغرفة">
           <Select
             style={{ width: '100%' }}
-            options={[
-              { value: 'normal', label: 'عادية' },
-              { value: 'vip', label: 'VIP' },
-              { value: 'operation', label: 'غرفة عمليات' },
-              { value: 'ward', label: 'عنبر' },
-            ]}
+            loading={roomTypesQuery.isLoading}
+            options={roomTypesQuery.data?.map((roomType) => ({ value: roomType.code, label: roomType.name }))}
           />
         </Form.Item>
-        <Form.Item name="capacity" label="السعة" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
+        <Form.Item name="capacity" label="عدد السراير" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
           <Input type="number" min={0} />
         </Form.Item>
-        <Form.Item name="is_short_stay" valuePropName="checked">
-          <Checkbox>غرفة إقامات قصيرة (12 أو 24 ساعة فقط)</Checkbox>
-        </Form.Item>
-        {isShortStay ? (
-          <>
-            <p className="text-xs text-muted-foreground">
-              هذه الغرفة مخصصة للإقامات القصيرة. جميع الأسرة داخلها تسمح بإقامة 12 أو 24 ساعة فقط.
-            </p>
-            <Form.Item name="price_12_hours" label="السعر لـ 12 ساعة">
-              <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
-            </Form.Item>
-            <Form.Item name="price_24_hours" label="السعر لـ 24 ساعة">
-              <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
-            </Form.Item>
-          </>
-        ) : (
-          <Form.Item name="price_per_day" label="السعر لليوم">
-            <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
+        {!isEditing && (
+          <Form.Item name="auto_create_beds" valuePropName="checked">
+            <Checkbox>إنشاء عدد السراير المحدد تلقائياً</Checkbox>
           </Form.Item>
         )}
+        <Form.Item name="price_per_day" label="السعر لليوم">
+          <Input type="number" className="amount-input" placeholder="غير محدد بعد" />
+        </Form.Item>
       </Form>
     </Modal>
   )

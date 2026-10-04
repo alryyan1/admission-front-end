@@ -29,9 +29,10 @@ import {
   createDoctor,
 } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
-import { getSpecialists } from '@/services/specialistService'
+import { createSpecialist, getSpecialists } from '@/services/specialistService'
 import { createAdmission } from '@/services/admissionService'
 import type { Patient, JawdaPatientResult, Doctor } from '@/types/patient'
+import type { Specialist } from '@/types/admission'
 
 type PatientSearchOption =
   | { kind: 'local'; patient: Patient }
@@ -40,6 +41,7 @@ type PatientSearchOption =
 
 type DoctorSearchOption = { kind: 'doctor'; doctor: Doctor } | { kind: 'create'; name: string }
 type DoctorFieldTarget = 'admitting' | 'referral'
+type SpecialistSearchOption = { kind: 'specialist'; specialist: Specialist } | { kind: 'create'; name: string }
 
 export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -69,6 +71,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [newDoctorName, setNewDoctorName] = useState('')
   const [newDoctorRoleId, setNewDoctorRoleId] = useState<number | ''>('')
   const [newDoctorSpecialistId, setNewDoctorSpecialistId] = useState<number | ''>('')
+  const [newDoctorSpecialistSearch, setNewDoctorSpecialistSearch] = useState('')
 
   const floorInputRef = useRef<HTMLInputElement>(null)
   const wardInputRef = useRef<HTMLInputElement>(null)
@@ -174,6 +177,17 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     },
   })
 
+  const createSpecialistMutation = useMutation({
+    mutationFn: createSpecialist,
+    onSuccess: (specialist: Specialist) => {
+      queryClient.setQueryData<Specialist[]>(['specialists'], (prev) =>
+        prev ? [...prev, specialist].sort((a, b) => a.name.localeCompare(b.name)) : [specialist],
+      )
+      setNewDoctorSpecialistId(specialist.id)
+      setNewDoctorSpecialistSearch(specialist.name)
+    },
+  })
+
   const admitMutation = useMutation({
     mutationFn: createAdmission,
     onSuccess: () => {
@@ -204,6 +218,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewDoctorName('')
     setNewDoctorRoleId('')
     setNewDoctorSpecialistId('')
+    setNewDoctorSpecialistSearch('')
     onClose()
   }
 
@@ -258,6 +273,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewDoctorName(name.trim())
     setNewDoctorRoleId('')
     setNewDoctorSpecialistId('')
+    setNewDoctorSpecialistSearch('')
     setQuickAddDoctorTarget(target)
     setQuickAddDoctorOpen(true)
   }
@@ -306,6 +322,21 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const referralDoctorOptions: DoctorSearchOption[] = [
     ...(referralDoctorsQuery.data ?? []).map((doctor) => ({ kind: 'doctor' as const, doctor })),
     ...(canOfferCreateReferralDoctor ? [{ kind: 'create' as const, name: referralDoctorSearch }] : []),
+  ]
+
+  const specialists = specialistsQuery.data ?? []
+  const selectedNewDoctorSpecialist = specialists.find((specialist) => specialist.id === newDoctorSpecialistId) ?? null
+  const specialistSearchTerm = newDoctorSpecialistSearch.trim()
+  const hasExactSpecialistMatch = specialists.some(
+    (specialist) => specialist.name.trim().toLowerCase() === specialistSearchTerm.toLowerCase(),
+  )
+  const specialistOptions: SpecialistSearchOption[] = [
+    ...specialists
+      .filter((specialist) => specialist.name.toLowerCase().includes(specialistSearchTerm.toLowerCase()))
+      .map((specialist) => ({ kind: 'specialist' as const, specialist })),
+    ...(specialistSearchTerm.length >= 2 && !hasExactSpecialistMatch
+      ? [{ kind: 'create' as const, name: specialistSearchTerm }]
+      : []),
   ]
 
   function renderDoctorOption(props: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key }, option: DoctorSearchOption) {
@@ -387,7 +418,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                 <TextField
                   {...params}
                   id="patient-search"
-                  label="ابحث بالاسم أو رقم الهاتف"
+                  label="ابحث عن مريض موجود بالاسم او رقم الهاتف"
                   
                   slotProps={{
                     ...params.slotProps,
@@ -421,6 +452,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             <Autocomplete
               sx={{ flex: 1 }}
               size="small"
+              disabled={!selectedPatient}
               options={floorsQuery.data ?? []}
               getOptionLabel={(floor) => floor.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -438,7 +470,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             <Autocomplete
               sx={{ flex: 1 }}
               size="small"
-              disabled={floorId === ''}
+              disabled={!selectedPatient || floorId === ''}
               options={wardsQuery.data ?? []}
               getOptionLabel={(ward) => ward.name}
               isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -457,7 +489,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             <Autocomplete
               sx={{ flex: 1 }}
               size="small"
-              disabled={wardId === ''}
+              disabled={!selectedPatient || wardId === ''}
               options={roomsQuery.data ?? []}
               getOptionLabel={(room) => `غرفة ${room.room_number}${room.is_short_stay ? ' (إقامة قصيرة)' : ''}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -473,7 +505,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             <Autocomplete
               sx={{ flex: 1 }}
               size="small"
-              disabled={roomId === ''}
+              disabled={!selectedPatient || roomId === ''}
               options={bedsQuery.data ?? []}
               getOptionLabel={(bed) => `سرير ${bed.bed_number}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -515,7 +547,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             renderInput={(params) => (
               <TextField
                 {...params}
-                label="ابحث عن الطبيب المعالج"
+                label="  الطبيب المعالج"
                 inputRef={doctorInputRef}
                 slotProps={{
                   ...params.slotProps,
@@ -708,21 +740,68 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               </MenuItem>
             ))}
           </TextField>
-          <TextField
-            select
-            label="التخصص"
+          <Autocomplete
             fullWidth
             size="small"
-            value={newDoctorSpecialistId}
-            onChange={(e) => setNewDoctorSpecialistId(e.target.value ? Number(e.target.value) : '')}
-          >
-            <MenuItem value="">بدون تخصص</MenuItem>
-            {(specialistsQuery.data ?? []).map((specialist) => (
-              <MenuItem key={specialist.id} value={specialist.id}>
-                {specialist.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            options={specialistOptions}
+            filterOptions={(options) => options}
+            loading={specialistsQuery.isFetching || createSpecialistMutation.isPending}
+            disabled={createSpecialistMutation.isPending}
+            noOptionsText="اكتب حرفين على الأقل للإضافة"
+            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.specialist.name)}
+            isOptionEqualToValue={(option, value) =>
+              option.kind === 'specialist' && value.kind === 'specialist' && option.specialist.id === value.specialist.id
+            }
+            renderOption={(props, option) => {
+              const { key, ...optionProps } = props
+              if (option.kind === 'create') {
+                return (
+                  <li key={key} {...optionProps}>
+                    <ListItemText primary={`+ إضافة "${option.name}" كتخصص جديد`} />
+                  </li>
+                )
+              }
+              return (
+                <li key={key} {...optionProps}>
+                  <ListItemText primary={option.specialist.name} />
+                </li>
+              )
+            }}
+            value={
+              selectedNewDoctorSpecialist ? { kind: 'specialist' as const, specialist: selectedNewDoctorSpecialist } : null
+            }
+            inputValue={newDoctorSpecialistSearch}
+            onInputChange={(_, value) => setNewDoctorSpecialistSearch(value)}
+            onChange={(_, option) => {
+              if (!option) {
+                setNewDoctorSpecialistId('')
+                return
+              }
+              if (option.kind === 'create') {
+                createSpecialistMutation.mutate(option.name)
+                return
+              }
+              setNewDoctorSpecialistId(option.specialist.id)
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="التخصص"
+                slotProps={{
+                  ...params.slotProps,
+                  input: {
+                    ...params.slotProps.input,
+                    endAdornment: (
+                      <>
+                        {createSpecialistMutation.isPending ? <CircularProgress color="inherit" size={16} /> : null}
+                        {params.slotProps.input.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+              />
+            )}
+          />
         </Stack>
       </DialogContent>
       <DialogActions>

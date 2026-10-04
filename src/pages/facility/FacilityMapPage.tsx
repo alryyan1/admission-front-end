@@ -23,6 +23,8 @@ import dayjs from '@/lib/dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { getFloors, getFloor } from '@/services/facilityService'
+import { getRoomTypes } from '@/services/roomTypeService'
+import { getRoomTypeName, getRoomTypeStyle } from '@/lib/roomTypes'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
 
 const { Title, Text } = Typography
@@ -31,13 +33,6 @@ const BED_STATUS_LABEL: Record<BedStatus, string> = {
   available: 'متاح',
   occupied: 'مشغول',
   maintenance: 'صيانة',
-}
-
-const ROOM_TYPE_TAG: Record<Room['room_type'], { label: string; color: string }> = {
-  normal: { label: 'عادية', color: 'default' },
-  vip: { label: 'VIP', color: 'gold' },
-  operation: { label: 'عمليات', color: 'red' },
-  ward: { label: 'عنبر', color: 'blue' },
 }
 
 const BED_STATUS_COLORS: Record<BedStatus, { border: string; background: string; color: string }> = {
@@ -278,6 +273,7 @@ function BedTile({ bed, onOpen }: { bed: Bed; onOpen: (admissionId: number) => v
 }
 
 function RoomCard({ room, bedsPerRow, onOpen }: { room: Room; bedsPerRow: number; onOpen: (id: number) => void }) {
+  const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes })
   const beds = room.beds ?? []
   const occupied = beds.filter((b) => b.status === 'occupied').length
 
@@ -287,7 +283,9 @@ function RoomCard({ room, bedsPerRow, onOpen }: { room: Room; bedsPerRow: number
         <Space size={6}>
           <DoorClosed size={14} />
           <Text strong style={{ fontSize: 13 }}>
-            غرفة {room.room_number}
+            غرفة {room.room_number}    <Tag color={getRoomTypeStyle(room.room_type).tagColor} style={{ marginInlineEnd: 0 }}>
+            {getRoomTypeName(roomTypesQuery.data, room.room_type)}
+          </Tag>
           </Text>
         </Space>
         <Space size={6}>
@@ -296,9 +294,7 @@ function RoomCard({ room, bedsPerRow, onOpen }: { room: Room; bedsPerRow: number
               {occupied}/{beds.length}
             </Text>
           )}
-          <Tag color={ROOM_TYPE_TAG[room.room_type].color} style={{ marginInlineEnd: 0 }}>
-            {ROOM_TYPE_TAG[room.room_type].label}
-          </Tag>
+       
         </Space>
       </Flex>
 

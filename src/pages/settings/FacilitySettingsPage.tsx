@@ -1,9 +1,8 @@
-import { useState } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Pencil, Trash2, X } from 'lucide-react'
-import { ConfigProvider, Button, Card, Tag, Collapse, Tabs, Flex, Radio, theme as antdThemeApi } from 'antd'
-import type { CollapseProps } from 'antd'
+import { Pencil, Trash2 } from 'lucide-react'
+import { ConfigProvider, Button, Tag, Tabs, Flex, Radio, theme as antdThemeApi } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
 import {
   useTheme,
@@ -23,8 +22,11 @@ import { ShortStayServiceSettingsTab } from '@/components/settings/ShortStayServ
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
+import { RoomTypesSettingsTab } from '@/components/settings/RoomTypesSettingsTab'
 import { getFloors, getFloor, deleteFloor, deleteWard, deleteRoom, deleteBed } from '@/services/facilityService'
-import { formatNumber } from '@/lib/utils'
+import { getRoomTypes } from '@/services/roomTypeService'
+import { getRoomTypeName, getRoomTypeStyle } from '@/lib/roomTypes'
+import { cn, formatNumber } from '@/lib/utils'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
 
 const BED_STATUS_VARIANT: Record<BedStatus, 'success' | 'error' | 'warning'> = {
@@ -39,14 +41,65 @@ const BED_STATUS_LABEL: Record<BedStatus, string> = {
   maintenance: 'صيانة',
 }
 
-const ROOM_TYPE_STYLE: Record<Room['room_type'], { label: string; color: string; bg: string; tagColor: string }> = {
-  normal: { label: 'عادية', color: '#94a3b8', bg: '#f8fafc', tagColor: 'default' },
-  vip: { label: 'VIP', color: '#d4af37', bg: '#fdf8e9', tagColor: 'gold' },
-  operation: { label: 'عمليات', color: '#dc2626', bg: '#fef2f2', tagColor: 'red' },
-  ward: { label: 'عنبر', color: '#2563eb', bg: '#eff6ff', tagColor: 'blue' },
+type DeleteTarget = { type: 'floor' | 'ward' | 'room' | 'bed'; id: number; label: string }
+
+type StructureColumnProps = {
+  title: string
+  count: number
+  action: ReactNode
+  isEmpty: boolean
+  emptyText: string
+  children?: ReactNode
 }
 
-type DeleteTarget = { type: 'floor' | 'ward' | 'room' | 'bed'; id: number; label: string }
+function StructureColumn({ title, count, action, isEmpty, emptyText, children }: StructureColumnProps) {
+  return (
+    <div className="flex min-w-0 flex-col rounded-lg border border-border bg-card">
+      <div className="flex items-center justify-between gap-2 border-b border-border p-3">
+        <div className="flex items-center gap-2">
+          <h2 className="font-semibold">{title}</h2>
+          <span className="text-xs text-muted-foreground">{count}</span>
+        </div>
+        {action}
+      </div>
+      <div className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto p-2">
+        {isEmpty ? <p className="p-4 text-center text-sm text-muted-foreground">{emptyText}</p> : children}
+      </div>
+    </div>
+  )
+}
+
+type StructureRowProps = {
+  selected?: boolean
+  onSelect?: () => void
+  style?: CSSProperties
+  onEdit: () => void
+  onDelete: () => void
+  children: ReactNode
+}
+
+function StructureRow({ selected = false, onSelect, style, onEdit, onDelete, children }: StructureRowProps) {
+  return (
+    <div
+      role={onSelect ? 'button' : undefined}
+      tabIndex={onSelect ? 0 : undefined}
+      onClick={onSelect}
+      onKeyDown={onSelect ? (e) => e.key === 'Enter' && onSelect() : undefined}
+      style={style}
+      className={cn(
+        'flex items-center gap-2 rounded-md border border-border p-2',
+        onSelect && 'cursor-pointer hover:bg-muted/40',
+        selected && 'ring-2 ring-primary',
+      )}
+    >
+      <div className="min-w-0 flex-1">{children}</div>
+      <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+        <Button type="text" shape="circle" size="small" icon={<Pencil className="h-4 w-4" />} onClick={onEdit} />
+        <Button type="text" shape="circle" size="small" icon={<Trash2 className="h-4 w-4" />} onClick={onDelete} />
+      </div>
+    </div>
+  )
+}
 
 export function FacilitySettingsPage() {
   const antTheme = useAntTheme()
@@ -60,7 +113,12 @@ export function FacilitySettingsPage() {
   const [bedDialog, setBedDialog] = useState<{ open: boolean; roomId: number; bed?: Bed | null } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null)
 
+  const [selectedFloorId, setSelectedFloorId] = useState<number | null>(null)
+  const [selectedWardId, setSelectedWardId] = useState<number | null>(null)
+  const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null)
+
   const floorsQuery = useQuery({ queryKey: ['floors'], queryFn: getFloors })
+  const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes })
 
   const floorDetailsQuery = useQuery({
     queryKey: ['floors', 'details', floorsQuery.data?.map((f) => f.id)],
@@ -71,34 +129,61 @@ export function FacilitySettingsPage() {
     enabled: !!floorsQuery.data && floorsQuery.data.length > 0,
   })
 
+  const floors = floorDetailsQuery.data ?? []
+  const selectedFloor = floors.find((floor) => floor.id === selectedFloorId)
+  const wards = selectedFloor?.wards ?? []
+  const selectedWard = wards.find((ward) => ward.id === selectedWardId)
+  const rooms = selectedWard?.rooms ?? []
+  const selectedRoom = rooms.find((room) => room.id === selectedRoomId)
+  const beds = selectedRoom?.beds ?? []
+
+  function selectFloor(floorId: number | null) {
+    setSelectedFloorId(floorId)
+    setSelectedWardId(null)
+    setSelectedRoomId(null)
+  }
+
+  function selectWard(wardId: number) {
+    setSelectedWardId(wardId)
+    setSelectedRoomId(null)
+  }
+
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['floors'] })
   }
 
+  function handleDeleted(type: DeleteTarget['type'], id: number) {
+    if (type === 'floor' && id === selectedFloorId) selectFloor(null)
+    if (type === 'ward' && id === selectedWardId) {
+      setSelectedWardId(null)
+      setSelectedRoomId(null)
+    }
+    if (type === 'room' && id === selectedRoomId) setSelectedRoomId(null)
+    invalidate()
+    setDeleteTarget(null)
+  }
+
   const deleteFloorMutation = useMutation({
     mutationFn: deleteFloor,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       toast.success('تم حذف الطابق')
-      invalidate()
-      setDeleteTarget(null)
+      handleDeleted('floor', id)
     },
   })
 
   const deleteWardMutation = useMutation({
     mutationFn: deleteWard,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       toast.success('تم حذف الجناح')
-      invalidate()
-      setDeleteTarget(null)
+      handleDeleted('ward', id)
     },
   })
 
   const deleteRoomMutation = useMutation({
     mutationFn: deleteRoom,
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       toast.success('تم حذف الغرفة')
-      invalidate()
-      setDeleteTarget(null)
+      handleDeleted('room', id)
     },
   })
 
@@ -106,8 +191,7 @@ export function FacilitySettingsPage() {
     mutationFn: deleteBed,
     onSuccess: () => {
       toast.success('تم حذف السرير')
-      invalidate()
-      setDeleteTarget(null)
+      handleDeleted('bed', 0)
     },
   })
 
@@ -117,183 +201,6 @@ export function FacilitySettingsPage() {
     room: deleteRoomMutation,
     bed: deleteBedMutation,
   }
-
-  const floorItems: CollapseProps['items'] = floorDetailsQuery.data?.map((floor) => {
-    const wardItems: CollapseProps['items'] = floor.wards?.map((ward) => ({
-      key: String(ward.id),
-      label: (
-        <div className="flex w-full items-center gap-2 pe-2">
-          <span className="flex-1 font-semibold">{ward.name}</span>
-          {ward.gender && (
-            <Tag>{ward.gender === 'male' ? 'رجالي' : ward.gender === 'female' ? 'نسائي' : 'أطفال'}</Tag>
-          )}
-          <span className="text-sm text-muted-foreground">{ward.rooms?.length ?? 0} غرفة</span>
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="text"
-              shape="circle"
-              size="small"
-              icon={<Pencil className="h-4 w-4" />}
-              onClick={() => setWardDialog({ open: true, floorId: floor.id, ward })}
-            />
-            <Button
-              type="text"
-              shape="circle"
-              size="small"
-              icon={<Trash2 className="h-4 w-4" />}
-              onClick={() => setDeleteTarget({ type: 'ward', id: ward.id, label: ward.name })}
-            />
-          </div>
-        </div>
-      ),
-      children: (
-        <div className="flex flex-wrap gap-4">
-          {ward.rooms?.map((room) => {
-            const typeStyle = ROOM_TYPE_STYLE[room.room_type]
-            return (
-            <Card
-              key={room.id}
-              size="small"
-              className="min-w-[240px] p-3"
-              style={{
-                borderInlineStart: `4px solid ${typeStyle.color}`,
-                backgroundColor: typeStyle.bg,
-                borderStyle: room.is_short_stay ? 'dashed' : undefined,
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="flex items-center gap-1 font-bold">
-                  غرفة {room.room_number}
-                  <Tag color={typeStyle.tagColor} className="ms-1">
-                    {typeStyle.label}
-                  </Tag>
-                  {room.is_short_stay && <Tag color="blue">إقامة قصيرة</Tag>}
-                </span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    type="text"
-                    shape="circle"
-                    size="small"
-                    className="h-6 w-6"
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    onClick={() => setRoomDialog({ open: true, wardId: ward.id, room })}
-                  />
-                  <Button
-                    type="text"
-                    shape="circle"
-                    size="small"
-                    className="h-6 w-6"
-                    icon={<Trash2 className="h-3.5 w-3.5" />}
-                    onClick={() =>
-                      setDeleteTarget({ type: 'room', id: room.id, label: `غرفة ${room.room_number}` })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="mt-1 text-xs text-muted-foreground">
-                {room.is_short_stay ? (
-                  <>
-                    12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
-                    24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
-                  </>
-                ) : (
-                  <>{room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}</>
-                )}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-1">
-                {room.beds?.map((bed) => {
-                  const label =
-                    bed.status === 'occupied' && bed.current_admission
-                      ? `${bed.bed_number} — ${bed.current_admission.patient.name}`
-                      : `${bed.unit_type === 'chair' ? 'كرسي' : 'سرير'} ${bed.bed_number} — ${BED_STATUS_LABEL[bed.status]}`
-                  return (
-                    <Tag
-                      key={bed.id}
-                      color={BED_STATUS_VARIANT[bed.status]}
-                      className="flex items-center gap-1 p-0 ps-2 pe-1"
-                      style={{ display: 'inline-flex', alignItems: 'center' }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setBedDialog({ open: true, roomId: room.id, bed })}
-                      >
-                        {label}
-                      </button>
-                      <button
-                        type="button"
-                        className="opacity-70 hover:opacity-100"
-                        onClick={() =>
-                          setDeleteTarget({ type: 'bed', id: bed.id, label: `سرير ${bed.bed_number}` })
-                        }
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Tag>
-                  )
-                })}
-                <button type="button" onClick={() => setBedDialog({ open: true, roomId: room.id })}>
-                  <Tag>+ سرير</Tag>
-                </button>
-              </div>
-            </Card>
-            )
-          })}
-          <Card
-            size="small"
-            className="flex min-w-[160px] cursor-pointer items-center justify-center p-3"
-            onClick={() => setRoomDialog({ open: true, wardId: ward.id })}
-          >
-            <span className="text-muted-foreground">+ غرفة جديدة</span>
-          </Card>
-        </div>
-      ),
-    }))
-
-    return {
-      key: String(floor.id),
-      label: (
-        <div className="flex w-full items-center gap-2 pe-2">
-          <span className="flex-1 font-bold">{floor.name}</span>
-          <span className="text-sm text-muted-foreground">{floor.wards?.length ?? 0} جناح</span>
-          <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-            <Button
-              type="text"
-              shape="circle"
-              size="small"
-              icon={<Pencil className="h-4 w-4" />}
-              onClick={() => setFloorDialog({ open: true, floor })}
-            />
-            <Button
-              type="text"
-              shape="circle"
-              size="small"
-              icon={<Trash2 className="h-4 w-4" />}
-              onClick={() => setDeleteTarget({ type: 'floor', id: floor.id, label: floor.name })}
-            />
-          </div>
-        </div>
-      ),
-      children: (
-        <>
-          <div className="mb-2 flex justify-end">
-            <Button
-              type="default"
-              size="small"
-              onClick={() => setWardDialog({ open: true, floorId: floor.id })}
-            >
-              + جناح جديد
-            </Button>
-          </div>
-
-          <Collapse
-            className="ps-4"
-            defaultActiveKey={floor.wards?.map((w) => String(w.id))}
-            items={wardItems}
-          />
-        </>
-      ),
-    }
-  })
 
   const previewColorFor = (value: AdmissionHeaderBg) => {
     switch (value) {
@@ -320,23 +227,166 @@ export function FacilitySettingsPage() {
             {
               key: 'rooms',
               label: 'إدارة الغرف',
-              children: (
-                <>
-                  <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-base font-semibold text-muted-foreground">الهيكل العام للمستشفى</h2>
-                    <Button type="primary" onClick={() => setFloorDialog({ open: true })}>
-                      + طابق جديد
-                    </Button>
+              children:
+                floorsQuery.isLoading || floorDetailsQuery.isLoading ? (
+                  <PageLoader />
+                ) : (
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <StructureColumn
+                      title="الطوابق"
+                      count={floors.length}
+                      action={
+                        <Button type="primary" size="small" onClick={() => setFloorDialog({ open: true })}>
+                          + طابق جديد
+                        </Button>
+                      }
+                      isEmpty={floors.length === 0}
+                      emptyText="لا توجد طوابق بعد"
+                    >
+                      {floors.map((floor) => (
+                        <StructureRow
+                          key={floor.id}
+                          selected={floor.id === selectedFloorId}
+                          onSelect={() => selectFloor(floor.id)}
+                          onEdit={() => setFloorDialog({ open: true, floor })}
+                          onDelete={() => setDeleteTarget({ type: 'floor', id: floor.id, label: floor.name })}
+                        >
+                          <div className="font-bold">{floor.name}</div>
+                          <div className="text-xs text-muted-foreground">{floor.wards?.length ?? 0} جناح</div>
+                        </StructureRow>
+                      ))}
+                    </StructureColumn>
+
+                    <StructureColumn
+                      title="الأجنحة"
+                      count={wards.length}
+                      action={
+                        <Button
+                          type="default"
+                          size="small"
+                          disabled={!selectedFloor}
+                          onClick={() => selectedFloor && setWardDialog({ open: true, floorId: selectedFloor.id })}
+                        >
+                          + جناح جديد
+                        </Button>
+                      }
+                      isEmpty={!selectedFloor || wards.length === 0}
+                      emptyText={selectedFloor ? 'لا توجد أجنحة في هذا الطابق' : 'اختر طابقاً لعرض أجنحته'}
+                    >
+                      {wards.map((ward) => (
+                        <StructureRow
+                          key={ward.id}
+                          selected={ward.id === selectedWardId}
+                          onSelect={() => selectWard(ward.id)}
+                          onEdit={() => selectedFloor && setWardDialog({ open: true, floorId: selectedFloor.id, ward })}
+                          onDelete={() => setDeleteTarget({ type: 'ward', id: ward.id, label: ward.name })}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">{ward.name}</span>
+                            {ward.gender && (
+                              <Tag>
+                                {ward.gender === 'male' ? 'رجالي' : ward.gender === 'female' ? 'نسائي' : 'أطفال'}
+                              </Tag>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">{ward.rooms?.length ?? 0} غرفة</div>
+                        </StructureRow>
+                      ))}
+                    </StructureColumn>
+
+                    <StructureColumn
+                      title="الغرف"
+                      count={rooms.length}
+                      action={
+                        <Button
+                          type="default"
+                          size="small"
+                          disabled={!selectedWard}
+                          onClick={() => selectedWard && setRoomDialog({ open: true, wardId: selectedWard.id })}
+                        >
+                          + غرفة جديدة
+                        </Button>
+                      }
+                      isEmpty={!selectedWard || rooms.length === 0}
+                      emptyText={selectedWard ? 'لا توجد غرف في هذا الجناح' : 'اختر جناحاً لعرض غرفه'}
+                    >
+                      {rooms.map((room) => {
+                        const typeStyle = getRoomTypeStyle(room.room_type)
+                        return (
+                          <StructureRow
+                            key={room.id}
+                            selected={room.id === selectedRoomId}
+                            onSelect={() => setSelectedRoomId(room.id)}
+                            style={{
+                              borderInlineStart: `4px solid ${typeStyle.color}`,
+                              backgroundColor: typeStyle.bg,
+                              borderStyle: room.is_short_stay ? 'dashed' : undefined,
+                            }}
+                            onEdit={() => selectedWard && setRoomDialog({ open: true, wardId: selectedWard.id, room })}
+                            onDelete={() =>
+                              setDeleteTarget({ type: 'room', id: room.id, label: `غرفة ${room.room_number}` })
+                            }
+                          >
+                            <div className="flex flex-wrap items-center gap-1 font-bold">
+                              غرفة {room.room_number}
+                              <Tag color={typeStyle.tagColor} className="ms-1">
+                                {getRoomTypeName(roomTypesQuery.data, room.room_type)}
+                              </Tag>
+                              {room.is_short_stay && <Tag color="blue">إقامة قصيرة</Tag>}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {room.is_short_stay ? (
+                                <>
+                                  12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
+                                  24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
+                                </>
+                              ) : (
+                                <>{room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}</>
+                              )}
+                              {' · '}
+                              {room.beds?.length ?? 0} سرير
+                            </div>
+                          </StructureRow>
+                        )
+                      })}
+                    </StructureColumn>
+
+                    <StructureColumn
+                      title="الأسرّة"
+                      count={beds.length}
+                      action={
+                        <Button
+                          type="default"
+                          size="small"
+                          disabled={!selectedRoom}
+                          onClick={() => selectedRoom && setBedDialog({ open: true, roomId: selectedRoom.id })}
+                        >
+                          + سرير
+                        </Button>
+                      }
+                      isEmpty={!selectedRoom || beds.length === 0}
+                      emptyText={selectedRoom ? 'لا توجد أسرّة في هذه الغرفة' : 'اختر غرفة لعرض أسرّتها'}
+                    >
+                      {beds.map((bed) => (
+                        <StructureRow
+                          key={bed.id}
+                          onEdit={() => selectedRoom && setBedDialog({ open: true, roomId: selectedRoom.id, bed })}
+                          onDelete={() => setDeleteTarget({ type: 'bed', id: bed.id, label: `سرير ${bed.bed_number}` })}
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">
+                              {bed.unit_type === 'chair' ? 'كرسي' : 'سرير'} {bed.bed_number}
+                            </span>
+                            <Tag color={BED_STATUS_VARIANT[bed.status]}>{BED_STATUS_LABEL[bed.status]}</Tag>
+                          </div>
+                          {bed.status === 'occupied' && bed.current_admission && (
+                            <div className="text-xs text-muted-foreground">{bed.current_admission.patient.name}</div>
+                          )}
+                        </StructureRow>
+                      ))}
+                    </StructureColumn>
                   </div>
-
-                  {(floorsQuery.isLoading || floorDetailsQuery.isLoading) && <PageLoader />}
-
-                  <Collapse
-                    defaultActiveKey={floorDetailsQuery.data?.map((f) => String(f.id))}
-                    items={floorItems}
-                  />
-                </>
-              ),
+                ),
             },
             {
               key: 'chart-opening-service',
@@ -362,6 +412,11 @@ export function FacilitySettingsPage() {
               key: 'payment-methods',
               label: 'طرق الدفع',
               children: <PaymentMethodsSettingsTab />,
+            },
+            {
+              key: 'room-types',
+              label: 'أنواع الغرف',
+              children: <RoomTypesSettingsTab />,
             },
             {
               key: 'appearance',
@@ -419,7 +474,6 @@ export function FacilitySettingsPage() {
                             gap={8}
                             style={{ padding: '8px 12px', fontSize: ADMISSION_HEADER_FONT_SIZE_PX[option.value].name }}
                           >
-                           
                             {option.label}
                           </Flex>
                         </Radio.Button>

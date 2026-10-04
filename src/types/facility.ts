@@ -38,11 +38,17 @@ export interface Ward {
   rooms?: Room[]
 }
 
+export interface RoomType {
+  id: number
+  code: string
+  name: string
+}
+
 export interface Room {
   id: number
   ward_id: number
   room_number: string
-  room_type: 'normal' | 'vip' | 'operation' | 'ward'
+  room_type: string
   capacity: number
   price_per_day: string | null
   is_short_stay: boolean

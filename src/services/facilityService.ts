@@ -61,7 +61,7 @@ export async function deleteWard(id: number): Promise<void> {
   await apiClient.delete(`/wards/${id}`)
 }
 
-export async function getRooms(wardId?: number, roomType?: Room['room_type']): Promise<Room[]> {
+export async function getRooms(wardId?: number, roomType?: string): Promise<Room[]> {
   const { data } = await apiClient.get<Room[]>('/rooms', {
     params: { ...(wardId ? { ward_id: wardId } : {}), ...(roomType ? { room_type: roomType } : {}) },
   })
@@ -75,8 +75,9 @@ export async function getOperationRooms(): Promise<Room[]> {
 export async function createRoom(payload: {
   ward_id: number
   room_number: string
-  room_type: 'normal' | 'vip' | 'operation'
+  room_type: string
   capacity: number
+  auto_create_beds?: boolean
   price_per_day?: number | null
   is_short_stay?: boolean
   price_12_hours?: number | null
@@ -91,7 +92,7 @@ export async function updateRoom(
   id: number,
   payload: {
     room_number?: string
-    room_type?: 'normal' | 'vip' | 'operation'
+    room_type?: string
     capacity?: number
     price_per_day?: number | null
     is_short_stay?: boolean
