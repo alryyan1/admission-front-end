@@ -288,7 +288,7 @@ export function FacilitySettingsPage() {
                               </Tag>
                             )}
                           </div>
-                          <div className="text-xs text-muted-foreground">{ward.rooms?.length ?? 0} غرفة</div>
+                          <div className="text-xs text-muted-foreground">{ward.rooms?.length ?? 0} غرفة | {ward.description}</div>
                         </StructureRow>
                       ))}
                     </StructureColumn>
