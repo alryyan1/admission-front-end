@@ -44,7 +44,7 @@ export function getAdmissionSquareStyle(token: GlobalToken, status: AdmissionSta
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: token.borderRadiusLG,
-    border: `${isActive ? 2 : 1}px solid ${isActive ? token.colorPrimary : token.colorBorderSecondary}`,
+    border: `${isActive ? 2 : 1}px solid ${isActive ? token.colorPrimary : statusColor}`,
     background: isActive ? `${statusColor}1a` : token.colorBgContainer,
     color: token.colorText,
     fontWeight: isActive ? 700 : 600,

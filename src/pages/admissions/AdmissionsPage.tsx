@@ -31,12 +31,6 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
   cancelled: 'ملغاة',
 }
 
-const STATUS_COLOR: Record<AdmissionStatus, string> = {
-  admitted: 'green',
-  discharged: 'blue',
-  cancelled: 'red',
-}
-
 const ARABIC_WEEKDAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت']
 
 function formatArabicDayHeader(date: Dayjs): string {
@@ -153,7 +147,7 @@ export function AdmissionsPage() {
       }),
   })
 
-  const columnCount = 11
+  const columnCount = 9
 
   const getStayDuration = (row: Admission) => {
     const end = row.discharge_date ? dayjs(row.discharge_date) : dayjs()
@@ -187,7 +181,9 @@ export function AdmissionsPage() {
         return {
           children: (
             <div style={{ position: 'relative', width: ADMISSION_SQUARE_SIZE, height: ADMISSION_SQUARE_SIZE }}>
-              <Flex style={getAdmissionSquareStyle(token, row.status)}>{v ?? '—'}</Flex>
+              <Tooltip title={STATUS_LABEL[row.status]}>
+                <Flex style={getAdmissionSquareStyle(token, row.status)}>{v ?? '—'}</Flex>
+              </Tooltip>
               <AdmissionBalanceBadge admission={row} />
             </div>
           ),
@@ -235,14 +231,6 @@ export function AdmissionsPage() {
       },
     },
     {
-      title: 'الحالة',
-      key: 'status',
-      render: (_, row) => {
-        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        return <Tag color={STATUS_COLOR[row.status]}>{STATUS_LABEL[row.status]}</Tag>
-      },
-    },
-    {
       title: 'الطبيب المعالج',
       key: 'doctor',
       render: (_, row) => {
@@ -259,19 +247,6 @@ export function AdmissionsPage() {
       },
     },
 
-    {
-      title: 'عدد الأيام',
-      key: 'days',
-      render: (_, row) => {
-        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        const { days, remainingHours } = getStayDuration(row)
-        return (
-          <span>
-            {days} يوم و {remainingHours} ساعة
-          </span>
-        )
-      },
-    },
     {
       title: 'الإجمالي',
       key: 'total_charges',
