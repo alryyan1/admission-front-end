@@ -23,6 +23,7 @@ export const admissionPdfPaths = {
   accountStatement: (admissionId: number) => `/admissions/${admissionId}/account-statement.pdf`,
   admissionSummary: (admissionId: number) => `/admissions/${admissionId}/summary.pdf`,
   operationInvoice: (operationId: number) => `/operations/${operationId}/invoice.pdf`,
+  operationTeam: (operationId: number) => `/operations/${operationId}/team.pdf`,
 }
 
 export async function getAdmissions(

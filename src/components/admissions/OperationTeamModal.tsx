@@ -18,11 +18,14 @@ import {
   TableCell,
   Typography,
 } from '@mui/material'
+import { FileTextOutlined } from '@ant-design/icons'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
+import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
+import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
-import { addOperationTeamMember, removeOperationTeamMember } from '@/services/admissionService'
+import { addOperationTeamMember, admissionPdfPaths, removeOperationTeamMember } from '@/services/admissionService'
 import { updateTeamMemberEntitlement } from '@/services/accountantService'
 import type { OperationTeamMember, TeamRole } from '@/types/admission'
 import type { Doctor } from '@/types/patient'
@@ -120,6 +123,7 @@ export function OperationTeamModal({
   onAdded,
 }: OperationTeamModalProps) {
   const [addMemberOpen, setAddMemberOpen] = useState(false)
+  const teamPdf = usePdfPreview()
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
   const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
@@ -187,7 +191,7 @@ export function OperationTeamModal({
   const price = operationPrice != null ? Number(operationPrice) : null
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
       <DialogTitle
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
@@ -200,7 +204,7 @@ export function OperationTeamModal({
         <Table size="small" sx={{ mt: 0.5 }}>
           <TableHead>
             <TableRow>
-              {/* <TableCell>الدور</TableCell> */}
+              <TableCell>الدور</TableCell>
               <TableCell>العضو</TableCell>
               <TableCell>الاستحقاق</TableCell>
               <TableCell>طريقة الدفع</TableCell>
@@ -235,6 +239,7 @@ export function OperationTeamModal({
 
               return (
                 <TableRow key={m.id}>
+                  <TableCell>{m.role?.name ?? teamRoleLabel(m.role_id)}</TableCell>
                   <TableCell>
                     <MemberDoctorCell
                       member={m}
@@ -291,8 +296,17 @@ export function OperationTeamModal({
         </Table>
       </DialogContent>
       <DialogActions>
+        <Button
+          variant="outlined"
+          startIcon={<FileTextOutlined />}
+          loading={teamPdf.isLoading()}
+          onClick={() => teamPdf.open(admissionPdfPaths.operationTeam(operationId), 'معاينة فريق العملية')}
+        >
+          معاينة PDF
+        </Button>
         <Button onClick={onClose}>إغلاق</Button>
       </DialogActions>
+      <PdfPreviewModal url={teamPdf.url} title={teamPdf.title} onClose={teamPdf.close} />
 
       <AddTeamMemberDialog
         open={addMemberOpen}
