@@ -153,7 +153,16 @@ export function AdmissionsPage() {
       }),
   })
 
-  const columnCount = 9
+  const columnCount = 11
+
+  const getStayDuration = (row: Admission) => {
+    const end = row.discharge_date ? dayjs(row.discharge_date) : dayjs()
+    const hoursElapsed = Math.max(0, end.diff(dayjs(row.admission_date), 'hour'))
+    const days = Math.floor(hoursElapsed / 24)
+    const remainingHours = hoursElapsed % 24
+    const dayProgress = Math.round((remainingHours / 24) * 100)
+    return { hoursElapsed, days, remainingHours, dayProgress }
+  }
 
   const columns: ColumnsType<AdmissionRow> = [
     {
@@ -187,14 +196,32 @@ export function AdmissionsPage() {
       },
     },
     {
+      title: 'المعرف',
+      key: 'id',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return <span style={{ fontVariantNumeric: 'tabular-nums' }}>{row.id}</span>
+      },
+    },
+    {
       title: 'المريض',
       key: 'patient',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
         return (
-          <Flex align="center" gap={6}>
-            <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
-            {!!row.operations_count && <Tag>عملية</Tag>}
+          <Flex vertical gap={4} style={{ minWidth: 180 }}>
+            <Flex align="center" gap={6}>
+              <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
+              {!!row.operations_count && <Tag>عملية</Tag>}
+            </Flex>
+            {(() => {
+              const { hoursElapsed, days, dayProgress } = getStayDuration(row)
+              return (
+                <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
+                  <Progress percent={dayProgress} size="small" showInfo={false} />
+                </Tooltip>
+              )
+            })()}
           </Flex>
         )
       },
@@ -223,26 +250,25 @@ export function AdmissionsPage() {
         return row.admitting_doctor?.name ?? '—'
       },
     },
+    {
+      title: 'محول من',
+      key: 'referred_by_doctor',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return row.referred_by_doctor?.name ?? '—'
+      },
+    },
 
     {
       title: 'عدد الأيام',
       key: 'days',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        const end = row.discharge_date ? dayjs(row.discharge_date) : dayjs()
-        const hoursElapsed = Math.max(0, end.diff(dayjs(row.admission_date), 'hour'))
-        const days = Math.floor(hoursElapsed / 24)
-        const remainingHours = hoursElapsed % 24
-        const dayProgress = Math.round((remainingHours / 24) * 100)
+        const { days, remainingHours } = getStayDuration(row)
         return (
-          <Flex vertical gap={2} style={{ minWidth: 110 }}>
-            <span>
-              {days} يوم و {remainingHours} ساعة
-            </span>
-            <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
-              <Progress percent={dayProgress} size="small" showInfo={false} />
-            </Tooltip>
-          </Flex>
+          <span>
+            {days} يوم و {remainingHours} ساعة
+          </span>
         )
       },
     },
