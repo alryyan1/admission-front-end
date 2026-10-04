@@ -1,5 +1,5 @@
 import apiClient from '@/services/api'
-import type { ChartOpeningServiceSetting, Service, ServiceCategory, ShortStayServiceSetting } from '@/types/service'
+import type { ChartOpeningServiceSetting, Service, ServiceCategory } from '@/types/service'
 
 export async function getServiceCategories(): Promise<ServiceCategory[]> {
   const { data } = await apiClient.get<ServiceCategory[]>('/service-categories')
@@ -66,22 +66,7 @@ export async function getChartOpeningServiceSetting(): Promise<ChartOpeningServi
 export async function updateChartOpeningServiceSetting(payload: {
   service_id: number | null
   auto_add: boolean
-  apply_to_short_stay: boolean
 }): Promise<ChartOpeningServiceSetting> {
   const { data } = await apiClient.put<ChartOpeningServiceSetting>('/settings/chart-opening-service', payload)
-  return data
-}
-
-export async function getShortStayServiceSetting(): Promise<ShortStayServiceSetting> {
-  const { data } = await apiClient.get<ShortStayServiceSetting>('/settings/short-stay-service')
-  return data
-}
-
-export async function updateShortStayServiceSetting(payload: {
-  enabled: boolean
-  service_12h_id: number | null
-  service_24h_id: number | null
-}): Promise<ShortStayServiceSetting> {
-  const { data } = await apiClient.put<ShortStayServiceSetting>('/settings/short-stay-service', payload)
   return data
 }

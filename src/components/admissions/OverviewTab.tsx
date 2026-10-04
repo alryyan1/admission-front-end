@@ -9,12 +9,7 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ admission }: OverviewTabProps) {
-  const admissionTypeLabel =
-    admission.admission_type === 'inpatient'
-      ? 'تنويم كامل'
-      : admission.admission_type === 'short_stay'
-        ? 'إقامة قصيرة'
-        : '—'
+  const admissionTypeLabel = admission.admission_type === 'inpatient' ? 'تنويم كامل' : '—'
 
   const ward = admission.bed?.room?.ward
 

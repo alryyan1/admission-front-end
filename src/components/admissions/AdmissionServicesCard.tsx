@@ -33,7 +33,6 @@ import type { Service } from '@/types/service'
 interface AdmissionServicesCardProps {
   services: RequestedService[]
   isLoading?: boolean
-  isShortStayRoom: boolean
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
   onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
   onRemoveService: (serviceId: number) => void
@@ -93,7 +92,6 @@ function EditableNumberCell({
 export function AdmissionServicesCard({
   services,
   isLoading = false,
-  isShortStayRoom,
   onAddService,
   onUpdateService,
   onRemoveService,
@@ -165,16 +163,14 @@ export function AdmissionServicesCard({
             >
               رسوم فتح الملف
             </Button>
-            {!isShortStayRoom && (
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={onCalculateAccommodationFee}
-                disabled={isCalculatingAccommodationFee}
-              >
-                رسوم الإقامة
-              </Button>
-            )}
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={onCalculateAccommodationFee}
+              disabled={isCalculatingAccommodationFee}
+            >
+              رسوم الإقامة
+            </Button>
           </Stack>
         )}
 

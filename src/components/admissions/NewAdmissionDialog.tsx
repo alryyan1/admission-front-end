@@ -491,7 +491,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               size="small"
               disabled={!selectedPatient || wardId === ''}
               options={roomsQuery.data ?? []}
-              getOptionLabel={(room) => `غرفة ${room.room_number}${room.is_short_stay ? ' (إقامة قصيرة)' : ''}`}
+              getOptionLabel={(room) => `غرفة ${room.room_number}`}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={selectedRoom}
               onChange={(_, room) => {

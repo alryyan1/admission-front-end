@@ -62,11 +62,7 @@ export function DashboardPage() {
         <PageLoader />
       ) : (
         <>
-           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-            <StatTile
-              label="إيرادات الإقامة القصيرة"
-              value={formatNumber(financialsQuery.data?.short_stay_total ?? 0)}
-            />
+           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             <StatTile label="إيرادات الغرف" value={formatNumber(financialsQuery.data?.rooms_total ?? 0)} />
             <StatTile label="إيرادات الخدمات" value={formatNumber(financialsQuery.data?.services_total ?? 0)} />
             <StatTile label="إيرادات العمليات" value={formatNumber(financialsQuery.data?.operations_total ?? 0)} />
@@ -75,14 +71,10 @@ export function DashboardPage() {
               value={formatNumber(financialsQuery.data?.entitlements_total ?? 0)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <StatTile
               label="المرضى المنومون حالياً"
               value={formatNumber(admissionsQuery.data?.active_admissions ?? 0)}
-            />
-            <StatTile
-              label="أسرّة متاحة (إقامة قصيرة)"
-              value={formatNumber(occupancyQuery.data?.summary.available_short_stay_beds ?? 0)}
             />
             <StatTile label="غرف متاحة" value={formatNumber(occupancyQuery.data?.summary.available_rooms ?? 0)} />
      

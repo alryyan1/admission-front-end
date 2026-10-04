@@ -41,7 +41,6 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
     queryFn: getChartOpeningServiceSetting,
   })
 
-  const isShortStayRoom = admission.bed?.room?.is_short_stay ?? false
   const servicesCount = admissionQuery.data?.requested_services?.length ?? 0
   const operationsCount = admissionQuery.data?.operations?.length ?? 0
   const isFileOpeningFeeAdded = (admissionQuery.data?.requested_services ?? []).some(
@@ -137,11 +136,9 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
           >
             رسوم فتح الملف
           </Button>
-          {!isShortStayRoom && (
-            <Button onClick={() => accommodationFeeMutation.mutate()} loading={accommodationFeeMutation.isPending}>
-              رسوم الإقامة
-            </Button>
-          )}
+          <Button onClick={() => accommodationFeeMutation.mutate()} loading={accommodationFeeMutation.isPending}>
+            رسوم الإقامة
+          </Button>
           <Badge count={admissionQuery.data?.deposits?.length ?? 0} size="small" offset={[-4, 2]}>
             <Button icon={<WalletOutlined />} onClick={() => setPaymentsOpen(true)}>
               الدفعات
@@ -174,7 +171,6 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
           <AdmissionServicesCard
             services={admissionQuery.data?.requested_services ?? []}
             isLoading={admissionQuery.isLoading}
-            isShortStayRoom={isShortStayRoom}
             onAddService={(payload) => serviceMutation.mutate(payload)}
             onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
             onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}

@@ -18,7 +18,6 @@ import { WardFormDialog } from '@/components/settings/WardFormDialog'
 import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { BedFormDialog } from '@/components/settings/BedFormDialog'
 import { ChartOpeningServiceSettingsTab } from '@/components/settings/ChartOpeningServiceSettingsTab'
-import { ShortStayServiceSettingsTab } from '@/components/settings/ShortStayServiceSettingsTab'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
@@ -320,7 +319,6 @@ export function FacilitySettingsPage() {
                             style={{
                               borderInlineStart: `4px solid ${typeStyle.color}`,
                               backgroundColor: typeStyle.bg,
-                              borderStyle: room.is_short_stay ? 'dashed' : undefined,
                             }}
                             onEdit={() => selectedWard && setRoomDialog({ open: true, wardId: selectedWard.id, room })}
                             onDelete={() =>
@@ -332,17 +330,9 @@ export function FacilitySettingsPage() {
                               <Tag color={typeStyle.tagColor} className="ms-1">
                                 {getRoomTypeName(roomTypesQuery.data, room.room_type)}
                               </Tag>
-                              {room.is_short_stay && <Tag color="blue">إقامة قصيرة</Tag>}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {room.is_short_stay ? (
-                                <>
-                                  12س: {room.price_12_hours ? formatNumber(room.price_12_hours) : 'غير محدد'} ·
-                                  24س: {room.price_24_hours ? formatNumber(room.price_24_hours) : 'غير محدد'}
-                                </>
-                              ) : (
-                                <>{room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}</>
-                              )}
+                              {room.price_per_day ? `${formatNumber(room.price_per_day)} / يوم` : 'السعر غير محدد'}
                               {' · '}
                               {room.beds?.length ?? 0} سرير
                             </div>
@@ -392,11 +382,6 @@ export function FacilitySettingsPage() {
               key: 'chart-opening-service',
               label: 'خدمة فتح الملف',
               children: <ChartOpeningServiceSettingsTab />,
-            },
-            {
-              key: 'short-stay-service',
-              label: 'خدمات الإقامة القصيرة',
-              children: <ShortStayServiceSettingsTab />,
             },
             {
               key: 'facility-info',

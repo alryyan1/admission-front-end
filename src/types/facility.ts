@@ -51,9 +51,6 @@ export interface Room {
   room_type: string
   capacity: number
   price_per_day: string | null
-  is_short_stay: boolean
-  price_12_hours: string | null
-  price_24_hours: string | null
   status: boolean
   ward?: Ward
   beds?: Bed[]

@@ -79,9 +79,6 @@ export async function createRoom(payload: {
   capacity: number
   auto_create_beds?: boolean
   price_per_day?: number | null
-  is_short_stay?: boolean
-  price_12_hours?: number | null
-  price_24_hours?: number | null
   status?: boolean
 }): Promise<Room> {
   const { data } = await apiClient.post<Room>('/rooms', payload)
@@ -95,9 +92,6 @@ export async function updateRoom(
     room_type?: string
     capacity?: number
     price_per_day?: number | null
-    is_short_stay?: boolean
-    price_12_hours?: number | null
-    price_24_hours?: number | null
     status?: boolean
   },
 ): Promise<Room> {

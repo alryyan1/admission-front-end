@@ -1,6 +1,18 @@
+import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Modal, Form, Input, Select, Checkbox, Button } from 'antd'
+import {
+  Box,
+  Button,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  MenuItem,
+  TextField,
+} from '@mui/material'
 import { createWard, updateWard } from '@/services/facilityService'
 import type { Ward, WardGender } from '@/types/facility'
 
@@ -17,23 +29,37 @@ const GENDER_LABEL: Record<WardGender, string> = {
   children: 'أطفال',
 }
 
-interface WardFormValues {
-  name: string
-  description?: string
-  gender: WardGender | 'none'
-  status: boolean
+type GenderOption = WardGender | 'none'
+
+const GENDER_OPTIONS: GenderOption[] = ['none', 'male', 'female', 'children']
+
+const GENDER_OPTION_LABEL: Record<GenderOption, string> = {
+  none: 'عام (بدون تحديد)',
+  ...GENDER_LABEL,
 }
 
 export function WardFormDialog({ open, onOpenChange, floorId, ward }: WardFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!ward
-  const [form] = Form.useForm<WardFormValues>()
+
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [gender, setGender] = useState<GenderOption>('none')
+  const [status, setStatus] = useState(true)
+  const [nameError, setNameError] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setName(ward?.name ?? '')
+    setDescription(ward?.description ?? '')
+    setGender(ward?.gender ?? 'none')
+    setStatus(ward?.status ?? true)
+    setNameError(false)
+  }, [open, ward])
 
   const mutation = useMutation({
     mutationFn: (payload: { name: string; description?: string; gender: WardGender | null; status: boolean }) =>
-      isEditing
-        ? updateWard(ward.id, payload)
-        : createWard({ ...payload, floor_id: floorId }),
+      isEditing ? updateWard(ward.id, payload) : createWard({ ...payload, floor_id: floorId }),
     onSuccess: () => {
       toast.success(isEditing ? 'تم تحديث الجناح' : 'تم إضافة الجناح')
       queryClient.invalidateQueries({ queryKey: ['floors'] })
@@ -41,60 +67,73 @@ export function WardFormDialog({ open, onOpenChange, floorId, ward }: WardFormDi
     },
   })
 
-  function handleFinish(values: WardFormValues) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!name.trim()) {
+      setNameError(true)
+      return
+    }
     mutation.mutate({
-      name: values.name,
-      description: values.description || '',
-      gender: values.gender === 'none' ? null : values.gender,
-      status: values.status,
+      name,
+      description: description || '',
+      gender: gender === 'none' ? null : gender,
+      status,
     })
   }
 
   return (
-    <Modal
-      open={open}
-      onCancel={() => onOpenChange(false)}
-      title={isEditing ? `تعديل ${ward.name}` : 'إضافة جناح جديد'}
-      width={340}
-      footer={[
-        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
-          إلغاء
-        </Button>,
-        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
-          حفظ
-        </Button>,
-      ]}
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          name: ward?.name,
-          description: ward?.description ?? '',
-          gender: ward?.gender ?? 'none',
-          status: ward?.status ?? true,
-        }}
-        onFinish={handleFinish}
-      >
-        <Form.Item name="name" label="اسم الجناح" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="description" label="الوصف">
-          <Input />
-        </Form.Item>
-        <Form.Item name="gender" label="النوع">
-          <Select
-            style={{ width: '100%' }}
-            options={[
-              { value: 'none', label: 'عام (بدون تحديد)' },
-              ...(Object.keys(GENDER_LABEL) as WardGender[]).map((g) => ({ value: g, label: GENDER_LABEL[g] })),
-            ]}
+    <Dialog open={open} onClose={() => onOpenChange(false)} fullWidth maxWidth="xs">
+      <DialogTitle>{isEditing ? `تعديل ${ward.name}` : 'إضافة جناح جديد'}</DialogTitle>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <DialogContent>
+          <TextField
+            fullWidth
+            autoFocus
+            margin="normal"
+            label="اسم الجناح"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setNameError(false)
+            }}
+            error={nameError}
+            helperText={nameError ? 'هذا الحقل مطلوب' : undefined}
           />
-        </Form.Item>
-        <Form.Item name="status" valuePropName="checked">
-          <Checkbox>نشط</Checkbox>
-        </Form.Item>
-      </Form>
-    </Modal>
+          <TextField
+            fullWidth
+            margin="normal"
+            label="الوصف"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <TextField
+            select
+            fullWidth
+            margin="normal"
+            label="النوع"
+            value={gender}
+            onChange={(e) => setGender(e.target.value as GenderOption)}
+          >
+            {GENDER_OPTIONS.map((option) => (
+              <MenuItem key={option} value={option}>
+                {GENDER_OPTION_LABEL[option]}
+              </MenuItem>
+            ))}
+          </TextField>
+          <FormControlLabel
+            control={<Checkbox checked={status} onChange={(e) => setStatus(e.target.checked)} />}
+            label="نشط"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button type="submit" variant="contained" disabled={mutation.isPending}>
+            حفظ
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
   )
 }

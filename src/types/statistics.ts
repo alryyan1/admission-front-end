@@ -17,10 +17,7 @@ export interface OccupancyStatistics {
     total_beds: number
     occupied_beds: number
     available_beds: number
-    available_short_stay_beds: number
     available_rooms: number
-    short_stay_rooms_total: number
-    regular_rooms_total: number
     maintenance_beds: number
     occupancy_rate: number
   }
@@ -55,7 +52,6 @@ export interface FinancialStatistics {
   expenses_total: number
   net_total: number
   services_total: number
-  short_stay_total: number
   rooms_total: number
   operations_total: number
   charges_total: number

@@ -19,13 +19,11 @@ export function ChartOpeningServiceSettingsTab() {
 
   const [serviceId, setServiceId] = useState<number | undefined>(undefined)
   const [autoAdd, setAutoAdd] = useState(false)
-  const [applyToShortStay, setApplyToShortStay] = useState(false)
 
   useEffect(() => {
     if (!settingQuery.data) return
     setServiceId(settingQuery.data.service_id ?? undefined)
     setAutoAdd(settingQuery.data.auto_add)
-    setApplyToShortStay(settingQuery.data.apply_to_short_stay)
   }, [settingQuery.data])
 
   const saveMutation = useMutation({
@@ -40,7 +38,6 @@ export function ChartOpeningServiceSettingsTab() {
     saveMutation.mutate({
       service_id: serviceId ?? null,
       auto_add: autoAdd,
-      apply_to_short_stay: applyToShortStay,
     })
   }
 
@@ -67,16 +64,6 @@ export function ChartOpeningServiceSettingsTab() {
         <Checkbox checked={autoAdd} onChange={(e) => setAutoAdd(e.target.checked)}>
           إضافة خدمة فتح الملف تلقائياً (تفعيل)
         </Checkbox>
-
-        {autoAdd && (
-          <Checkbox
-            checked={applyToShortStay}
-            onChange={(e) => setApplyToShortStay(e.target.checked)}
-            style={{ marginInlineStart: 24 }}
-          >
-            إضافة لمرضى الإقامة القصيرة
-          </Checkbox>
-        )}
 
         <Button
           type="primary"

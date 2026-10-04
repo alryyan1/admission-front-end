@@ -19,7 +19,6 @@ const SUBJECT_LABELS: Record<string, string> = {
   Service: 'خدمة',
   ServiceCategory: 'تصنيف خدمة',
   ChartOpeningServiceSetting: 'إعداد فتح الملف',
-  ShortStayServiceSetting: 'إعداد الإقامة القصيرة',
   User: 'مستخدم',
   Bed: 'سرير',
   Ward: 'جناح',

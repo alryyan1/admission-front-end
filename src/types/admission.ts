@@ -3,7 +3,7 @@ import type { Doctor, Patient } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
 
 export type AdmissionStatus = 'admitted' | 'discharged' | 'cancelled'
-export type AdmissionType = 'inpatient' | 'short_stay'
+export type AdmissionType = 'inpatient'
 
 export interface Admission {
   id: number

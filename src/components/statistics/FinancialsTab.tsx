@@ -50,7 +50,6 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
         <StatTile label="فواتير غير مسددة" value={formatNumber(data.outstanding_total)} />
         <StatTile label="إجمالي الودائع" value={formatNumber(data.deposits_total)} />
         <StatTile label="إجمالي الرسوم" value={formatNumber(data.charges_total)} />
-        <StatTile label="إيرادات الإقامة القصيرة" value={formatNumber(data.short_stay_total)} />
         <StatTile label="إيرادات الغرف" value={formatNumber(data.rooms_total)} />
         <StatTile label="إيرادات الخدمات" value={formatNumber(data.services_total)} />
         <StatTile label="إيرادات العمليات" value={formatNumber(data.operations_total)} />
