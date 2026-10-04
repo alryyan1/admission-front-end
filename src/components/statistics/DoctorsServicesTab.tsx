@@ -27,7 +27,7 @@ const doctorColumns: ColumnsType<TopDoctor> = [
 const serviceColumns: ColumnsType<TopService> = [
   { title: 'الخدمة', dataIndex: 'name', key: 'name' },
   {
-    title: 'الكمية',
+    title: 'العدد',
     dataIndex: 'total_quantity',
     key: 'total_quantity',
     render: (v) => formatNumber(v),

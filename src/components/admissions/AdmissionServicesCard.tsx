@@ -45,17 +45,25 @@ interface AdmissionServicesCardProps {
   showQuickActions?: boolean
 }
 
+function parseNumericInput(raw: string, integer?: boolean): number | null {
+  if (raw === '') return null
+  const parsed = integer ? parseInt(raw, 10) : Number(raw)
+  return Number.isNaN(parsed) ? null : parsed
+}
+
 function EditableNumberCell({
   value,
   min,
   disabled,
   currency,
+  integer,
   onCommit,
 }: {
   value: number
   min: number
   disabled?: boolean
   currency?: boolean
+  integer?: boolean
   onCommit: (value: number) => void
 }) {
   const [draft, setDraft] = useState<number | null>(value)
@@ -77,12 +85,12 @@ function EditableNumberCell({
       size="small"
       disabled={disabled}
       value={draft ?? ''}
-      onChange={(e) => setDraft(e.target.value === '' ? null : Number(e.target.value))}
+      onChange={(e) => setDraft(parseNumericInput(e.target.value, integer))}
       onBlur={commit}
       onKeyDown={(e) => {
         if (e.key === 'Enter') commit()
       }}
-      slotProps={{ htmlInput: { min } }}
+      slotProps={{ htmlInput: { min, step: integer ? 1 : 'any' } }}
       sx={{ width: 110 }}
     />
   )
@@ -178,7 +186,7 @@ export function AdmissionServicesCard({
           <TableHead>
             <TableRow>
               <TableCell>الخدمة</TableCell>
-              <TableCell>الكمية</TableCell>
+              <TableCell>العدد</TableCell>
               <TableCell>سعر الوحدة</TableCell>
               <TableCell>الإجمالي</TableCell>
               <TableCell />
@@ -228,6 +236,7 @@ export function AdmissionServicesCard({
                   <EditableNumberCell
                     value={s.quantity}
                     min={1}
+                    integer
                     disabled={isUpdatingService}
                     onCommit={(quantity) => onUpdateService(s.id, { quantity })}
                   />
@@ -300,15 +309,15 @@ export function AdmissionServicesCard({
               renderInput={(params) => <TextField {...params} label="الخدمة" />}
             />
             <TextField
-              label="الكمية"
+              label="العدد"
               type="number"
               size="small"
               value={quantity ?? ''}
-              onChange={(e) => setQuantity(e.target.value === '' ? null : Number(e.target.value))}
+              onChange={(e) => setQuantity(parseNumericInput(e.target.value, true))}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleAddService()
               }}
-              slotProps={{ htmlInput: { min: 1 } }}
+              slotProps={{ htmlInput: { min: 1, step: 1 } }}
               sx={{ width: 110 }}
             />
             <TextField
