@@ -103,6 +103,12 @@ export interface Specialist {
   name: string
 }
 
+export interface InsuranceCompany {
+  id: number
+  name: string
+  phone: string | null
+}
+
 export interface OperationTeamMember {
   id: number
   operation_id: number

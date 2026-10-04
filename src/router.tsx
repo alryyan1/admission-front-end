@@ -9,6 +9,7 @@ import { ProcedureCatalogSettingsPage } from '@/pages/settings/ProcedureCatalogS
 import { ServiceCatalogSettingsPage } from '@/pages/settings/ServiceCatalogSettingsPage'
 import { DoctorsSettingsPage } from '@/pages/settings/DoctorsSettingsPage'
 import { TeamRolesSettingsPage } from '@/pages/settings/TeamRolesSettingsPage'
+import { InsuranceCompaniesSettingsPage } from '@/pages/settings/InsuranceCompaniesSettingsPage'
 import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
 import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
 import { BackupPage } from '@/pages/settings/BackupPage'
@@ -59,6 +60,7 @@ export const router = createBrowserRouter([
                   { path: '/settings/services', element: <ServiceCatalogSettingsPage /> },
                   { path: '/settings/doctors', element: <DoctorsSettingsPage /> },
                   { path: '/settings/team-roles', element: <TeamRolesSettingsPage /> },
+                  { path: '/settings/insurance-companies', element: <InsuranceCompaniesSettingsPage /> },
                   { path: '/settings/users', element: <UsersSettingsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
                   { path: '/settings/activity-log', element: <ActivityLogPage /> },

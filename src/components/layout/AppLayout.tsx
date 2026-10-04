@@ -65,6 +65,7 @@ const settingsNavItems: NavItem[] = [
   { to: '/settings/services', label: 'كتالوج الخدمات' },
   { to: '/settings/procedures', label: 'كتالوج العمليات' },
   { to: '/settings/team-roles', label: 'أدوار الفريق الطبي' },
+  { to: '/settings/insurance-companies', label: 'شركات التأمين' },
   { to: '/settings/users', label: 'المستخدمون' },
   { to: '/settings/sessions', label: 'الجلسات النشطة' },
   { to: '/settings/activity-log', label: 'سجل النشاط' },
