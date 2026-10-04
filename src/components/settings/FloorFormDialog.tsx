@@ -1,6 +1,17 @@
+import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Modal, Form, Input, Checkbox, Button } from 'antd'
+import {
+  Box,
+  Button,
+  Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControlLabel,
+  TextField,
+} from '@mui/material'
 import { createFloor, updateFloor } from '@/services/facilityService'
 import type { Floor } from '@/types/facility'
 
@@ -10,16 +21,22 @@ interface FloorFormDialogProps {
   floor?: Floor | null
 }
 
-interface FloorFormValues {
-  name: string
-  description?: string
-  status: boolean
-}
-
 export function FloorFormDialog({ open, onOpenChange, floor }: FloorFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!floor
-  const [form] = Form.useForm<FloorFormValues>()
+
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [status, setStatus] = useState(true)
+  const [nameError, setNameError] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setName(floor?.name ?? '')
+    setDescription(floor?.description ?? '')
+    setStatus(floor?.status ?? true)
+    setNameError(false)
+  }, [open, floor])
 
   const mutation = useMutation({
     mutationFn: (payload: { name: string; description?: string; status: boolean }) =>
@@ -31,49 +48,54 @@ export function FloorFormDialog({ open, onOpenChange, floor }: FloorFormDialogPr
     },
   })
 
-  function handleFinish(values: FloorFormValues) {
-    mutation.mutate({
-      name: values.name,
-      description: values.description || '',
-      status: values.status,
-    })
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!name.trim()) {
+      setNameError(true)
+      return
+    }
+    mutation.mutate({ name, description: description || '', status })
   }
 
   return (
-    <Modal
-      open={open}
-      onCancel={() => onOpenChange(false)}
-      title={isEditing ? `تعديل ${floor.name}` : 'إضافة طابق جديد'}
-      width={340}
-      footer={[
-        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
-          إلغاء
-        </Button>,
-        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
-          حفظ
-        </Button>,
-      ]}
-    >
-      <Form
-        form={form}
-        layout="vertical"
-        initialValues={{
-          name: floor?.name,
-          description: floor?.description ?? '',
-          status: floor?.status ?? true,
-        }}
-        onFinish={handleFinish}
-      >
-        <Form.Item name="name" label="اسم الطابق" rules={[{ required: true, message: 'هذا الحقل مطلوب' }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="description" label="الوصف">
-          <Input />
-        </Form.Item>
-        <Form.Item name="status" valuePropName="checked">
-          <Checkbox>نشط</Checkbox>
-        </Form.Item>
-      </Form>
-    </Modal>
+    <Dialog open={open} onClose={() => onOpenChange(false)} fullWidth maxWidth="xs">
+      <DialogTitle>{isEditing ? `تعديل ${floor.name}` : 'إضافة طابق جديد'}</DialogTitle>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <DialogContent>
+          <TextField
+            fullWidth
+            autoFocus
+            margin="normal"
+            label="اسم الطابق"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setNameError(false)
+            }}
+            error={nameError}
+            helperText={nameError ? 'هذا الحقل مطلوب' : undefined}
+          />
+          <TextField
+            fullWidth
+            margin="normal"
+            label="الوصف"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          <FormControlLabel
+            control={<Checkbox checked={status} onChange={(e) => setStatus(e.target.checked)} />}
+            label="نشط"
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button type="submit" variant="contained" disabled={mutation.isPending}>
+            حفظ
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
   )
 }

@@ -251,7 +251,7 @@ export function FacilitySettingsPage() {
                           onEdit={() => setFloorDialog({ open: true, floor })}
                           onDelete={() => setDeleteTarget({ type: 'floor', id: floor.id, label: floor.name })}
                         >
-                          <div className="font-bold">{floor.name}</div>
+                          <div className="font-bold">{floor.name} {floor.description && <span className="text-sm text-muted-foreground">({floor.description})</span>}</div>
                           <div className="text-xs text-muted-foreground">{floor.wards?.length ?? 0} جناح</div>
                         </StructureRow>
                       ))}
