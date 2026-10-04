@@ -9,7 +9,12 @@ import { formatNumber } from '@/lib/utils'
 import { getAdmissions } from '@/services/admissionService'
 import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
 import { RevenueCalculatorDialog } from '@/components/admissions/RevenueCalculatorDialog'
-import { AdmissionNumberRail } from '@/components/admissions/AdmissionNumberRail'
+import {
+  ADMISSION_SQUARE_SIZE,
+  AdmissionBalanceBadge,
+  AdmissionNumberRail,
+  getAdmissionSquareStyle,
+} from '@/components/admissions/AdmissionNumberRail'
 import { AdmissionWorkArea } from '@/components/admissions/AdmissionWorkArea'
 import { AdmissionInfoPanel } from '@/components/admissions/AdmissionInfoPanel'
 import { PatientLocationButton } from '@/components/admissions/PatientLocationButton'
@@ -172,19 +177,10 @@ export function AdmissionsPage() {
         }
         return {
           children: (
-            <Flex
-              align="center"
-              justify="center"
-              style={{
-                width: 44,
-                height: 44,
-                border: `1px solid ${token.colorBorder}`,
-                borderRadius: 8,
-                fontWeight: 600,
-              }}
-            >
-              {v ?? '—'}
-            </Flex>
+            <div style={{ position: 'relative', width: ADMISSION_SQUARE_SIZE, height: ADMISSION_SQUARE_SIZE }}>
+              <Flex style={getAdmissionSquareStyle(token, row.status)}>{v ?? '—'}</Flex>
+              <AdmissionBalanceBadge admission={row} />
+            </div>
           ),
           props: {},
         }
