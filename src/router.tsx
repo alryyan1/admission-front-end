@@ -21,6 +21,7 @@ import { PatientsPage } from '@/pages/patients/PatientsPage'
 import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
 import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
+import { PaymentsReportPage } from '@/pages/reports/PaymentsReportPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
                 element: <RequireRole roles={['admin', 'cashier']} />,
                 children: [
                   { path: '/expenses', element: <ExpensesPage /> },
+                  { path: '/reports/payments', element: <PaymentsReportPage /> },
                 ],
               },
               {
