@@ -23,6 +23,11 @@ export interface PaymentReportRow {
   paid_at: string | null
 }
 
+export interface PaymentRecorder {
+  id: number
+  name: string
+}
+
 export interface PaymentMethodBreakdown {
   method: string
   count: number

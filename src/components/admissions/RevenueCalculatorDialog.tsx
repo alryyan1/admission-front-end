@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Modal, Table, DatePicker, Button, Flex, Typography, Spin } from 'antd'
+import { Modal, Table, DatePicker, Button, Flex, Typography, Spin, Select } from 'antd'
 import { FilePdfOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
-import { getRevenueCalculator, reportPdfPaths } from '@/services/reportService'
+import { getPaymentRecorders, getRevenueCalculator, reportPdfPaths } from '@/services/reportService'
 import type { RevenueCalculatorRow } from '@/types/report'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
+import { useAuth } from '@/contexts/AuthContext'
 import { formatNumber } from '@/lib/utils'
 
 const { Text } = Typography
@@ -19,13 +20,21 @@ interface RevenueCalculatorDialogProps {
 
 export function RevenueCalculatorDialog({ open, onClose }: RevenueCalculatorDialogProps) {
   const [date, setDate] = useState<Dayjs>(dayjs())
+  const { user } = useAuth()
+  const [userId, setUserId] = useState<number | null>(user?.id ?? null)
   const pdf = usePdfPreview()
 
   const dateStr = date.format('YYYY-MM-DD')
 
+  const recordersQuery = useQuery({
+    queryKey: ['payments-recorders'],
+    queryFn: getPaymentRecorders,
+    enabled: open,
+  })
+
   const query = useQuery({
-    queryKey: ['revenue-calculator', dateStr],
-    queryFn: () => getRevenueCalculator(dateStr),
+    queryKey: ['revenue-calculator', dateStr, userId],
+    queryFn: () => getRevenueCalculator(dateStr, userId),
     enabled: open,
   })
 
@@ -56,12 +65,23 @@ export function RevenueCalculatorDialog({ open, onClose }: RevenueCalculatorDial
     <>
       <Modal title="حاسبة الإيرادات" open={open} onCancel={onClose} width={720} destroyOnClose footer={null}>
         <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
-          <DatePicker value={date} onChange={(value) => value && setDate(value)} format="YYYY-MM-DD" allowClear={false} />
+          <Flex gap={8} wrap="wrap">
+            <DatePicker value={date} onChange={(value) => value && setDate(value)} format="YYYY-MM-DD" allowClear={false} />
+            <Select<number | null>
+              style={{ minWidth: 160 }}
+              placeholder="الكل"
+              allowClear
+              loading={recordersQuery.isLoading}
+              value={userId}
+              onChange={(value) => setUserId(value ?? null)}
+              options={(recordersQuery.data ?? []).map((recorder) => ({ value: recorder.id, label: recorder.name }))}
+            />
+          </Flex>
           <Button
             type="primary"
             icon={<FilePdfOutlined />}
             loading={pdf.isLoading()}
-            onClick={() => pdf.open(reportPdfPaths.revenueCalculator(dateStr), 'حاسبة الإيرادات')}
+            onClick={() => pdf.open(reportPdfPaths.revenueCalculator(dateStr, userId), 'حاسبة الإيرادات')}
           >
             معاينة / طباعة PDF
           </Button>

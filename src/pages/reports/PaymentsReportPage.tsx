@@ -20,10 +20,12 @@ import { PageLoader } from '@/components/common/PageLoader'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { getPaymentsReport, reportPdfPaths } from '@/services/reportService'
+import { getPaymentRecorders, getPaymentsReport, reportPdfPaths } from '@/services/reportService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
+import { useAuth } from '@/contexts/AuthContext'
 import { formatDateTime, formatNumber } from '@/lib/utils'
 import type { PaymentMethod } from '@/types/paymentMethod'
+import type { PaymentRecorder } from '@/types/report'
 
 function toDateInputValue(date: Date): string {
   return date.toISOString().slice(0, 10)
@@ -50,6 +52,10 @@ export function PaymentsReportPage() {
   const [from, setFrom] = useState(DEFAULT_FROM)
   const [to, setTo] = useState(DEFAULT_TO)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
+  const { user } = useAuth()
+  const [recorder, setRecorder] = useState<PaymentRecorder | null>(() =>
+    user ? { id: user.id, name: user.name } : null,
+  )
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [page, setPage] = useState(0)
@@ -57,14 +63,16 @@ export function PaymentsReportPage() {
   const pdf = usePdfPreview()
 
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
+  const recordersQuery = useQuery({ queryKey: ['payments-recorders'], queryFn: getPaymentRecorders })
 
   const reportQuery = useQuery({
-    queryKey: ['reports', 'payments', from, to, paymentMethod?.id, debouncedSearch],
+    queryKey: ['reports', 'payments', from, to, paymentMethod?.id, recorder?.id, debouncedSearch],
     queryFn: () =>
       getPaymentsReport({
         from,
         to,
         payment_method_id: paymentMethod?.id,
+        paid_by_user_id: recorder?.id,
         search: debouncedSearch || undefined,
       }),
   })
@@ -91,7 +99,7 @@ export function PaymentsReportPage() {
           variant="outlined"
           startIcon={<FileTextOutlined />}
           loading={pdf.isLoading()}
-          onClick={() => pdf.open(reportPdfPaths.payments(from, to), 'معاينة تقرير المدفوعات')}
+          onClick={() => pdf.open(reportPdfPaths.payments(from, to, recorder?.id), 'معاينة تقرير المدفوعات')}
         >
           معاينة PDF
         </Button>
@@ -136,6 +144,20 @@ export function PaymentsReportPage() {
               setPage(0)
             }}
             renderInput={(params) => <TextField {...params} label="طريقة الدفع" />}
+          />
+          <Autocomplete<PaymentRecorder>
+            size="small"
+            sx={{ width: 190 }}
+            options={recordersQuery.data ?? []}
+            getOptionLabel={(r) => r.name}
+            isOptionEqualToValue={(o, v) => o.id === v.id}
+            loading={recordersQuery.isLoading}
+            value={recorder}
+            onChange={(_, value) => {
+              setRecorder(value)
+              setPage(0)
+            }}
+            renderInput={(params) => <TextField {...params} label="المستلم" />}
           />
           <TextField
             label="اسم المريض"
