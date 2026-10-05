@@ -1,9 +1,11 @@
+import { useQuery } from '@tanstack/react-query'
 import { Avatar, Card, CardContent, CardHeader, Divider } from '@mui/material'
 import { UserOutlined } from '@ant-design/icons'
 import type { Patient } from '@/types/patient'
 import { DetailGrid } from '@/components/patients/DetailGrid'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { usePatientFieldUpdate } from '@/hooks/usePatientFieldUpdate'
+import { getInsuranceCompanies } from '@/services/insuranceCompanyService'
 
 interface OverviewTabProps {
   patient: Patient
@@ -18,6 +20,11 @@ const GENDER_OPTIONS = [
 
 export function OverviewTab({ patient, editable }: OverviewTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
+  const insuranceCompaniesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies })
+  const insuranceOptions = [
+    { label: 'بدون تأمين', value: '' },
+    ...(insuranceCompaniesQuery.data ?? []).map((company) => ({ label: company.name, value: String(company.id) })),
+  ]
 
   const ageParts = [
     patient.age_year ? `${patient.age_year} سنة` : null,
@@ -98,6 +105,20 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
                   editable={editable}
                   value={patient.address}
                   onSave={(v) => saveField('address', v as string | null)}
+                />
+              ),
+            },
+            {
+              key: 'insurance',
+              label: 'شركة التأمين',
+              value: (
+                <InlineEditableField
+                  editable={editable}
+                  type="select"
+                  options={insuranceOptions}
+                  value={patient.insurance_company_id ? String(patient.insurance_company_id) : null}
+                  displayValue={patient.insurance_company?.name ?? 'بدون تأمين'}
+                  onSave={(v) => saveField('insurance_company_id', v ? Number(v) : null)}
                 />
               ),
             },

@@ -127,7 +127,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
         </Flex>
 
         <Descriptions size="small" column={1} bordered={false}>
-          <Descriptions.Item label="معرف التنويم">{admission.id}</Descriptions.Item>
+          <Descriptions.Item label="رقم الملف">{admission.id}</Descriptions.Item>
           <Descriptions.Item label="الغرفة">
             <PatientLocationButton bed={admission.bed} variant="compact" />
           </Descriptions.Item>

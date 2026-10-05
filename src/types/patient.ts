@@ -1,4 +1,4 @@
-import type { Specialist, TeamRole } from '@/types/admission'
+import type { InsuranceCompany, Specialist, TeamRole } from '@/types/admission'
 
 export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
 
@@ -12,6 +12,8 @@ export interface Patient {
   age_month: number | null
   age_day: number | null
   address: string | null
+  insurance_company_id: number | null
+  insurance_company?: InsuranceCompany | null
   is_local_only: boolean
   emergency_contact_name: string | null
   emergency_contact_relationship: string | null
@@ -34,6 +36,7 @@ export interface UpdatePatientPayload {
   age_month?: number | null
   age_day?: number | null
   address?: string | null
+  insurance_company_id?: number | null
   emergency_contact_name?: string | null
   emergency_contact_relationship?: string | null
   emergency_contact_phone?: string | null

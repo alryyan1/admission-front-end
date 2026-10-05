@@ -19,6 +19,7 @@ import {
   MenuItem,
 } from '@mui/material'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+import { getInsuranceCompanies } from '@/services/insuranceCompanyService'
 import { getAvailableBeds, getFloors, getRooms, getWards } from '@/services/facilityService'
 import {
   searchLocalPatients,
@@ -67,6 +68,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [newPatientPhone, setNewPatientPhone] = useState('')
   const [newPatientGender, setNewPatientGender] = useState<'male' | 'female' | ''>('')
   const [newPatientAgeYear, setNewPatientAgeYear] = useState('')
+  const [newPatientInsuranceCompanyId, setNewPatientInsuranceCompanyId] = useState<string>('')
 
   const [quickAddDoctorOpen, setQuickAddDoctorOpen] = useState(false)
   const [quickAddDoctorTarget, setQuickAddDoctorTarget] = useState<DoctorFieldTarget>('admitting')
@@ -152,6 +154,12 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     },
   })
 
+  const insuranceCompaniesQuery = useQuery({
+    queryKey: ['insurance-companies'],
+    queryFn: getInsuranceCompanies,
+    enabled: createPatientOpen,
+  })
+
   const createPatientMutation = useMutation({
     mutationFn: createLocalPatient,
     onSuccess: (patient) => {
@@ -217,6 +225,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientPhone('')
     setNewPatientGender('')
     setNewPatientAgeYear('')
+    setNewPatientInsuranceCompanyId('')
     setQuickAddDoctorOpen(false)
     setNewDoctorName('')
     setNewDoctorRoleId('')
@@ -259,6 +268,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientPhone('')
     setNewPatientGender('')
     setNewPatientAgeYear('')
+    setNewPatientInsuranceCompanyId('')
     setCreatePatientOpen(true)
   }
 
@@ -269,6 +279,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       phone: newPatientPhone.trim() || undefined,
       gender: newPatientGender || undefined,
       age_year: newPatientAgeYear ? Number(newPatientAgeYear) : undefined,
+      insurance_company_id: newPatientInsuranceCompanyId ? Number(newPatientInsuranceCompanyId) : undefined,
     })
   }
 
@@ -687,6 +698,21 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             value={newPatientAgeYear}
             onChange={(e) => setNewPatientAgeYear(e.target.value)}
           />
+          <TextField
+            select
+            label="شركة التأمين"
+            fullWidth
+            size="small"
+            value={newPatientInsuranceCompanyId}
+            onChange={(e) => setNewPatientInsuranceCompanyId(e.target.value)}
+          >
+            <MenuItem value="">بدون تأمين</MenuItem>
+            {(insuranceCompaniesQuery.data ?? []).map((company) => (
+              <MenuItem key={company.id} value={String(company.id)}>
+                {company.name}
+              </MenuItem>
+            ))}
+          </TextField>
         </Stack>
       </DialogContent>
       <DialogActions>

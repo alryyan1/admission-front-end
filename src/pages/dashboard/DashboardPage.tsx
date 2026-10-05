@@ -81,7 +81,7 @@ export function DashboardPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatTile label="إجمالي الإيرادات" value={formatNumber(financialsQuery.data?.deposits_total ?? 0)} />
+            <StatTile label="إجمالي المدفوع" value={formatNumber(financialsQuery.data?.deposits_total ?? 0)} />
             <StatTile label="إجمالي الاستحقاقات" value={formatNumber(financialsQuery.data?.entitlements_total ?? 0)} />
             <StatTile label="إجمالي المصروفات" value={formatNumber(financialsQuery.data?.expenses_total ?? 0)} />
             <StatTile
@@ -93,17 +93,7 @@ export function DashboardPage() {
 
        
 
-          <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
-            <div>
-              <h2 className="text-sm font-semibold">تقارير مفصّلة حسب الطبيب والقسم</h2>
-              <p className="text-sm text-muted-foreground">
-                إشغال الأجنحة، الأطباء الأكثر استقبالاً للحالات، والعمليات حسب الجراح.
-              </p>
-            </div>
-            <Link to="/statistics" className="text-sm font-medium text-primary underline-offset-4 hover:underline">
-              عرض التقارير الكاملة ←
-            </Link>
-          </Card>
+   
         </>
       )}
     </div>

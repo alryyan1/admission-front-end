@@ -109,6 +109,9 @@ export interface InsuranceCompany {
   id: number
   name: string
   phone: string | null
+  email: string | null
+  /** Decimal string from the API, e.g. "80.00". */
+  coverage_percentage: string | null
 }
 
 export interface OperationTeamMember {

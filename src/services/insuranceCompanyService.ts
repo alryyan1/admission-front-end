@@ -4,6 +4,8 @@ import type { InsuranceCompany } from '@/types/admission'
 export interface InsuranceCompanyPayload {
   name?: string
   phone?: string | null
+  email?: string | null
+  coverage_percentage?: number | null
 }
 
 export async function getInsuranceCompanies(): Promise<InsuranceCompany[]> {
