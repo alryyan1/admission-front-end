@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Tabs, Tab } from '@mui/material'
+import { Tabs, Tab, Alert, Typography } from '@mui/material'
 import { Badge, Button, Flex } from 'antd'
 import { WalletOutlined } from '@ant-design/icons'
 import { AdmissionServicesCard } from '@/components/admissions/AdmissionServicesCard'
 import { AdmissionDepositsDialog } from '@/components/admissions/AdmissionDepositsDialog'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
+import { formatDateTime } from '@/lib/utils'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   addDeposit,
   addOperation,
@@ -28,6 +30,7 @@ interface AdmissionWorkAreaProps {
 /** Middle "main work area" — services and operations management, with payments in a dialog, for the active admission on {@link AdmissionsPage}. */
 export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'services' | 'operations'>('services')
 
@@ -41,6 +44,9 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
     queryFn: getChartOpeningServiceSetting,
   })
 
+  const currentAdmission = admissionQuery.data ?? admission
+  /** Matches the backend's assertMutable(): only admins may change a discharged or cancelled admission. */
+  const isReadOnly = currentAdmission.status !== 'admitted' && user?.role !== 'admin'
   const servicesCount = admissionQuery.data?.requested_services?.length ?? 0
   const operationsCount = admissionQuery.data?.operations?.length ?? 0
   const isFileOpeningFeeAdded = (admissionQuery.data?.requested_services ?? []).some(
@@ -124,24 +130,31 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
   return (
     <>
       <div className="animate-in fade-in duration-300">
-        <Flex gap={8} justify="flex-end" style={{ marginBottom: 12 }}>
-          <Button
-            onClick={handleAddFileOpeningFee}
-            disabled={
-              serviceMutation.isPending ||
-              chartOpeningQuery.isLoading ||
-              !chartOpeningQuery.data?.service ||
-              isFileOpeningFeeAdded
-            }
-          >
-            رسوم فتح الملف
-          </Button>
-          <Button onClick={() => accommodationFeeMutation.mutate()} loading={accommodationFeeMutation.isPending}>
-            رسوم الإقامة
-          </Button>
+        <Flex gap={8} justify="space-between" align="center" style={{ marginBottom: 12 }}>
+          <Flex gap={8}>
+            <Button
+              onClick={handleAddFileOpeningFee}
+              disabled={
+                isReadOnly ||
+                serviceMutation.isPending ||
+                chartOpeningQuery.isLoading ||
+                !chartOpeningQuery.data?.service ||
+                isFileOpeningFeeAdded
+              }
+            >
+              رسوم فتح الملف
+            </Button>
+            <Button
+              onClick={() => accommodationFeeMutation.mutate()}
+              disabled={isReadOnly}
+              loading={accommodationFeeMutation.isPending}
+            >
+              رسوم الإقامة
+            </Button>
+          </Flex>
           <Badge count={admissionQuery.data?.deposits?.length ?? 0} size="small" offset={[-4, 2]}>
             <Button icon={<WalletOutlined />} onClick={() => setPaymentsOpen(true)}>
-              الدفعات
+              المدفوعات
             </Button>
           </Badge>
         </Flex>
@@ -181,6 +194,7 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
             isCalculatingAccommodationFee={accommodationFeeMutation.isPending}
             hasPayments={(admissionQuery.data?.deposits?.length ?? 0) > 0}
             showQuickActions={false}
+            readOnly={isReadOnly}
           />
         )}
 
@@ -192,7 +206,22 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
             onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
             onTeamChanged={invalidateAfterChange}
             isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
+            readOnly={isReadOnly}
           />
+        )}
+
+        {currentAdmission.status === 'cancelled' && (
+          <Alert severity="warning" sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" fontWeight={700}>
+              سبب الإلغاء
+            </Typography>
+            <Typography variant="body2">{currentAdmission.cancellation_reason || '—'}</Typography>
+            {currentAdmission.cancelled_at && (
+              <Typography variant="caption" color="text.secondary">
+                {formatDateTime(currentAdmission.cancelled_at)}
+              </Typography>
+            )}
+          </Alert>
         )}
       </div>
 

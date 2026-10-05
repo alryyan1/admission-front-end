@@ -45,6 +45,8 @@ interface AdmissionServicesCardProps {
   hasPayments?: boolean
   /** Set to false when the host page renders its own "رسوم فتح الملف"/"رسوم الإقامة" quick-add buttons elsewhere (e.g. next to a payments button). Defaults to true. */
   showQuickActions?: boolean
+  /** When true, services can't be added, edited or removed (the admission is discharged or cancelled). */
+  readOnly?: boolean
 }
 
 function parseNumericInput(raw: string, integer?: boolean): number | null {
@@ -112,6 +114,7 @@ export function AdmissionServicesCard({
   isCalculatingAccommodationFee,
   hasPayments = false,
   showQuickActions = true,
+  readOnly = false,
 }: AdmissionServicesCardProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
   const chartOpeningQuery = useQuery({
@@ -159,12 +162,14 @@ export function AdmissionServicesCard({
   return (
     <Card>
       <CardHeader action={
-        <Button variant="contained" onClick={() => setAddDialogOpen(true)}>
-          + إضافة خدمة
-        </Button>
+        readOnly ? undefined : (
+          <Button variant="contained" onClick={() => setAddDialogOpen(true)}>
+            + إضافة خدمة
+          </Button>
+        )
       } title="الخدمات المطلوبة" />
       <CardContent>
-        {showQuickActions && (
+        {showQuickActions && !readOnly && (
           <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
             <Button
               size="small"
@@ -240,7 +245,7 @@ export function AdmissionServicesCard({
                     value={s.quantity}
                     min={1}
                     integer
-                    disabled={isUpdatingService}
+                    disabled={isUpdatingService || readOnly}
                     onCommit={(quantity) => onUpdateService(s.id, { quantity })}
                   />
                 </TableCell>
@@ -249,7 +254,7 @@ export function AdmissionServicesCard({
                     value={Number(s.unit_price)}
                     min={0}
                     currency
-                    disabled={isUpdatingService}
+                    disabled={isUpdatingService || readOnly}
                     onCommit={(unit_price) => onUpdateService(s.id, { unit_price })}
                   />
                 </TableCell>
@@ -257,7 +262,7 @@ export function AdmissionServicesCard({
                 <TableCell align="right">
                   <ConfirmRemoveButton
                     loading={isRemovingService}
-                    disabled={hasPayments}
+                    disabled={hasPayments || readOnly}
                     onConfirm={() => onRemoveService(s.id)}
                   />
                 </TableCell>

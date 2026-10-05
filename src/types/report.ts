@@ -40,3 +40,22 @@ export interface PaymentsReport {
   by_method: PaymentMethodBreakdown[]
   payments: PaymentReportRow[]
 }
+
+export interface DailyRevenuePaymentMethodColumn {
+  key: string
+  name: string
+}
+
+export interface DailyRevenueDay {
+  date: string
+  amounts: Record<string, number>
+  total: number
+}
+
+export interface DailyRevenueReport {
+  month: string
+  range: { from: string; to: string }
+  payment_methods: DailyRevenuePaymentMethodColumn[]
+  days: DailyRevenueDay[]
+  totals: { amounts: Record<string, number>; total: number }
+}

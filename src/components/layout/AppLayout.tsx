@@ -71,7 +71,8 @@ const navItems: NavItem[] = [
 
 const reportsNavItems: NavItem[] = [
   { to: '/statistics', label: 'الإحصائيات' },
-  { to: '/reports/payments', label: 'تقرير المدفوعات', roles: ['admin', 'cashier'] },
+  { to: '/reports/payments', label: 'تقرير المدفوعات تفصيلي', roles: ['admin', 'cashier'] },
+  { to: '/reports/daily-revenue', label: 'الإيراد اليومي', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [
@@ -263,7 +264,7 @@ function AppLayoutContent() {
               style={{ width: 220 }}
             />
             <Select
-              style={{ width: 220 }}
+              style={{ width: 420 }}
               placeholder="الغرفة"
               allowClear
               showSearch

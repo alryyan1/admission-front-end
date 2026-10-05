@@ -28,12 +28,18 @@ import type { PaymentMethod } from '@/types/paymentMethod'
 import type { PaymentRecorder } from '@/types/report'
 
 function toDateInputValue(date: Date): string {
-  return date.toISOString().slice(0, 10)
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
-const now = new Date()
-const DEFAULT_FROM = toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1))
-const DEFAULT_TO = toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0))
+function getCurrentMonthRange(): { from: string; to: string } {
+  const now = new Date()
+  return {
+    from: toDateInputValue(new Date(now.getFullYear(), now.getMonth(), 1)),
+    to: toDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  }
+}
 
 function StatTile({ label, value }: { label: string; value: string }) {
   return (
@@ -49,8 +55,8 @@ function StatTile({ label, value }: { label: string; value: string }) {
 }
 
 export function PaymentsReportPage() {
-  const [from, setFrom] = useState(DEFAULT_FROM)
-  const [to, setTo] = useState(DEFAULT_TO)
+  const [from, setFrom] = useState(() => getCurrentMonthRange().from)
+  const [to, setTo] = useState(() => getCurrentMonthRange().to)
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | null>(null)
   const { user } = useAuth()
   const [recorder, setRecorder] = useState<PaymentRecorder | null>(() =>

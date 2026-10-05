@@ -196,9 +196,19 @@ export function OperationTeamModal({
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         الفريق الطبي
-        <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
-          + إضافة عضو
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            size="small"
+            variant="outlined"
+            loading={addDefaultTeamMutation.isPending}
+            onClick={handleAddDefaultTeam}
+          >
+            + الفريق الافتراضي
+          </Button>
+          <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
+            + إضافة عضو
+          </Button>
+        </Box>
       </DialogTitle>
       <DialogContent>
         <Table size="small" sx={{ mt: 0.5 }}>

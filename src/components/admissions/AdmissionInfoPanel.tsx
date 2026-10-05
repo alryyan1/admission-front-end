@@ -107,7 +107,10 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
       <Card style={{ position: 'sticky', top: 16 }} className="animate-in fade-in slide-in-from-left-4 duration-300">
         <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
           <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
-            <Text strong style={{ fontSize: 18 }}>
+            <Text strong style={{ fontSize: 24, lineHeight: 1.2 }}>
+              رقم الملف: {admission.id ?? '—'}
+            </Text>
+            <Text strong style={{ fontSize: 16 }}>
               {admission.patient?.name}
             </Text>
             <Flex align="center" gap={8}>
@@ -125,15 +128,13 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 title="تعديل بيانات المريض"
               />
             </Flex>
-            <Text type="secondary">
-               رقم الملف: {admission.id ?? '—'} — دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}
-            </Text>
+            <Text type="secondary">دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}</Text>
           </Flex>
           <Button type="text" icon={<CloseOutlined />} onClick={onClear} />
         </Flex>
 
         <Descriptions size="small" column={1} bordered={false}>
-          <Descriptions.Item label="رقم الملف">{admission.id}</Descriptions.Item>
+          {/* <Descriptions.Item label="رقم الملف">{admission.id}</Descriptions.Item> */}
           <Descriptions.Item label="الغرفة">
             <PatientLocationButton bed={admission.bed} variant="compact" />
           </Descriptions.Item>

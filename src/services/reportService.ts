@@ -1,5 +1,5 @@
 import apiClient from '@/services/api'
-import type { PaymentRecorder, PaymentsReport, RevenueCalculatorReport } from '@/types/report'
+import type { DailyRevenueReport, PaymentRecorder, PaymentsReport, RevenueCalculatorReport } from '@/types/report'
 
 /** Relative paths to the server-rendered PDF endpoints (see {@link usePdfPreview}). */
 export const reportPdfPaths = {
@@ -29,5 +29,10 @@ export async function getPaymentsReport(filters: {
 
 export async function getPaymentRecorders(): Promise<PaymentRecorder[]> {
   const { data } = await apiClient.get<PaymentRecorder[]>('/reports/payments/recorders')
+  return data
+}
+
+export async function getDailyRevenueReport(month: string): Promise<DailyRevenueReport> {
+  const { data } = await apiClient.get<DailyRevenueReport>('/reports/daily-revenue', { params: { month } })
   return data
 }
