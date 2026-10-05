@@ -77,9 +77,11 @@ export function AdmissionDepositsCard({
   }
 
   const depositColumns: ColumnsType<AdmissionDeposit> = [
+    { title: 'الكود', key: 'id', render: (_, d) => `#${d.id}` },
     { title: 'التاريخ', key: 'paid_at', render: (_, d) => formatDate(d.paid_at) },
     { title: 'المبلغ', key: 'amount', render: (_, d) => formatNumber(d.amount) },
     { title: 'الطريقة', key: 'method', render: (_, d) => d.payment_method?.name ?? '—' },
+    { title: 'استلمها', key: 'paid_by', render: (_, d) => d.paid_by_name ?? '—' },
     { title: 'ملاحظة', key: 'comment', render: (_, d) => d.comment ?? '—' },
     {
       title: '',

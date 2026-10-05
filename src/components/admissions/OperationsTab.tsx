@@ -88,7 +88,7 @@ export function OperationsTab({
                 <TableCell onClick={(e) => e.stopPropagation()}>
                   <OperationPriceCell operation={op} onCommit={(price) => onUpdate(op.id, { price })} />
                 </TableCell>
-                <TableCell align="right">
+                <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                   <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
                     <Button
                       size="small"

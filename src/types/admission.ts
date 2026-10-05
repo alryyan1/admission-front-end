@@ -78,6 +78,8 @@ export interface AdmissionDeposit {
   payment_method?: PaymentMethod | null
   comment: string | null
   paid_at: string
+  /** Name of the user who recorded the payment. */
+  paid_by_name?: string | null
 }
 
 export interface RequestedService {
