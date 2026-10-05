@@ -30,6 +30,8 @@ interface OperationsTabProps {
   onUpdate: (operationId: number, payload: Partial<OperationFormPayload>) => Promise<unknown>
   onTeamChanged?: () => void
   isSubmitting: boolean
+  /** When true, operations can't be scheduled or edited, and team members can't be changed (the admission is discharged or cancelled). */
+  readOnly?: boolean
 }
 
 /** Operations management card, mirroring {@link AdmissionServicesCard}'s layout. */
@@ -40,6 +42,7 @@ export function OperationsTab({
   onUpdate,
   onTeamChanged,
   isSubmitting,
+  readOnly = false,
 }: OperationsTabProps) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
@@ -50,9 +53,11 @@ export function OperationsTab({
   return (
     <Card>
       <CardHeader action={
-        <Button variant="contained" onClick={() => setScheduleOpen(true)}>
-          + طلب عملية جديدة
-        </Button>
+        readOnly ? undefined : (
+          <Button variant="contained" onClick={() => setScheduleOpen(true)}>
+            + طلب عملية جديدة
+          </Button>
+        )
       } title="العمليات" />
       <CardContent>
         
@@ -86,21 +91,27 @@ export function OperationsTab({
                 </TableCell>
                 <TableCell>{op.surgeon?.name ?? '—'}</TableCell>
                 <TableCell onClick={(e) => e.stopPropagation()}>
-                  <OperationPriceCell operation={op} onCommit={(price) => onUpdate(op.id, { price })} />
+                  <OperationPriceCell
+                    operation={op}
+                    disabled={readOnly}
+                    onCommit={(price) => onUpdate(op.id, { price })}
+                  />
                 </TableCell>
                 <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                   <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<EditOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        setEditingOperation(op)
-                      }}
-                    >
-                      تعديل
-                    </Button>
+                    {!readOnly && (
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<EditOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingOperation(op)
+                        }}
+                      >
+                        تعديل
+                      </Button>
+                    )}
                     <OperationInvoiceButton operation={op} />
                     <Tooltip title="أعضاء الفريق الطبي">
                       <Badge badgeContent={op.team_members?.length ?? 0} color="primary">
@@ -151,6 +162,7 @@ export function OperationsTab({
           existingMembers={teamOperation.team_members ?? []}
           operationPrice={teamOperation.price}
           onAdded={onTeamChanged}
+          readOnly={readOnly}
         />
       )}
     </Card>

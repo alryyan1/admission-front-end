@@ -5,10 +5,11 @@ import type { Operation } from '@/types/admission'
 interface OperationPriceCellProps {
   operation: Operation
   onCommit: (price: number | null) => void
+  disabled?: boolean
 }
 
 /** Inline-editable price cell; commits on blur / Enter when the value changed. */
-export function OperationPriceCell({ operation, onCommit }: OperationPriceCellProps) {
+export function OperationPriceCell({ operation, onCommit, disabled = false }: OperationPriceCellProps) {
   const toNumber = (value: string | null) => (value != null ? Number(value) : null)
   const [draft, setDraft] = useState<number | null>(toNumber(operation.price))
 
@@ -26,6 +27,7 @@ export function OperationPriceCell({ operation, onCommit }: OperationPriceCellPr
       className="amount-input"
       type="number"
       size="small"
+      disabled={disabled}
       placeholder="السعر"
       value={draft ?? ''}
       onChange={(e) => setDraft(e.target.value === '' ? null : Number(e.target.value))}

@@ -42,6 +42,8 @@ interface OperationTeamModalProps {
   /** Operation price (decimal string); caps the sum of entitlement amounts when provided. */
   operationPrice?: string | null
   onAdded?: () => void
+  /** When true, team members can't be added or removed (the admission is discharged or cancelled). */
+  readOnly?: boolean
 }
 
 interface MemberForm {
@@ -121,6 +123,7 @@ export function OperationTeamModal({
   existingMembers = [],
   operationPrice,
   onAdded,
+  readOnly = false,
 }: OperationTeamModalProps) {
   const [addMemberOpen, setAddMemberOpen] = useState(false)
   const teamPdf = usePdfPreview()
@@ -196,19 +199,21 @@ export function OperationTeamModal({
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         الفريق الطبي
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            size="small"
-            variant="outlined"
-            loading={addDefaultTeamMutation.isPending}
-            onClick={handleAddDefaultTeam}
-          >
-            + الفريق الافتراضي
-          </Button>
-          <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
-            + إضافة عضو
-          </Button>
-        </Box>
+        {!readOnly && (
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              size="small"
+              variant="outlined"
+              loading={addDefaultTeamMutation.isPending}
+              onClick={handleAddDefaultTeam}
+            >
+              + الفريق الافتراضي
+            </Button>
+            <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
+              + إضافة عضو
+            </Button>
+          </Box>
+        )}
       </DialogTitle>
       <DialogContent>
         <Table size="small" sx={{ mt: 0.5 }}>
@@ -295,6 +300,7 @@ export function OperationTeamModal({
                   <TableCell align="right">
                     <ConfirmRemoveButton
                       loading={removeMutation.isPending && removeMutation.variables === m.id}
+                      disabled={readOnly}
                       onConfirm={() => removeMutation.mutate(m.id)}
                       description="إزالة هذا العضو؟"
                     />

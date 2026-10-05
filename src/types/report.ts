@@ -59,3 +59,33 @@ export interface DailyRevenueReport {
   days: DailyRevenueDay[]
   totals: { amounts: Record<string, number>; total: number }
 }
+
+export interface DoctorEntitlementDoctorRow {
+  name: string
+  role: string | null
+  operations_count: number
+  total: number
+  paid: number
+  unpaid: number
+}
+
+export interface DoctorEntitlementRow {
+  id: number
+  operation_id: number
+  operation_number: string | null
+  scheduled_at: string | null
+  patient_name: string | null
+  procedure_name: string | null
+  doctor_name: string
+  role: string | null
+  amount: number
+  paid_at: string | null
+  payment_method: string | null
+}
+
+export interface DoctorEntitlementsReport {
+  range: { from: string; to: string }
+  summary: { operations_count: number; total: number; paid: number; unpaid: number }
+  doctors: DoctorEntitlementDoctorRow[]
+  entitlements: DoctorEntitlementRow[]
+}
