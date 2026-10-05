@@ -1,7 +1,17 @@
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ChevronDown, LogOut, Menu as MenuIcon, Moon, Search, Settings, Sun, UserRound } from 'lucide-react'
+import {
+  ChevronDown,
+  FileBarChart2,
+  LogOut,
+  Menu as MenuIcon,
+  Moon,
+  Search,
+  Settings,
+  Sun,
+  UserRound,
+} from 'lucide-react'
 import {
   ConfigProvider,
   Layout,
@@ -57,6 +67,11 @@ const navItems: NavItem[] = [
   { to: '/operations', label: 'العمليات' },
   { to: '/statistics', label: 'الإحصائيات' },
   { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
+]
+
+const reportsNavItems: NavItem[] = [
+  { to: '/statistics', label: 'الإحصائيات' },
+  { to: '/reports/payments', label: 'تقرير المدفوعات', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [
@@ -131,6 +146,9 @@ function AppLayoutContent() {
   }
 
   const visibleNavItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)))
+  const visibleReportsNavItems = reportsNavItems.filter(
+    (item) => !item.roles || (user && item.roles.includes(user.role)),
+  )
 
   const selectedKey =
     visibleNavItems.find((item) =>
@@ -158,6 +176,13 @@ function AppLayoutContent() {
         </div>
       ),
       disabled: true,
+    },
+    { type: 'divider' },
+    {
+      key: 'reports',
+      label: 'التقارير',
+      icon: <FileBarChart2 size={14} />,
+      children: visibleReportsNavItems.map((item) => ({ key: item.to, label: item.label })),
     },
     { type: 'divider' },
     ...(isAdmin

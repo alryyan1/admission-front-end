@@ -192,7 +192,7 @@ export function AdmissionsPage() {
       },
     },
     {
-      title: 'المعرف',
+      title: 'الملف',
       key: 'id',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
