@@ -43,6 +43,7 @@ export async function createLocalPatient(payload: {
   gender?: string
   age_year?: number
   insurance_company_id?: number
+  insurance_card_number?: string
 }): Promise<Patient> {
   const { data } = await apiClient.post<Patient>('/patients', payload)
   return data
@@ -56,6 +57,7 @@ export async function getDoctors(search?: string, roleId?: number): Promise<Doct
 
 export async function createDoctor(payload: {
   name: string
+  phone?: string | null
   specialist_id?: number | null
   role_id: number
 }): Promise<Doctor> {
@@ -65,7 +67,7 @@ export async function createDoctor(payload: {
 
 export async function updateDoctor(
   id: number,
-  payload: Partial<{ name: string; specialist_id: number | null; role_id: number }>,
+  payload: Partial<{ name: string; phone: string | null; specialist_id: number | null; role_id: number }>,
 ): Promise<Doctor> {
   const { data } = await apiClient.patch<Doctor>(`/doctors/${id}`, payload)
   return data

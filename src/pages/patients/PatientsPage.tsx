@@ -33,6 +33,16 @@ export function PatientsPage() {
       render: (_, patient) => (patient.gender ? GENDER_LABEL[patient.gender] ?? patient.gender : '—'),
     },
     { title: 'العنوان', dataIndex: 'address', key: 'address', render: (v) => v ?? '—' },
+    {
+      title: 'شركة التأمين',
+      key: 'insurance_company',
+      render: (_, patient) => patient.insurance_company?.name ?? '—',
+    },
+    {
+      title: 'رقم البطاقة',
+      key: 'insurance_card_number',
+      render: (_, patient) => patient.insurance_card_number ?? '—',
+    },
   ]
 
   return (

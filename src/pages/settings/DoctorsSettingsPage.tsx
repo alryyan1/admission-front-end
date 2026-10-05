@@ -47,6 +47,7 @@ export function DoctorsSettingsPage() {
   const columns: ColumnsType<Doctor> = [
     { title: 'المعرف', dataIndex: 'id', key: 'id', width: 80 },
     { title: 'الاسم', dataIndex: 'name', key: 'name' },
+    { title: 'الهاتف', dataIndex: 'phone', key: 'phone', render: (v) => v ?? '—' },
     { title: 'الدور', key: 'role', render: (_, d) => <Tag>{d.role?.name ?? '—'}</Tag> },
     { title: 'التخصص', key: 'specialist', render: (_, d) => d.specialist?.name ?? '—' },
     {

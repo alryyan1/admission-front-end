@@ -14,7 +14,7 @@ interface DoctorFormModalProps {
   open: boolean
   onClose: () => void
   doctor: Doctor | null
-  onSubmit: (payload: { name: string; specialist_id?: number | null; role_id: number }) => void
+  onSubmit: (payload: { name: string; phone: string | null; specialist_id?: number | null; role_id: number }) => void
   isSubmitting: boolean
 }
 
@@ -31,6 +31,7 @@ function FieldLabel({ label, children }: { label: string; children: React.ReactN
 
 export function DoctorFormModal({ open, onClose, doctor, onSubmit, isSubmitting }: DoctorFormModalProps) {
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
   const [specialistId, setSpecialistId] = useState<number | undefined>(undefined)
   const [roleId, setRoleId] = useState<number | undefined>(undefined)
   const [newSpecialistName, setNewSpecialistName] = useState('')
@@ -57,6 +58,7 @@ export function DoctorFormModal({ open, onClose, doctor, onSubmit, isSubmitting 
   useEffect(() => {
     if (!open) return
     setName(doctor?.name ?? '')
+    setPhone(doctor?.phone ?? '')
     setSpecialistId(doctor?.specialist_id ?? undefined)
     setRoleId(doctor?.role_id)
     setNewSpecialistName('')
@@ -77,6 +79,7 @@ export function DoctorFormModal({ open, onClose, doctor, onSubmit, isSubmitting 
     if (!name.trim() || !roleId) return
     onSubmit({
       name,
+      phone: phone.trim() || null,
       specialist_id: specialistId ?? null,
       role_id: roleId,
     })
@@ -97,6 +100,11 @@ export function DoctorFormModal({ open, onClose, doctor, onSubmit, isSubmitting 
         <Col span={24}>
           <FieldLabel label="الاسم">
             <Input value={name} onChange={(e) => setName(e.target.value)} />
+          </FieldLabel>
+        </Col>
+        <Col span={24}>
+          <FieldLabel label="رقم الهاتف">
+            <Input value={phone} onChange={(e) => setPhone(e.target.value)} />
           </FieldLabel>
         </Col>
         <Col span={24}>

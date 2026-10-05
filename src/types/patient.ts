@@ -13,6 +13,7 @@ export interface Patient {
   age_day: number | null
   address: string | null
   insurance_company_id: number | null
+  insurance_card_number: string | null
   insurance_company?: InsuranceCompany | null
   is_local_only: boolean
   emergency_contact_name: string | null
@@ -37,6 +38,7 @@ export interface UpdatePatientPayload {
   age_day?: number | null
   address?: string | null
   insurance_company_id?: number | null
+  insurance_card_number?: string | null
   emergency_contact_name?: string | null
   emergency_contact_relationship?: string | null
   emergency_contact_phone?: string | null
@@ -65,6 +67,7 @@ export interface JawdaPatientResult {
 export interface Doctor {
   id: number
   name: string
+  phone: string | null
   specialist_id: number | null
   role_id: number
   role?: TeamRole | null

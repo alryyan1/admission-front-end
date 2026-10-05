@@ -69,6 +69,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [newPatientGender, setNewPatientGender] = useState<'male' | 'female' | ''>('')
   const [newPatientAgeYear, setNewPatientAgeYear] = useState('')
   const [newPatientInsuranceCompanyId, setNewPatientInsuranceCompanyId] = useState<string>('')
+  const [newPatientInsuranceCardNumber, setNewPatientInsuranceCardNumber] = useState('')
 
   const [quickAddDoctorOpen, setQuickAddDoctorOpen] = useState(false)
   const [quickAddDoctorTarget, setQuickAddDoctorTarget] = useState<DoctorFieldTarget>('admitting')
@@ -226,6 +227,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientGender('')
     setNewPatientAgeYear('')
     setNewPatientInsuranceCompanyId('')
+    setNewPatientInsuranceCardNumber('')
     setQuickAddDoctorOpen(false)
     setNewDoctorName('')
     setNewDoctorRoleId('')
@@ -269,6 +271,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientGender('')
     setNewPatientAgeYear('')
     setNewPatientInsuranceCompanyId('')
+    setNewPatientInsuranceCardNumber('')
     setCreatePatientOpen(true)
   }
 
@@ -280,6 +283,10 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       gender: newPatientGender || undefined,
       age_year: newPatientAgeYear ? Number(newPatientAgeYear) : undefined,
       insurance_company_id: newPatientInsuranceCompanyId ? Number(newPatientInsuranceCompanyId) : undefined,
+      insurance_card_number:
+        newPatientInsuranceCompanyId && newPatientInsuranceCardNumber.trim()
+          ? newPatientInsuranceCardNumber.trim()
+          : undefined,
     })
   }
 
@@ -698,21 +705,31 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
             value={newPatientAgeYear}
             onChange={(e) => setNewPatientAgeYear(e.target.value)}
           />
-          <TextField
-            select
-            label="شركة التأمين"
-            fullWidth
-            size="small"
-            value={newPatientInsuranceCompanyId}
-            onChange={(e) => setNewPatientInsuranceCompanyId(e.target.value)}
-          >
-            <MenuItem value="">بدون تأمين</MenuItem>
-            {(insuranceCompaniesQuery.data ?? []).map((company) => (
-              <MenuItem key={company.id} value={String(company.id)}>
-                {company.name}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Autocomplete
+            options={insuranceCompaniesQuery.data ?? []}
+            getOptionLabel={(company) => company.name}
+            isOptionEqualToValue={(option, value) => option.id === value.id}
+            loading={insuranceCompaniesQuery.isLoading}
+            noOptionsText="لا توجد شركات تأمين"
+            value={
+              (insuranceCompaniesQuery.data ?? []).find((company) => String(company.id) === newPatientInsuranceCompanyId) ??
+              null
+            }
+            onChange={(_, company) => {
+              setNewPatientInsuranceCompanyId(company ? String(company.id) : '')
+              if (!company) setNewPatientInsuranceCardNumber('')
+            }}
+            renderInput={(params) => <TextField {...params} label="شركة التأمين" size="small" />}
+          />
+          {newPatientInsuranceCompanyId && (
+            <TextField
+              label="رقم البطاقة"
+              fullWidth
+              size="small"
+              value={newPatientInsuranceCardNumber}
+              onChange={(e) => setNewPatientInsuranceCardNumber(e.target.value)}
+            />
+          )}
         </Stack>
       </DialogContent>
       <DialogActions>

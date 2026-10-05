@@ -122,6 +122,21 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
                 />
               ),
             },
+            ...(patient.insurance_company_id
+              ? [
+                  {
+                    key: 'insurance_card_number',
+                    label: 'رقم البطاقة',
+                    value: (
+                      <InlineEditableField
+                        editable={editable}
+                        value={patient.insurance_card_number}
+                        onSave={(v) => saveField('insurance_card_number', v as string | null)}
+                      />
+                    ),
+                  },
+                ]
+              : []),
             {
               key: 'source',
               label: 'مصدر الملف',

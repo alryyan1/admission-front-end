@@ -151,7 +151,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           {admission.diagnosis && <Descriptions.Item label="التشخيص">{admission.diagnosis}</Descriptions.Item>}
         </Descriptions>
 
-        {(admission.patient?.phone || admission.patient?.age_year != null || admission.patient?.gender || admission.patient?.blood_type) && (
+        {(admission.patient?.phone || admission.patient?.age_year != null || admission.patient?.gender || admission.patient?.blood_type || admission.patient?.insurance_card_number) && (
           <>
             <Divider style={{ margin: '8px 0' }} titlePlacement="right" plain>
               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -176,6 +176,9 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 <Descriptions.Item label="فصيلة الدم">
                   <Tag color="red">{admission.patient.blood_type}</Tag>
                 </Descriptions.Item>
+              )}
+              {admission.patient?.insurance_card_number && (
+                <Descriptions.Item label="رقم البطاقة">{admission.patient.insurance_card_number}</Descriptions.Item>
               )}
             </Descriptions>
           </>
