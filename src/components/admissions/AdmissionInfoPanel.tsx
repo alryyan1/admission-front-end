@@ -12,6 +12,7 @@ import {
   FileDoneOutlined,
   AccountBookOutlined,
   ProfileOutlined,
+  HeartFilled,
 } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
@@ -111,6 +112,11 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
             </Text>
             <Flex align="center" gap={8}>
               <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
+              {admission.patient?.insurance_company && (
+                <Tag color="red" icon={<HeartFilled />}>
+                  {admission.patient.insurance_company.name}
+                </Tag>
+              )}
               <Button
                 size="small"
                 type="text"

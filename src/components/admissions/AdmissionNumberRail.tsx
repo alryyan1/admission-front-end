@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Card, Flex, Tooltip, Typography, theme as antdThemeApi } from 'antd'
 import type { GlobalToken } from 'antd/es/theme/interface'
-import { CheckCircleFilled, DollarCircleFilled } from '@ant-design/icons'
+import { CheckCircleFilled, DollarCircleFilled, HeartFilled } from '@ant-design/icons'
 import type { Admission, AdmissionStatus } from '@/types/admission'
 import { formatNumber } from '@/lib/utils'
 import dayjs from 'dayjs'
@@ -95,6 +95,30 @@ export function AdmissionBalanceBadge({ admission }: { admission: Admission }) {
   )
 }
 
+/** Red heart on the opposite corner of the square when the patient is covered by an insurance company. */
+export function AdmissionInsuranceBadge({ admission }: { admission: Admission }) {
+  const { token } = antdThemeApi.useToken()
+  const insuranceCompanyId = admission.patient?.insurance_company_id
+  if (!insuranceCompanyId) return null
+
+  const companyName = admission.patient?.insurance_company?.name
+  return (
+    <Tooltip title={companyName ? `تأمين: ${companyName}` : 'مريض تأمين'}>
+      <HeartFilled
+        style={{
+          position: 'absolute',
+          top: -5,
+          insetInlineStart: -5,
+          fontSize: 14,
+          color: token.colorError,
+          background: token.colorBgContainer,
+          borderRadius: '50%',
+        }}
+      />
+    </Tooltip>
+  )
+}
+
 /** Right-column compact rail of admission-number squares on {@link AdmissionsPage}. */
 export function AdmissionNumberRail({ admissions, activeId, onSelect }: AdmissionNumberRailProps) {
   const { token } = antdThemeApi.useToken()
@@ -171,6 +195,7 @@ export function AdmissionNumberRail({ admissions, activeId, onSelect }: Admissio
                   </button>
                 </Tooltip>
                 <AdmissionBalanceBadge admission={admission} />
+                <AdmissionInsuranceBadge admission={admission} />
               </div>
             </div>
           )

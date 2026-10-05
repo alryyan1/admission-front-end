@@ -12,6 +12,7 @@ import { RevenueCalculatorDialog } from '@/components/admissions/RevenueCalculat
 import {
   ADMISSION_SQUARE_SIZE,
   AdmissionBalanceBadge,
+  AdmissionInsuranceBadge,
   AdmissionNumberRail,
   getAdmissionSquareStyle,
 } from '@/components/admissions/AdmissionNumberRail'
@@ -185,6 +186,7 @@ export function AdmissionsPage() {
                 <Flex style={getAdmissionSquareStyle(token, row.status)}>{v ?? '—'}</Flex>
               </Tooltip>
               <AdmissionBalanceBadge admission={row} />
+              <AdmissionInsuranceBadge admission={row} />
             </div>
           ),
           props: {},
