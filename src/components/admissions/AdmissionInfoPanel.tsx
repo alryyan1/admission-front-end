@@ -136,11 +136,15 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
         <Descriptions size="small" column={1} bordered={false}>
           {/* <Descriptions.Item label="رقم الملف">{admission.id}</Descriptions.Item> */}
           <Descriptions.Item label="الغرفة">
-            <PatientLocationButton bed={admission.bed} variant="compact" />
+            <PatientLocationButton
+              bed={admission.bed}
+              variant="compact"
+              bedAdmissionId={admission.status === 'admitted' ? admission.id : undefined}
+            />
           </Descriptions.Item>
-          <Descriptions.Item label="الطبيب المعالج">{admission.admitting_doctor?.name ?? '—'}</Descriptions.Item>
-          {admission.referred_by_doctor && (
-            <Descriptions.Item label="محول من">{admission.referred_by_doctor.name}</Descriptions.Item>
+          <Descriptions.Item label="الطبيب المعالج">{admission.patient?.admitting_doctor?.name ?? '—'}</Descriptions.Item>
+          {admission.patient?.referred_by_doctor && (
+            <Descriptions.Item label="محول من">{admission.patient.referred_by_doctor.name}</Descriptions.Item>
           )}
           <Descriptions.Item label="مدة الإقامة">
             {(() => {
@@ -301,12 +305,12 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
               }
             />
           </Tooltip>
-          <Tooltip title="طباعة ملخص التنويم">
+          <Tooltip title="طباعة ملف التنويم">
             <Button
               icon={<ProfileOutlined />}
               loading={summaryPdf.isLoading('summary')}
               onClick={() =>
-                summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملخص التنويم', 'summary')
+                summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملف التنويم', 'summary')
               }
             />
           </Tooltip>

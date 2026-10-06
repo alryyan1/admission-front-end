@@ -3,16 +3,23 @@ import type { Doctor, Patient } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
 
 export type AdmissionStatus = 'admitted' | 'discharged' | 'cancelled'
-export type AdmissionType = 'inpatient'
+export type AdmissionEntryType = 'emergency' | 'clinic_referral' | 'hospital_transfer' | 'scheduled'
+
+export const ADMISSION_ENTRY_TYPE_LABELS: Record<AdmissionEntryType, string> = {
+  emergency: 'طوارئ',
+  clinic_referral: 'تحويل من عيادة',
+  hospital_transfer: 'تحويل من مستشفى آخر',
+  scheduled: 'دخول مجدول',
+}
 
 export interface Admission {
   id: number
   patient_id: number
-  bed_id: number
-  admitting_doctor_id: number | null
-  referred_by_doctor_id: number | null
+  /** Null until a bed is assigned (admissions can be registered without one). */
+  bed_id: number | null
   admission_number: string | null
-  admission_type: AdmissionType | null
+  entry_type: AdmissionEntryType | null
+  referring_hospital_name: string | null
   admission_date: string
   discharge_date: string | null
   status: AdmissionStatus
@@ -22,9 +29,7 @@ export interface Admission {
   cancellation_reason: string | null
   cancelled_at: string | null
   patient?: Patient
-  bed?: Bed
-  admitting_doctor?: Doctor | null
-  referred_by_doctor?: Doctor | null
+  bed?: Bed | null
   vital_signs?: VitalSign[]
   doctor_orders?: DoctorOrder[]
   deposits?: AdmissionDeposit[]

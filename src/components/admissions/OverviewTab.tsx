@@ -1,6 +1,6 @@
 import { Card, Descriptions, Row, Col, Tag, Typography } from 'antd'
 import { formatDateTime } from '@/lib/utils'
-import type { Admission } from '@/types/admission'
+import { ADMISSION_ENTRY_TYPE_LABELS, type Admission } from '@/types/admission'
 
 const { Text } = Typography
 
@@ -9,7 +9,7 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ admission }: OverviewTabProps) {
-  const admissionTypeLabel = admission.admission_type === 'inpatient' ? 'تنويم كامل' : '—'
+  const entryTypeLabel = admission.entry_type ? ADMISSION_ENTRY_TYPE_LABELS[admission.entry_type] : '—'
 
   const ward = admission.bed?.room?.ward
 
@@ -25,7 +25,7 @@ export function OverviewTab({ admission }: OverviewTabProps) {
               { key: 'ward', label: 'القسم', children: ward?.name ?? '—' },
               { key: 'room', label: 'الغرفة', children: admission.bed?.room?.room_number ?? '—' },
               { key: 'bed', label: 'السرير', children: admission.bed?.bed_number ?? '—' },
-              { key: 'doctor', label: 'الطبيب المعالج', children: admission.admitting_doctor?.name ?? '—' },
+              { key: 'doctor', label: 'الطبيب المعالج', children: admission.patient?.admitting_doctor?.name ?? '—' },
             ]}
           />
         </Card>
@@ -38,7 +38,10 @@ export function OverviewTab({ admission }: OverviewTabProps) {
             size="small"
             items={[
               { key: 'number', label: 'رقم التنويم', children: admission.admission_number ?? '—' },
-              { key: 'type', label: 'نوع التنويم', children: admissionTypeLabel },
+              { key: 'entry_type', label: 'نوع الدخول', children: entryTypeLabel },
+              ...(admission.entry_type === 'hospital_transfer'
+                ? [{ key: 'referring_hospital', label: 'المستشفى المحوِّل', children: admission.referring_hospital_name ?? '—' }]
+                : []),
               { key: 'admitted_at', label: 'تاريخ الدخول', children: formatDateTime(admission.admission_date) },
               {
                 key: 'discharged_at',

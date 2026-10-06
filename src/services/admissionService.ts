@@ -1,6 +1,7 @@
 import apiClient from '@/services/api'
 import type {
   Admission,
+  AdmissionEntryType,
   AdmissionDeposit,
   AdmissionInvoice,
   AdmissionStatus,
@@ -50,8 +51,8 @@ export async function getAdmission(id: number): Promise<Admission> {
 export async function createAdmission(payload: {
   patient_id: number
   bed_id: number
-  admitting_doctor_id?: number | null
-  referred_by_doctor_id?: number | null
+  entry_type?: AdmissionEntryType | null
+  referring_hospital_name?: string | null
   diagnosis?: string
   admission_notes?: string
 }): Promise<Admission> {
@@ -59,11 +60,26 @@ export async function createAdmission(payload: {
   return data
 }
 
+/** Creates an active admission for a patient without a bed or doctor. */
+export async function registerAdmission(patientId: number): Promise<Admission> {
+  const { data } = await apiClient.post<Admission>('/admissions/register', { patient_id: patientId })
+  return data
+}
+
+export async function assignAdmissionBed(id: number, bedId: number): Promise<Admission> {
+  const { data } = await apiClient.patch<Admission>(`/admissions/${id}/bed`, { bed_id: bedId })
+  return data
+}
+
+/** Clears the bed from an active admission, leaving the admission without a bed. */
+export async function releaseAdmissionBed(id: number): Promise<Admission> {
+  const { data } = await apiClient.delete<Admission>(`/admissions/${id}/bed`)
+  return data
+}
+
 export async function updateAdmission(
   id: number,
   payload: Partial<{
-    admitting_doctor_id: number | null
-    referred_by_doctor_id: number | null
     diagnosis: string | null
     admission_notes: string | null
   }>,

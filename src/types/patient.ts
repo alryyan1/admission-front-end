@@ -15,6 +15,10 @@ export interface Patient {
   insurance_company_id: number | null
   insurance_card_number: string | null
   insurance_company?: InsuranceCompany | null
+  admitting_doctor_id: number | null
+  referred_by_doctor_id: number | null
+  admitting_doctor?: Doctor | null
+  referred_by_doctor?: Doctor | null
   is_local_only: boolean
   emergency_contact_name: string | null
   emergency_contact_relationship: string | null
@@ -39,6 +43,8 @@ export interface UpdatePatientPayload {
   address?: string | null
   insurance_company_id?: number | null
   insurance_card_number?: string | null
+  admitting_doctor_id?: number | null
+  referred_by_doctor_id?: number | null
   emergency_contact_name?: string | null
   emergency_contact_relationship?: string | null
   emergency_contact_phone?: string | null

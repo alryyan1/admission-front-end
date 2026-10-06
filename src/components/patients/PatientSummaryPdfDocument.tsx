@@ -213,7 +213,7 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
               render: (a) =>
                 `${a.bed?.room?.ward?.name ?? ''} — غرفة ${a.bed?.room?.room_number ?? ''} — سرير ${a.bed?.bed_number ?? ''}`,
             },
-            { header: 'الطبيب المعالج', width: '20%', render: (a) => a.admitting_doctor?.name ?? '—' },
+            { header: 'الطبيب المعالج', width: '20%', render: (a) => a.patient?.admitting_doctor?.name ?? '—' },
             { header: 'تاريخ الدخول', width: '20%', render: (a) => formatDateTime(a.admission_date) },
             { header: 'الحالة', width: '14%', render: (a) => STATUS_LABEL[a.status] ?? a.status },
           ]}

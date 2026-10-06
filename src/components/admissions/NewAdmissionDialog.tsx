@@ -26,25 +26,17 @@ import {
   searchJawdaPatients,
   importJawdaPatient,
   createLocalPatient,
-  getDoctors,
-  createDoctor,
 } from '@/services/patientService'
 import { getRoomTypes } from '@/services/roomTypeService'
 import { getRoomTypeName } from '@/lib/roomTypes'
-import { getTeamRoles } from '@/services/teamRoleService'
-import { createSpecialist, getSpecialists } from '@/services/specialistService'
 import { createAdmission } from '@/services/admissionService'
-import type { Patient, JawdaPatientResult, Doctor } from '@/types/patient'
-import type { Specialist } from '@/types/admission'
+import type { Patient, JawdaPatientResult } from '@/types/patient'
+import { ADMISSION_ENTRY_TYPE_LABELS, type AdmissionEntryType } from '@/types/admission'
 
 type PatientSearchOption =
   | { kind: 'local'; patient: Patient }
   | { kind: 'jawda'; patient: JawdaPatientResult }
   | { kind: 'create'; name: string }
-
-type DoctorSearchOption = { kind: 'doctor'; doctor: Doctor } | { kind: 'create'; name: string }
-type DoctorFieldTarget = 'admitting' | 'referral'
-type SpecialistSearchOption = { kind: 'specialist'; specialist: Specialist } | { kind: 'create'; name: string }
 
 export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const queryClient = useQueryClient()
@@ -56,12 +48,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [wardId, setWardId] = useState<number | ''>('')
   const [roomId, setRoomId] = useState<number | ''>('')
   const [bedId, setBedId] = useState<number | ''>('')
-  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null)
-  const [doctorSearch, setDoctorSearch] = useState('')
-  const debouncedDoctorSearch = useDebouncedValue(doctorSearch, 400)
-  const [referralDoctor, setReferralDoctor] = useState<Doctor | null>(null)
-  const [referralDoctorSearch, setReferralDoctorSearch] = useState('')
-  const debouncedReferralDoctorSearch = useDebouncedValue(referralDoctorSearch, 400)
+  const [entryType, setEntryType] = useState<AdmissionEntryType | ''>('')
+  const [referringHospitalName, setReferringHospitalName] = useState('')
 
   const [createPatientOpen, setCreatePatientOpen] = useState(false)
   const [newPatientName, setNewPatientName] = useState('')
@@ -71,24 +59,14 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const [newPatientInsuranceCompanyId, setNewPatientInsuranceCompanyId] = useState<string>('')
   const [newPatientInsuranceCardNumber, setNewPatientInsuranceCardNumber] = useState('')
 
-  const [quickAddDoctorOpen, setQuickAddDoctorOpen] = useState(false)
-  const [quickAddDoctorTarget, setQuickAddDoctorTarget] = useState<DoctorFieldTarget>('admitting')
-  const [newDoctorName, setNewDoctorName] = useState('')
-  const [newDoctorRoleId, setNewDoctorRoleId] = useState<number | ''>('')
-  const [newDoctorSpecialistId, setNewDoctorSpecialistId] = useState<number | ''>('')
-  const [newDoctorSpecialistSearch, setNewDoctorSpecialistSearch] = useState('')
-
   const floorInputRef = useRef<HTMLInputElement>(null)
   const wardInputRef = useRef<HTMLInputElement>(null)
   const roomInputRef = useRef<HTMLInputElement>(null)
   const bedInputRef = useRef<HTMLInputElement>(null)
-  const doctorInputRef = useRef<HTMLInputElement>(null)
-  const referralDoctorInputRef = useRef<HTMLInputElement>(null)
   const newPatientNameInputRef = useRef<HTMLInputElement>(null)
   const newPatientPhoneInputRef = useRef<HTMLInputElement>(null)
   const newPatientGenderInputRef = useRef<HTMLInputElement>(null)
   const newPatientAgeInputRef = useRef<HTMLInputElement>(null)
-  const newDoctorNameInputRef = useRef<HTMLInputElement>(null)
 
   function focusField(ref: React.RefObject<HTMLElement | null>) {
     setTimeout(() => ref.current?.focus(), 50)
@@ -133,18 +111,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryFn: () => getAvailableBeds(roomId as number),
     enabled: open && roomId !== '',
   })
-  const doctorsQuery = useQuery({
-    queryKey: ['doctors', debouncedDoctorSearch],
-    queryFn: () => getDoctors(debouncedDoctorSearch),
-    enabled: open,
-  })
-  const referralDoctorsQuery = useQuery({
-    queryKey: ['doctors', 'referral', debouncedReferralDoctorSearch],
-    queryFn: () => getDoctors(debouncedReferralDoctorSearch),
-    enabled: open,
-  })
-  const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles, enabled: quickAddDoctorOpen })
-  const specialistsQuery = useQuery({ queryKey: ['specialists'], queryFn: getSpecialists, enabled: quickAddDoctorOpen })
 
   const importMutation = useMutation({
     mutationFn: importJawdaPatient,
@@ -172,34 +138,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     },
   })
 
-  const createDoctorMutation = useMutation({
-    mutationFn: createDoctor,
-    onSuccess: (doctor) => {
-      toast.success('تم إضافة الطبيب')
-      queryClient.invalidateQueries({ queryKey: ['doctors'] })
-      if (quickAddDoctorTarget === 'admitting') {
-        setSelectedDoctor(doctor)
-        setDoctorSearch('')
-        focusField(referralDoctorInputRef)
-      } else {
-        setReferralDoctor(doctor)
-        setReferralDoctorSearch('')
-      }
-      setQuickAddDoctorOpen(false)
-    },
-  })
-
-  const createSpecialistMutation = useMutation({
-    mutationFn: createSpecialist,
-    onSuccess: (specialist: Specialist) => {
-      queryClient.setQueryData<Specialist[]>(['specialists'], (prev) =>
-        prev ? [...prev, specialist].sort((a, b) => a.name.localeCompare(b.name)) : [specialist],
-      )
-      setNewDoctorSpecialistId(specialist.id)
-      setNewDoctorSpecialistSearch(specialist.name)
-    },
-  })
-
   const admitMutation = useMutation({
     mutationFn: createAdmission,
     onSuccess: () => {
@@ -217,10 +155,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setWardId('')
     setRoomId('')
     setBedId('')
-    setSelectedDoctor(null)
-    setDoctorSearch('')
-    setReferralDoctor(null)
-    setReferralDoctorSearch('')
+    setEntryType('')
+    setReferringHospitalName('')
     setCreatePatientOpen(false)
     setNewPatientName('')
     setNewPatientPhone('')
@@ -228,20 +164,8 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     setNewPatientAgeYear('')
     setNewPatientInsuranceCompanyId('')
     setNewPatientInsuranceCardNumber('')
-    setQuickAddDoctorOpen(false)
-    setNewDoctorName('')
-    setNewDoctorRoleId('')
-    setNewDoctorSpecialistId('')
-    setNewDoctorSpecialistSearch('')
     onClose()
   }
-
-  /** Default a fresh quick-add doctor to "surgeon", the most common role, once roles are loaded. */
-  useEffect(() => {
-    if (!quickAddDoctorOpen || newDoctorRoleId !== '') return
-    const surgeonRoleId = teamRolesQuery.data?.find((role) => role.slug === 'surgeon')?.id
-    if (surgeonRoleId !== undefined) setNewDoctorRoleId(surgeonRoleId)
-  }, [quickAddDoctorOpen, newDoctorRoleId, teamRolesQuery.data])
 
   /** Pressing "+" again while this dialog is already open jumps straight to "إضافة مريض جديد". */
   useEffect(() => {
@@ -290,33 +214,18 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     })
   }
 
-  function openQuickAddDoctor(name: string, target: DoctorFieldTarget) {
-    setNewDoctorName(name.trim())
-    setNewDoctorRoleId('')
-    setNewDoctorSpecialistId('')
-    setNewDoctorSpecialistSearch('')
-    setQuickAddDoctorTarget(target)
-    setQuickAddDoctorOpen(true)
-  }
-
-  function handleCreateDoctorSubmit() {
-    if (!newDoctorName.trim() || !newDoctorRoleId) return
-    createDoctorMutation.mutate({
-      name: newDoctorName.trim(),
-      specialist_id: newDoctorSpecialistId || null,
-      role_id: Number(newDoctorRoleId),
-    })
-  }
-
   const selectedBed = bedsQuery.data?.find((bed) => bed.id === bedId)
 
+  const isHospitalTransfer = entryType === 'hospital_transfer'
+  const isReferringHospitalMissing = isHospitalTransfer && !referringHospitalName.trim()
+
   function handleSubmit() {
-    if (!selectedPatient || !bedId) return
+    if (!selectedPatient || !bedId || isReferringHospitalMissing) return
     admitMutation.mutate({
       patient_id: selectedPatient.id,
       bed_id: Number(bedId),
-      admitting_doctor_id: selectedDoctor ? selectedDoctor.id : null,
-      referred_by_doctor_id: referralDoctor ? referralDoctor.id : null,
+      entry_type: entryType || null,
+      referring_hospital_name: isHospitalTransfer ? referringHospitalName.trim() : null,
     })
   }
 
@@ -331,50 +240,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const selectedFloor = floorsQuery.data?.find((floor) => floor.id === floorId) ?? null
   const selectedWard = wardsQuery.data?.find((ward) => ward.id === wardId) ?? null
   const selectedRoom = roomsQuery.data?.find((room) => room.id === roomId) ?? null
-
-  const canOfferCreateDoctor = debouncedDoctorSearch.trim().length >= 2 && !doctorsQuery.isFetching
-  const doctorOptions: DoctorSearchOption[] = [
-    ...(doctorsQuery.data ?? []).map((doctor) => ({ kind: 'doctor' as const, doctor })),
-    ...(canOfferCreateDoctor ? [{ kind: 'create' as const, name: doctorSearch }] : []),
-  ]
-
-  const canOfferCreateReferralDoctor =
-    debouncedReferralDoctorSearch.trim().length >= 2 && !referralDoctorsQuery.isFetching
-  const referralDoctorOptions: DoctorSearchOption[] = [
-    ...(referralDoctorsQuery.data ?? []).map((doctor) => ({ kind: 'doctor' as const, doctor })),
-    ...(canOfferCreateReferralDoctor ? [{ kind: 'create' as const, name: referralDoctorSearch }] : []),
-  ]
-
-  const specialists = specialistsQuery.data ?? []
-  const selectedNewDoctorSpecialist = specialists.find((specialist) => specialist.id === newDoctorSpecialistId) ?? null
-  const specialistSearchTerm = newDoctorSpecialistSearch.trim()
-  const hasExactSpecialistMatch = specialists.some(
-    (specialist) => specialist.name.trim().toLowerCase() === specialistSearchTerm.toLowerCase(),
-  )
-  const specialistOptions: SpecialistSearchOption[] = [
-    ...specialists
-      .filter((specialist) => specialist.name.toLowerCase().includes(specialistSearchTerm.toLowerCase()))
-      .map((specialist) => ({ kind: 'specialist' as const, specialist })),
-    ...(specialistSearchTerm.length >= 2 && !hasExactSpecialistMatch
-      ? [{ kind: 'create' as const, name: specialistSearchTerm }]
-      : []),
-  ]
-
-  function renderDoctorOption(props: React.HTMLAttributes<HTMLLIElement> & { key?: React.Key }, option: DoctorSearchOption) {
-    const { key, ...optionProps } = props
-    if (option.kind === 'create') {
-      return (
-        <li key={key} {...optionProps}>
-          <ListItemText primary={`+ إضافة "${option.name}" كطبيب جديد`} />
-        </li>
-      )
-    }
-    return (
-      <li key={key} {...optionProps}>
-        <ListItemText primary={option.doctor.name} secondary={option.doctor.specialist?.name} />
-      </li>
-    )
-  }
 
   return (
     <>
@@ -440,7 +305,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
                   {...params}
                   id="patient-search"
                   label="ابحث عن مريض موجود بالاسم او رقم الهاتف"
-                  
+
                   slotProps={{
                     ...params.slotProps,
                     input: {
@@ -533,104 +398,41 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
               value={selectedBed ?? null}
               onChange={(_, bed) => {
                 setBedId(bed ? bed.id : '')
-                if (bed) focusField(doctorInputRef)
               }}
               renderInput={(params) => <TextField {...params} label="السرير" inputRef={bedInputRef} />}
             />
           </Box>
 
-          <Autocomplete
+          <TextField
+            select
             fullWidth
             size="small"
-            options={doctorOptions}
-            filterOptions={(options) => options}
-            loading={doctorsQuery.isFetching}
-            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.doctor.name)}
-            isOptionEqualToValue={(option, value) =>
-              option.kind === 'doctor' && value.kind === 'doctor' && option.doctor.id === value.doctor.id
-            }
-            renderOption={renderDoctorOption}
-            value={selectedDoctor ? { kind: 'doctor' as const, doctor: selectedDoctor } : null}
-            inputValue={doctorSearch}
-            onInputChange={(_, value) => setDoctorSearch(value)}
-            onChange={(_, option) => {
-              if (!option) {
-                setSelectedDoctor(null)
-                return
-              }
-              if (option.kind === 'create') {
-                openQuickAddDoctor(option.name, 'admitting')
-                return
-              }
-              setSelectedDoctor(option.doctor)
-              focusField(referralDoctorInputRef)
+            label="نوع الدخول (اختياري)"
+            value={entryType}
+            onChange={(event) => {
+              const value = event.target.value as AdmissionEntryType | ''
+              setEntryType(value)
+              if (value !== 'hospital_transfer') setReferringHospitalName('')
             }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="  الطبيب المعالج"
-                inputRef={doctorInputRef}
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps.input,
-                    endAdornment: (
-                      <>
-                        {doctorsQuery.isFetching ? <CircularProgress color="inherit" size={16} /> : null}
-                        {params.slotProps.input.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-          />
+          >
+            <MenuItem value="">غير محدد</MenuItem>
+            {(Object.keys(ADMISSION_ENTRY_TYPE_LABELS) as AdmissionEntryType[]).map((key) => (
+              <MenuItem key={key} value={key}>
+                {ADMISSION_ENTRY_TYPE_LABELS[key]}
+              </MenuItem>
+            ))}
+          </TextField>
 
-          <Autocomplete
-            fullWidth
-            size="small"
-            options={referralDoctorOptions}
-            filterOptions={(options) => options}
-            loading={referralDoctorsQuery.isFetching}
-            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.doctor.name)}
-            isOptionEqualToValue={(option, value) =>
-              option.kind === 'doctor' && value.kind === 'doctor' && option.doctor.id === value.doctor.id
-            }
-            renderOption={renderDoctorOption}
-            value={referralDoctor ? { kind: 'doctor' as const, doctor: referralDoctor } : null}
-            inputValue={referralDoctorSearch}
-            onInputChange={(_, value) => setReferralDoctorSearch(value)}
-            onChange={(_, option) => {
-              if (!option) {
-                setReferralDoctor(null)
-                return
-              }
-              if (option.kind === 'create') {
-                openQuickAddDoctor(option.name, 'referral')
-                return
-              }
-              setReferralDoctor(option.doctor)
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="الطبيب المحوِّل"
-                inputRef={referralDoctorInputRef}
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps.input,
-                    endAdornment: (
-                      <>
-                        {referralDoctorsQuery.isFetching ? <CircularProgress color="inherit" size={16} /> : null}
-                        {params.slotProps.input.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-          />
+          {isHospitalTransfer ? (
+            <TextField
+              fullWidth
+              size="small"
+              required
+              label="اسم المستشفى المحوِّل"
+              value={referringHospitalName}
+              onChange={(event) => setReferringHospitalName(event.target.value)}
+            />
+          ) : null}
         </Stack>
       </DialogContent>
 
@@ -639,7 +441,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
         <Button
           variant="contained"
           onClick={handleSubmit}
-          disabled={!selectedPatient || !bedId || admitMutation.isPending}
+          disabled={!selectedPatient || !bedId || isReferringHospitalMissing || admitMutation.isPending}
         >
           تنويم
         </Button>
@@ -739,124 +541,6 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
           form="create-patient-form"
           variant="contained"
           disabled={!newPatientName.trim() || createPatientMutation.isPending}
-        >
-          إضافة
-        </Button>
-      </DialogActions>
-    </Dialog>
-
-    <Dialog
-      open={quickAddDoctorOpen}
-      onClose={() => setQuickAddDoctorOpen(false)}
-      fullWidth
-      maxWidth="xs"
-      slotProps={{ transition: { onEntered: () => newDoctorNameInputRef.current?.focus() } }}
-    >
-      <DialogTitle>إضافة طبيب جديد</DialogTitle>
-      <DialogContent>
-        <Stack
-          component="form"
-          id="create-doctor-form"
-          onSubmit={(e) => {
-            e.preventDefault()
-            handleCreateDoctorSubmit()
-          }}
-          spacing={2.5}
-          sx={{ pt: 1 }}
-        >
-          <TextField
-            inputRef={newDoctorNameInputRef}
-            label="اسم الطبيب"
-            fullWidth
-            size="small"
-            value={newDoctorName}
-            onChange={(e) => setNewDoctorName(e.target.value)}
-          />
-          <TextField
-            select
-            label="الدور"
-            fullWidth
-            size="small"
-            value={newDoctorRoleId}
-            onChange={(e) => setNewDoctorRoleId(e.target.value ? Number(e.target.value) : '')}
-          >
-            {(teamRolesQuery.data ?? []).map((role) => (
-              <MenuItem key={role.id} value={role.id}>
-                {role.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Autocomplete
-            fullWidth
-            size="small"
-            options={specialistOptions}
-            filterOptions={(options) => options}
-            loading={specialistsQuery.isFetching || createSpecialistMutation.isPending}
-            disabled={createSpecialistMutation.isPending}
-            noOptionsText="اكتب حرفين على الأقل للإضافة"
-            getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.specialist.name)}
-            isOptionEqualToValue={(option, value) =>
-              option.kind === 'specialist' && value.kind === 'specialist' && option.specialist.id === value.specialist.id
-            }
-            renderOption={(props, option) => {
-              const { key, ...optionProps } = props
-              if (option.kind === 'create') {
-                return (
-                  <li key={key} {...optionProps}>
-                    <ListItemText primary={`+ إضافة "${option.name}" كتخصص جديد`} />
-                  </li>
-                )
-              }
-              return (
-                <li key={key} {...optionProps}>
-                  <ListItemText primary={option.specialist.name} />
-                </li>
-              )
-            }}
-            value={
-              selectedNewDoctorSpecialist ? { kind: 'specialist' as const, specialist: selectedNewDoctorSpecialist } : null
-            }
-            inputValue={newDoctorSpecialistSearch}
-            onInputChange={(_, value) => setNewDoctorSpecialistSearch(value)}
-            onChange={(_, option) => {
-              if (!option) {
-                setNewDoctorSpecialistId('')
-                return
-              }
-              if (option.kind === 'create') {
-                createSpecialistMutation.mutate(option.name)
-                return
-              }
-              setNewDoctorSpecialistId(option.specialist.id)
-            }}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="التخصص"
-                slotProps={{
-                  ...params.slotProps,
-                  input: {
-                    ...params.slotProps.input,
-                    endAdornment: (
-                      <>
-                        {createSpecialistMutation.isPending ? <CircularProgress color="inherit" size={16} /> : null}
-                        {params.slotProps.input.endAdornment}
-                      </>
-                    ),
-                  },
-                }}
-              />
-            )}
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={() => setQuickAddDoctorOpen(false)}>إلغاء</Button>
-        <Button
-          type="submit"
-          form="create-doctor-form"
-          variant="contained"
-          disabled={!newDoctorName.trim() || !newDoctorRoleId || createDoctorMutation.isPending}
         >
           إضافة
         </Button>

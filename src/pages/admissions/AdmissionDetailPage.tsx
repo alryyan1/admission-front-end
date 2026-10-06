@@ -269,13 +269,13 @@ export function AdmissionDetailPage() {
                 </Text>
                 <Divider type="vertical" style={{ margin: 0 }} />
                 <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                  الطبيب: {admission.admitting_doctor?.name ?? '—'}
+                  الطبيب: {admission.patient?.admitting_doctor?.name ?? '—'}
                 </Text>
-                {admission.referred_by_doctor && (
+                {admission.patient?.referred_by_doctor && (
                   <>
                     <Divider type="vertical" style={{ margin: 0 }} />
                     <Text type="secondary" style={{ fontSize: secondaryFontSize, fontWeight: 600 }}>
-                      محوّل من: {admission.referred_by_doctor.name}
+                      محوّل من: {admission.patient.referred_by_doctor.name}
                     </Text>
                   </>
                 )}
@@ -291,15 +291,18 @@ export function AdmissionDetailPage() {
           </Flex>
 
           <Flex gap={8}>
-            <PatientLocationButton bed={admission.bed} />
-            <Tooltip title="إنشاء ملف PDF بملخص التنويم (بيانات المريض والإقامة) وفتحه في نافذة جديدة للطباعة">
+            <PatientLocationButton
+              bed={admission.bed}
+              bedAdmissionId={admission.status === 'admitted' ? admission.id : undefined}
+            />
+            <Tooltip title="إنشاء ملف PDF بملف التنويم (بيانات المريض والإقامة) وفتحه في نافذة جديدة للطباعة">
               <Button
                 size="small"
                 icon={<PrinterOutlined />}
                 loading={summaryPdf.isLoading()}
-                onClick={() => summaryPdf.open(admissionPdfPaths.admissionSummary(id), 'معاينة ملخص التنويم')}
+                onClick={() => summaryPdf.open(admissionPdfPaths.admissionSummary(id), 'معاينة ملف التنويم')}
               >
-                طباعة ملخص التنويم
+                طباعة ملف التنويم
               </Button>
             </Tooltip>
             <Tooltip title="عرض فاتورة التنويم بكل الخدمات والمبالغ والمدفوعات في نافذة منبثقة">

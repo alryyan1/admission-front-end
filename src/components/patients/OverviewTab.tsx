@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
-import { Avatar, Card, CardContent, CardHeader, Divider } from '@mui/material'
+import { Avatar, Card, CardContent, CardHeader, Divider, Autocomplete, TextField } from '@mui/material'
 import { UserOutlined } from '@ant-design/icons'
-import type { Patient } from '@/types/patient'
+import type { Doctor, Patient } from '@/types/patient'
 import { DetailGrid } from '@/components/patients/DetailGrid'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { usePatientFieldUpdate } from '@/hooks/usePatientFieldUpdate'
 import { getInsuranceCompanies } from '@/services/insuranceCompanyService'
+import { getDoctors } from '@/services/patientService'
 
 interface OverviewTabProps {
   patient: Patient
@@ -17,6 +18,37 @@ const GENDER_OPTIONS = [
   { label: 'ذكر', value: 'male' },
   { label: 'أنثى', value: 'female' },
 ]
+
+function DoctorField({
+  doctor,
+  editable,
+  onSave,
+}: {
+  doctor: Doctor | null | undefined
+  editable: boolean
+  onSave: (doctorId: number | null) => Promise<void>
+}) {
+  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+
+  if (!editable) {
+    return <>{doctor?.name ?? '—'}</>
+  }
+
+  return (
+    <Autocomplete
+      size="small"
+      fullWidth
+      sx={{ minWidth: 200 }}
+      options={doctorsQuery.data ?? []}
+      getOptionLabel={(d) => d.name}
+      isOptionEqualToValue={(o, v) => o.id === v.id}
+      loading={doctorsQuery.isLoading}
+      value={doctor ?? null}
+      onChange={(_, value) => onSave(value ? value.id : null)}
+      renderInput={(params) => <TextField {...params} />}
+    />
+  )
+}
 
 export function OverviewTab({ patient, editable }: OverviewTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
@@ -137,6 +169,28 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
                   },
                 ]
               : []),
+            {
+              key: 'admitting_doctor',
+              label: 'الطبيب المعالج',
+              value: (
+                <DoctorField
+                  doctor={patient.admitting_doctor}
+                  editable={editable}
+                  onSave={(id) => saveField('admitting_doctor_id', id)}
+                />
+              ),
+            },
+            {
+              key: 'referred_by_doctor',
+              label: 'الطبيب المرجعي',
+              value: (
+                <DoctorField
+                  doctor={patient.referred_by_doctor}
+                  editable={editable}
+                  onSave={(id) => saveField('referred_by_doctor_id', id)}
+                />
+              ),
+            },
             {
               key: 'source',
               label: 'مصدر الملف',

@@ -5,6 +5,7 @@ import { StatTile } from '@/components/statistics/StatTile'
 import { DateRangeFilter } from '@/components/statistics/DateRangeFilter'
 import { formatDate, formatNumber } from '@/lib/utils'
 import type { AdmissionsStatistics } from '@/types/statistics'
+import { ADMISSION_ENTRY_TYPE_LABELS, type AdmissionEntryType } from '@/types/admission'
 
 const STATUS_LABELS: Record<string, string> = {
   admitted: 'نشطة',
@@ -42,7 +43,10 @@ const statusColumns: ColumnsType<StatusCountRow> = [
 
 export function AdmissionsTab({ data, from, to, onFromChange, onToChange }: AdmissionsTabProps) {
   const totalInRange = Object.values(data.status_counts).reduce((sum, count) => sum + count, 0)
-  const typeCountRows: TypeCountRow[] = Object.entries(data.type_counts).map(([type, count]) => ({ type, count }))
+  const typeCountRows: TypeCountRow[] = Object.entries(data.type_counts).map(([type, count]) => ({
+    type: type === 'unspecified' ? 'غير محدد' : (ADMISSION_ENTRY_TYPE_LABELS[type as AdmissionEntryType] ?? type),
+    count,
+  }))
   const statusCountRows: StatusCountRow[] = Object.entries(data.status_counts).map(([status, count]) => ({
     status,
     count,

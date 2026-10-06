@@ -7,7 +7,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { formatNumber } from '@/lib/utils'
 import { getAdmissions } from '@/services/admissionService'
-import { NewAdmissionDialog } from '@/components/admissions/NewAdmissionDialog'
+import { RegisterPatientDialog } from '@/components/admissions/RegisterPatientDialog'
 import { RevenueCalculatorDialog } from '@/components/admissions/RevenueCalculatorDialog'
 import {
   ADMISSION_SQUARE_SIZE,
@@ -229,7 +229,12 @@ export function AdmissionsPage() {
       key: 'location',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        return <PatientLocationButton bed={row.bed} />
+        return (
+          <PatientLocationButton
+            bed={row.bed}
+            bedAdmissionId={row.status === 'admitted' ? row.id : undefined}
+          />
+        )
       },
     },
     {
@@ -237,7 +242,7 @@ export function AdmissionsPage() {
       key: 'doctor',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        return row.admitting_doctor?.name ?? '—'
+        return row.patient?.admitting_doctor?.name ?? '—'
       },
     },
     {
@@ -245,7 +250,7 @@ export function AdmissionsPage() {
       key: 'referred_by_doctor',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        return row.referred_by_doctor?.name ?? '—'
+        return row.patient?.referred_by_doctor?.name ?? '—'
       },
     },
 
@@ -299,7 +304,7 @@ export function AdmissionsPage() {
             الحاسبة
           </Button>
           <Button type="primary" onClick={() => setDialogOpen(true)}>
-            + تنويم جديد
+            + تسجيل جديد
           </Button>
         </Flex>
       </Flex>
@@ -336,7 +341,7 @@ export function AdmissionsPage() {
           />
       )}
 
-      <NewAdmissionDialog open={dialogOpen} onClose={() => setDialogOpen(false)} />
+      {dialogOpen && <RegisterPatientDialog open onClose={() => setDialogOpen(false)} />}
       <RevenueCalculatorDialog open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
     </ConfigProvider>
   )

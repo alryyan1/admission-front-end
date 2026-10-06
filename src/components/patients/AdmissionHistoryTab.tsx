@@ -29,7 +29,7 @@ export function AdmissionHistoryTab({ admissions, isLoading }: AdmissionHistoryT
     {
       title: 'الطبيب المعالج',
       key: 'doctor',
-      render: (_, admission) => admission.admitting_doctor?.name ?? '—',
+      render: (_, admission) => admission.patient?.admitting_doctor?.name ?? '—',
     },
     {
       title: 'تاريخ الدخول',

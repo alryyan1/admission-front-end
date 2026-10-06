@@ -44,6 +44,8 @@ export async function createLocalPatient(payload: {
   age_year?: number
   insurance_company_id?: number
   insurance_card_number?: string
+  admitting_doctor_id?: number
+  referred_by_doctor_id?: number
 }): Promise<Patient> {
   const { data } = await apiClient.post<Patient>('/patients', payload)
   return data
