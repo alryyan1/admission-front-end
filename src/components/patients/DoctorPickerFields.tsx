@@ -239,7 +239,7 @@ export function DoctorPickerFields({
         renderInput={(params) => (
           <TextField
             {...params}
-            label="الطبيب المرجعي"
+            label="الطبيب المحوّل"
             inputRef={referralInputRef}
             slotProps={{
               ...params.slotProps,

@@ -116,7 +116,7 @@ export function PatientLocationButton({
   return (
     <Popover content={content} title="الموقع" trigger="click" placement="bottomLeft">
       <Button size={size} icon={<EnvironmentOutlined />} onClick={(e) => e.stopPropagation()}>
-        الموقع
+        {bed?.room?.room_number ? `غرفة ${bed.room.room_number}` : 'الموقع'}
       </Button>
     </Popover>
   )

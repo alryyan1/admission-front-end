@@ -134,6 +134,12 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
             value={ageYear}
             onChange={(event) => setAgeYear(event.target.value)}
           />
+            <DoctorPickerFields
+            admittingDoctor={admittingDoctor}
+            onAdmittingDoctorChange={setAdmittingDoctor}
+            referralDoctor={referralDoctor}
+            onReferralDoctorChange={setReferralDoctor}
+          />
           <Autocomplete
             options={insuranceCompaniesQuery.data ?? []}
             getOptionLabel={(company) => company.name}
@@ -158,12 +164,7 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
               onChange={(event) => setInsuranceCardNumber(event.target.value)}
             />
           )}
-          <DoctorPickerFields
-            admittingDoctor={admittingDoctor}
-            onAdmittingDoctorChange={setAdmittingDoctor}
-            referralDoctor={referralDoctor}
-            onReferralDoctorChange={setReferralDoctor}
-          />
+        
         </Stack>
       </DialogContent>
       <DialogActions>
