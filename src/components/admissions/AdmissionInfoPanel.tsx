@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Card, Button, Tag, Flex, Typography, Descriptions, Divider, Input, Statistic, Tooltip, theme as antdThemeApi } from 'antd'
 import {
-  CloseOutlined,
   EditOutlined,
   LogoutOutlined,
   CloseCircleOutlined,
@@ -107,10 +106,10 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
       <Card style={{ position: 'sticky', top: 16 }} className="animate-in fade-in slide-in-from-left-4 duration-300">
         <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
           <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
-            <Text strong style={{ fontSize: 24, lineHeight: 1.2 }}>
-              رقم الملف: {admission.id ?? '—'}
+            <Text strong style={{ fontSize: 24, lineHeight: 1.2,border: `1px solid ${token.colorBorder}`,textAlign: 'center',padding: '4px 0' }}>
+              {admission.id ?? '—'}
             </Text>
-            <Text strong style={{ fontSize: 16 }}>
+            <Text strong style={{ fontSize: 16, textAlign: 'center', lineHeight: 1.2,borderBottom: `1px solid ${token.colorBorder}` }}>
               {admission.patient?.name}
             </Text>
             <Flex align="center" gap={8}>
@@ -120,17 +119,15 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                   {admission.patient.insurance_company.name}
                 </Tag>
               )}
-              <Button
-                size="small"
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => setEditPatientOpen(true)}
-                title="تعديل بيانات المريض"
-              />
             </Flex>
             <Text type="secondary">دخول {dayjs(admission.admission_date).format('YYYY-MM-DD hh:mm A')}</Text>
           </Flex>
-          <Button type="text" icon={<CloseOutlined />} onClick={onClear} />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => setEditPatientOpen(true)}
+            title="تعديل بيانات المريض"
+          />
         </Flex>
 
         <Descriptions size="small" column={1} bordered={false}>

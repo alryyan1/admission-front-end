@@ -289,6 +289,7 @@ export function AdmissionsPage() {
 
   return (
     <ConfigProvider direction="rtl" theme={antTheme}>
+      <div style={{ userSelect: 'none' }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Flex align="center" gap={10}>
         
@@ -343,6 +344,7 @@ export function AdmissionsPage() {
 
       {dialogOpen && <RegisterPatientDialog open onClose={() => setDialogOpen(false)} />}
       <RevenueCalculatorDialog open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
+      </div>
     </ConfigProvider>
   )
 }
