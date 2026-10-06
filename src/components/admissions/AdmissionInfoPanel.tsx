@@ -128,7 +128,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 title="تعديل بيانات المريض"
               />
             </Flex>
-            <Text type="secondary">دخول {dayjs(admission.admission_date).format('YYYY-MM-DD')}</Text>
+            <Text type="secondary">دخول {dayjs(admission.admission_date).format('YYYY-MM-DD hh:mm A')}</Text>
           </Flex>
           <Button type="text" icon={<CloseOutlined />} onClick={onClear} />
         </Flex>
