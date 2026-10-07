@@ -140,11 +140,30 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
 
   const admitMutation = useMutation({
     mutationFn: createAdmission,
-    onSuccess: () => {
+    onMutate: () => {
+      const whatsappToastId = toast.loading('جاري إرسال إشعار واتساب للطبيب المحوِّل...')
+      return { whatsappToastId }
+    },
+    onSuccess: (admission, _variables, context) => {
       toast.success('تم تنويم المريض بنجاح')
+
+      const notice = admission.whatsapp_doctor_notice
+      if (notice) {
+        if (notice.sent) {
+          toast.success(notice.message, { id: context.whatsappToastId })
+        } else {
+          toast.warning(notice.message, { id: context.whatsappToastId })
+        }
+      } else {
+        toast.dismiss(context.whatsappToastId)
+      }
+
       queryClient.invalidateQueries({ queryKey: ['admissions'] })
       queryClient.invalidateQueries({ queryKey: ['floors'] })
       resetAndClose()
+    },
+    onError: (_error, _variables, context) => {
+      toast.dismiss(context?.whatsappToastId)
     },
   })
 

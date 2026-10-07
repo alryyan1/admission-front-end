@@ -14,6 +14,7 @@ import { SessionsSettingsPage } from '@/pages/settings/SessionsSettingsPage'
 import { ActivityLogPage } from '@/pages/settings/ActivityLogPage'
 import { BackupPage } from '@/pages/settings/BackupPage'
 import { UsersSettingsPage } from '@/pages/settings/UsersSettingsPage'
+import { WhatsAppSettingsPage } from '@/pages/settings/WhatsAppSettingsPage'
 import { FacilityMapPage } from '@/pages/facility/FacilityMapPage'
 import { AdmissionsPage } from '@/pages/admissions/AdmissionsPage'
 import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
@@ -24,6 +25,7 @@ import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
 import { PaymentsReportPage } from '@/pages/reports/PaymentsReportPage'
 import { DailyRevenueReportPage } from '@/pages/reports/DailyRevenueReportPage'
 import { DoctorEntitlementsReportPage } from '@/pages/reports/DoctorEntitlementsReportPage'
+import { DoctorRevenueReportPage } from '@/pages/reports/DoctorRevenueReportPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
@@ -56,6 +58,7 @@ export const router = createBrowserRouter([
                   { path: '/reports/payments', element: <PaymentsReportPage /> },
                   { path: '/reports/daily-revenue', element: <DailyRevenueReportPage /> },
                   { path: '/reports/doctor-entitlements', element: <DoctorEntitlementsReportPage /> },
+                  { path: '/reports/doctor-revenue', element: <DoctorRevenueReportPage /> },
                 ],
               },
               {
@@ -68,6 +71,7 @@ export const router = createBrowserRouter([
                   { path: '/settings/team-roles', element: <TeamRolesSettingsPage /> },
                   { path: '/settings/insurance-companies', element: <InsuranceCompaniesSettingsPage /> },
                   { path: '/settings/users', element: <UsersSettingsPage /> },
+                  { path: '/settings/whatsapp', element: <WhatsAppSettingsPage /> },
                   { path: '/settings/sessions', element: <SessionsSettingsPage /> },
                   { path: '/settings/activity-log', element: <ActivityLogPage /> },
                   { path: '/settings/backup', element: <BackupPage /> },

@@ -43,6 +43,8 @@ export interface Admission {
   paid_total?: number
   /** Live services + priced operations minus deposits, as computed by the admissions index endpoint. */
   balance_due?: number
+  /** Outcome of the synchronous WhatsApp notice sent to the referring doctor on admission (POST /admissions only). */
+  whatsapp_doctor_notice?: { sent: boolean; message: string }
 }
 
 export interface VitalSign {

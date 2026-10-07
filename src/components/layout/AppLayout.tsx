@@ -74,6 +74,7 @@ const reportsNavItems: NavItem[] = [
   { to: '/reports/payments', label: 'تقرير المدفوعات تفصيلي', roles: ['admin', 'cashier'] },
   { to: '/reports/daily-revenue', label: 'الإيراد اليومي', roles: ['admin', 'cashier'] },
   { to: '/reports/doctor-entitlements', label: 'استحقاقات الأطباء', roles: ['admin', 'cashier'] },
+  { to: '/reports/doctor-revenue', label: 'أداء الأطباء (الإيرادات)', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [
@@ -84,6 +85,7 @@ const settingsNavItems: NavItem[] = [
   { to: '/settings/team-roles', label: 'أدوار الفريق الطبي' },
   { to: '/settings/insurance-companies', label: 'شركات التأمين' },
   { to: '/settings/users', label: 'المستخدمون' },
+  { to: '/settings/whatsapp', label: 'واتساب' },
   { to: '/settings/sessions', label: 'الجلسات النشطة' },
   { to: '/settings/activity-log', label: 'سجل النشاط' },
   { to: '/settings/backup', label: 'النسخ الاحتياطي' },

@@ -2,6 +2,8 @@ import apiClient from '@/services/api'
 import type {
   DailyRevenueReport,
   DoctorEntitlementsReport,
+  DoctorRevenueReport,
+  DoctorRevenueRole,
   PaymentRecorder,
   PaymentsReport,
   RevenueCalculatorReport,
@@ -45,5 +47,15 @@ export async function getDailyRevenueReport(month: string): Promise<DailyRevenue
 
 export async function getDoctorEntitlementsReport(filters: { from: string; to: string }): Promise<DoctorEntitlementsReport> {
   const { data } = await apiClient.get<DoctorEntitlementsReport>('/reports/doctor-entitlements', { params: filters })
+  return data
+}
+
+export async function getDoctorRevenueReport(filters: {
+  doctor_id: number
+  doctor_role: DoctorRevenueRole
+  from: string
+  to: string
+}): Promise<DoctorRevenueReport> {
+  const { data } = await apiClient.get<DoctorRevenueReport>('/reports/doctor-revenue', { params: filters })
   return data
 }
