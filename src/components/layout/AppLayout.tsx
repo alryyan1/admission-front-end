@@ -65,7 +65,6 @@ const navItems: NavItem[] = [
   { to: '/patients', label: 'سجل المرضى' },
   { to: '/facility-map', label: 'الغرف' },
   { to: '/operations', label: 'العمليات' },
-  { to: '/statistics', label: 'الإحصائيات' },
   { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
 ]
 

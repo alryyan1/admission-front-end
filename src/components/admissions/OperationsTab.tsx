@@ -161,6 +161,7 @@ export function OperationsTab({
           operationId={teamOperation.id}
           existingMembers={teamOperation.team_members ?? []}
           operationPrice={teamOperation.price}
+          operationName={teamOperation.procedure?.name_ar}
           onAdded={onTeamChanged}
           readOnly={readOnly}
         />

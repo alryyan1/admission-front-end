@@ -1,14 +1,17 @@
 import apiClient from '@/services/api'
-import type { Operation } from '@/types/admission'
+import type { Operation, OperationListResponse } from '@/types/admission'
 
 export interface OperationFilters {
   surgeon_id?: number
   date?: string
+  date_from?: string
+  date_to?: string
   search?: string
   page?: number
+  per_page?: number
 }
 
-export async function getAllOperations(filters: OperationFilters = {}): Promise<{ data: Operation[] }> {
+export async function getAllOperations(filters: OperationFilters = {}): Promise<OperationListResponse> {
   const { data } = await apiClient.get('/operations', { params: filters })
   return data
 }

@@ -19,14 +19,17 @@ import {
   Typography,
 } from '@mui/material'
 import { FileTextOutlined } from '@ant-design/icons'
+import { MessageCircle } from 'lucide-react'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { formatNumber } from '@/lib/utils'
 import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
 import { addOperationTeamMember, admissionPdfPaths, removeOperationTeamMember } from '@/services/admissionService'
 import { updateTeamMemberEntitlement } from '@/services/accountantService'
+import { sendOperationTeamPdfWhatsApp } from '@/services/whatsappService'
 import type { OperationTeamMember, TeamRole } from '@/types/admission'
 import type { Doctor } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
@@ -41,6 +44,7 @@ interface OperationTeamModalProps {
   existingMembers?: OperationTeamMember[]
   /** Operation price (decimal string); caps the sum of entitlement amounts when provided. */
   operationPrice?: string | null
+  operationName?: string | null
   onAdded?: () => void
   /** When true, team members can't be added or removed (the admission is discharged or cancelled). */
   readOnly?: boolean
@@ -122,6 +126,7 @@ export function OperationTeamModal({
   operationId,
   existingMembers = [],
   operationPrice,
+  operationName,
   onAdded,
   readOnly = false,
 }: OperationTeamModalProps) {
@@ -140,6 +145,27 @@ export function OperationTeamModal({
       onAdded?.()
     },
     onError: () => toast.error('تعذر إزالة العضو'),
+  })
+
+  const sendWhatsAppMutation = useMutation({
+    mutationFn: () => sendOperationTeamPdfWhatsApp(operationId),
+    onSuccess: ({ results }) => {
+      const sentCount = results.filter((r) => r.sent).length
+      const failed = results.filter((r) => !r.sent)
+
+      if (failed.length === 0) {
+        toast.success(`تم إرسال الملف إلى ${sentCount} رقم عبر واتساب`)
+      } else {
+        toast.warning(
+          `تم الإرسال إلى ${sentCount} من ${results.length}. فشل الإرسال إلى: ${failed.map((r) => r.label ?? r.phone).join('، ')}`,
+        )
+      }
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'تعذر إرسال الملف عبر واتساب'
+      toast.error(message)
+    },
   })
 
   const addDefaultTeamMutation = useMutation({
@@ -192,6 +218,11 @@ export function OperationTeamModal({
   })
 
   const price = operationPrice != null ? Number(operationPrice) : null
+  const totalEntitlements = existingMembers.reduce(
+    (sum, m) => sum + (m.entitlement_amount != null ? Number(m.entitlement_amount) : 0),
+    0,
+  )
+  const remaining = price != null ? price - totalEntitlements : null
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
@@ -216,6 +247,16 @@ export function OperationTeamModal({
         )}
       </DialogTitle>
       <DialogContent>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
+          {operationName && <Chip label={`العملية: ${operationName}`} />}
+          {price != null && <Chip label={`السعر: ${formatNumber(price)}`} />}
+          {remaining != null && (
+            <Chip
+              label={`المتبقي بعد الاستحقاقات: ${formatNumber(remaining)}`}
+              color={remaining < 0 ? 'error' : 'success'}
+            />
+          )}
+        </Box>
         <Table size="small" sx={{ mt: 0.5 }}>
           <TableHead>
             <TableRow>
@@ -319,6 +360,14 @@ export function OperationTeamModal({
           onClick={() => teamPdf.open(admissionPdfPaths.operationTeam(operationId), 'معاينة فريق العملية')}
         >
           معاينة PDF
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<MessageCircle size={16} />}
+          loading={sendWhatsAppMutation.isPending}
+          onClick={() => sendWhatsAppMutation.mutate()}
+        >
+          إرسال عبر واتساب
         </Button>
         <Button onClick={onClose}>إغلاق</Button>
       </DialogActions>

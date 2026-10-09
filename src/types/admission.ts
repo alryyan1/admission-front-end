@@ -171,11 +171,24 @@ export interface Operation {
   /** Price of the operation (decimal string, e.g. "75000.00"). */
   price: string | null
   scheduled_at: string | null
+  created_at: string
   surgeon?: Doctor
   admission?: Admission
   team_members?: OperationTeamMember[]
   supplies?: OperationSupply[]
   procedure?: Procedure
+}
+
+export interface OperationListResponse {
+  data: Operation[]
+  current_page: number
+  last_page: number
+  total: number
+  per_page: number
+  /** Sum of `price` across every operation matching the current filters (not just the current page). */
+  price_total: number
+  /** Sum of `price - team entitlements` across every operation matching the current filters. */
+  net_total: number
 }
 
 export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'cancelled'
