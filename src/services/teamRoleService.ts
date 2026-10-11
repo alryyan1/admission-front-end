@@ -16,6 +16,11 @@ export async function updateTeamRole(id: number, name: string): Promise<TeamRole
   return data
 }
 
+export async function setTeamRoleDefaultTeamMember(id: number, isDefaultTeamMember: boolean): Promise<TeamRole> {
+  const { data } = await apiClient.patch<TeamRole>(`/team-roles/${id}`, { is_default_team_member: isDefaultTeamMember })
+  return data
+}
+
 export async function deleteTeamRole(id: number): Promise<void> {
   await apiClient.delete(`/team-roles/${id}`)
 }

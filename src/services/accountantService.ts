@@ -6,7 +6,6 @@ export async function updateTeamMemberEntitlement(
   payload: {
     entitlement_amount?: number | null
     payment_method_id?: number | null
-    entitlement_paid_at?: string | null
     name?: string | null
     doctor_id?: number | null
   },

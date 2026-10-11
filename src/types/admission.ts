@@ -89,6 +89,11 @@ export interface AdmissionDeposit {
   paid_by_name?: string | null
 }
 
+export interface DepositSetting {
+  id: number
+  require_balance_for_deposit: boolean
+}
+
 export interface RequestedService {
   id: number
   admission_id: number
@@ -105,6 +110,7 @@ export interface TeamRole {
   slug: string | null
   name: string
   is_protected: boolean
+  is_default_team_member: boolean
 }
 
 export interface Specialist {
@@ -130,7 +136,6 @@ export interface OperationTeamMember {
   notes: string | null
   entitlement_amount: string | null
   payment_method_id: number | null
-  entitlement_paid_at: string | null
   doctor?: Doctor | null
   role?: TeamRole | null
   payment_method?: PaymentMethod | null

@@ -5,7 +5,7 @@ import { PrinterOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { getPaymentMethods } from '@/services/paymentMethodService'
-import { admissionPdfPaths } from '@/services/admissionService'
+import { admissionPdfPaths, getDepositSetting } from '@/services/admissionService'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import type { AdmissionDeposit } from '@/types/admission'
@@ -45,8 +45,11 @@ export function AdmissionDepositsCard({
   isRemovingDeposit,
 }: AdmissionDepositsCardProps) {
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
+  const depositSettingQuery = useQuery({ queryKey: ['deposit-setting'], queryFn: getDepositSetting })
   const receiptPdf = usePdfPreview()
   const activePaymentMethods = (paymentMethodsQuery.data ?? []).filter((pm) => pm.is_active)
+  const requiresBalance = depositSettingQuery.data?.require_balance_for_deposit ?? false
+  const blockedByBalance = requiresBalance && (patientBalance ?? 0) <= 0
 
   const [depositAmount, setDepositAmount] = useState<number | null>(null)
   const [depositMethodId, setDepositMethodId] = useState<number | undefined>(undefined)
@@ -70,7 +73,7 @@ export function AdmissionDepositsCard({
   const depositsTotal = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
 
   function handleAddDeposit() {
-    if (depositAmount === null) return
+    if (depositAmount === null || blockedByBalance) return
     onAddDeposit({ amount: depositAmount, payment_method_id: depositMethodId, comment: depositComment.trim() || undefined })
     setDepositAmount(null)
     setDepositComment('')
@@ -153,11 +156,16 @@ export function AdmissionDepositsCard({
             type="primary"
             onClick={handleAddDeposit}
             loading={isSubmittingDeposit}
-            disabled={depositAmount === null || !depositMethodId}
+            disabled={depositAmount === null || !depositMethodId || blockedByBalance}
           >
             إضافة
           </Button>
         </Flex>
+        {blockedByBalance && (
+          <Text style={{ fontSize: 12, display: 'block', marginBottom: 12 }} type="danger">
+            لا يمكن إضافة دفعة لأنه لا يوجد رصيد مستحق على المريض حالياً.
+          </Text>
+        )}
         <Table
           rowKey="id"
           columns={depositColumns}

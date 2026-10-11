@@ -2,9 +2,15 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { isAxiosError } from 'axios'
-import { ConfigProvider, Card, Input, Button, Row, Col, Space, Typography, Tag, Popconfirm } from 'antd'
+import { ConfigProvider, Card, Input, Button, Row, Col, Space, Typography, Tag, Popconfirm, Checkbox } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
-import { getTeamRoles, createTeamRole, updateTeamRole, deleteTeamRole } from '@/services/teamRoleService'
+import {
+  getTeamRoles,
+  createTeamRole,
+  updateTeamRole,
+  setTeamRoleDefaultTeamMember,
+  deleteTeamRole,
+} from '@/services/teamRoleService'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 
 const { Title, Text } = Typography
@@ -34,6 +40,13 @@ export function TeamRolesSettingsPage() {
     onSuccess: invalidate,
   })
 
+  const toggleDefaultTeamMemberMutation = useMutation({
+    mutationFn: ({ id, isDefaultTeamMember }: { id: number; isDefaultTeamMember: boolean }) =>
+      setTeamRoleDefaultTeamMember(id, isDefaultTeamMember),
+    onSuccess: invalidate,
+    onError: () => toast.error('تعذر تحديث الفريق الافتراضي'),
+  })
+
   const deleteRoleMutation = useMutation({
     mutationFn: deleteTeamRole,
     onSuccess: () => {
@@ -54,7 +67,14 @@ export function TeamRolesSettingsPage() {
         أدوار الفريق الطبي
       </Title>
 
-      <Card title="الأدوار">
+      <Card
+        title="الأدوار"
+        extra={
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            الأدوار المحددة "فريق افتراضي" تُضاف تلقائياً بزر "+ الفريق الافتراضي" في العمليات
+          </Text>
+        }
+      >
         <Space direction="vertical" size={8} style={{ width: '100%' }}>
           {(rolesQuery.data ?? []).map((role) => (
             <Row key={role.id} justify="space-between" align="middle">
@@ -71,6 +91,15 @@ export function TeamRolesSettingsPage() {
                 </Space>
               </Col>
               <Col>
+                <Checkbox
+                  checked={role.is_default_team_member}
+                  disabled={toggleDefaultTeamMemberMutation.isPending}
+                  onChange={(e) =>
+                    toggleDefaultTeamMemberMutation.mutate({ id: role.id, isDefaultTeamMember: e.target.checked })
+                  }
+                >
+                  فريق افتراضي
+                </Checkbox>
                 {!role.is_protected && (
                   <Popconfirm
                     title="حذف الدور؟"

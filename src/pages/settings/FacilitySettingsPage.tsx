@@ -18,6 +18,7 @@ import { WardFormDialog } from '@/components/settings/WardFormDialog'
 import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { BedFormDialog } from '@/components/settings/BedFormDialog'
 import { ChartOpeningServiceSettingsTab } from '@/components/settings/ChartOpeningServiceSettingsTab'
+import { DepositSettingsTab } from '@/components/settings/DepositSettingsTab'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
@@ -382,6 +383,11 @@ export function FacilitySettingsPage() {
               key: 'chart-opening-service',
               label: 'خدمة فتح الملف',
               children: <ChartOpeningServiceSettingsTab />,
+            },
+            {
+              key: 'deposit',
+              label: 'الدفعات',
+              children: <DepositSettingsTab />,
             },
             {
               key: 'facility-info',

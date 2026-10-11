@@ -28,6 +28,7 @@ import {
   markInvoicePaid,
   addOperation,
   updateOperation,
+  deleteOperation,
   admissionPdfPaths,
 } from '@/services/admissionService'
 import { OverviewTab } from '@/components/admissions/OverviewTab'
@@ -196,6 +197,11 @@ export function AdmissionDetailPage() {
   const updateOperationMutation = useMutation({
     mutationFn: ({ operationId, ...payload }: { operationId: number } & Parameters<typeof updateOperation>[1]) =>
       updateOperation(operationId, payload),
+    onSuccess: invalidateAdmission,
+  })
+
+  const deleteOperationMutation = useMutation({
+    mutationFn: (operationId: number) => deleteOperation(operationId),
     onSuccess: invalidateAdmission,
   })
 
@@ -410,8 +416,10 @@ export function AdmissionDetailPage() {
           loading={admissionQuery.isFetching}
           onSchedule={(payload) => operationMutation.mutateAsync(payload)}
           onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
+          onDelete={(operationId) => deleteOperationMutation.mutate(operationId)}
           onTeamChanged={invalidateAdmission}
           isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
+          isDeleting={deleteOperationMutation.isPending}
         />
       )}
 

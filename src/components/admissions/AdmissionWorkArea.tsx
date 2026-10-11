@@ -14,6 +14,7 @@ import {
   addOperation,
   addRequestedService,
   calculateAccommodationFee,
+  deleteOperation,
   getAdmission,
   removeDeposit,
   removeRequestedService,
@@ -118,6 +119,11 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
     onSuccess: invalidateAfterChange,
   })
 
+  const deleteOperationMutation = useMutation({
+    mutationFn: (operationId: number) => deleteOperation(operationId),
+    onSuccess: invalidateAfterChange,
+  })
+
   function handleAddFileOpeningFee() {
     const service = chartOpeningQuery.data?.service
     if (!service) {
@@ -204,8 +210,10 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
             loading={admissionQuery.isFetching}
             onSchedule={(payload) => operationMutation.mutateAsync(payload)}
             onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
+            onDelete={(operationId) => deleteOperationMutation.mutate(operationId)}
             onTeamChanged={invalidateAfterChange}
             isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
+            isDeleting={deleteOperationMutation.isPending}
             readOnly={isReadOnly}
           />
         )}

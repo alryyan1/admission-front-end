@@ -65,8 +65,6 @@ export interface DoctorEntitlementDoctorRow {
   role: string | null
   operations_count: number
   total: number
-  paid: number
-  unpaid: number
 }
 
 export interface DoctorEntitlementRow {
@@ -79,13 +77,12 @@ export interface DoctorEntitlementRow {
   doctor_name: string
   role: string | null
   amount: number
-  paid_at: string | null
   payment_method: string | null
 }
 
 export interface DoctorEntitlementsReport {
   range: { from: string; to: string }
-  summary: { operations_count: number; total: number; paid: number; unpaid: number }
+  summary: { operations_count: number; total: number }
   doctors: DoctorEntitlementDoctorRow[]
   entitlements: DoctorEntitlementRow[]
 }

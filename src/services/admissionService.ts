@@ -5,6 +5,7 @@ import type {
   AdmissionDeposit,
   AdmissionInvoice,
   AdmissionStatus,
+  DepositSetting,
   DoctorOrder,
   Invoice,
   Operation,
@@ -143,6 +144,18 @@ export async function removeDeposit(admissionId: number, depositId: number): Pro
   await apiClient.delete(`/admissions/${admissionId}/deposits/${depositId}`)
 }
 
+export async function getDepositSetting(): Promise<DepositSetting> {
+  const { data } = await apiClient.get<DepositSetting>('/settings/deposit')
+  return data
+}
+
+export async function updateDepositSetting(payload: {
+  require_balance_for_deposit: boolean
+}): Promise<DepositSetting> {
+  const { data } = await apiClient.put<DepositSetting>('/settings/deposit', payload)
+  return data
+}
+
 export async function addRequestedService(
   admissionId: number,
   payload: { name: string; quantity?: number; unit_price: number },
@@ -226,6 +239,10 @@ export async function updateOperation(
 ): Promise<Operation> {
   const { data } = await apiClient.patch<Operation>(`/operations/${operationId}`, payload)
   return data
+}
+
+export async function deleteOperation(operationId: number): Promise<void> {
+  await apiClient.delete(`/operations/${operationId}`)
 }
 
 export async function addOperationTeamMember(

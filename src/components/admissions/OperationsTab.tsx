@@ -11,15 +11,11 @@ import {
   TableRow,
   TableCell,
   Typography,
-  Tooltip,
-  Badge,
-  Chip,
 } from '@mui/material'
-import { EditOutlined, TeamOutlined } from '@ant-design/icons'
 import { formatDateTime } from '@/lib/utils'
 import { ScheduleOperationModal, type OperationFormPayload } from '@/components/admissions/ScheduleOperationModal'
 import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
-import { OperationInvoiceButton } from '@/components/admissions/OperationInvoiceButton'
+import { OperationActionsMenu } from '@/components/admissions/OperationActionsMenu'
 import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
 import type { Operation } from '@/types/admission'
 
@@ -28,8 +24,10 @@ interface OperationsTabProps {
   loading?: boolean
   onSchedule: (payload: OperationFormPayload) => Promise<unknown>
   onUpdate: (operationId: number, payload: Partial<OperationFormPayload>) => Promise<unknown>
+  onDelete: (operationId: number) => void
   onTeamChanged?: () => void
   isSubmitting: boolean
+  isDeleting?: boolean
   /** When true, operations can't be scheduled or edited, and team members can't be changed (the admission is discharged or cancelled). */
   readOnly?: boolean
 }
@@ -40,8 +38,10 @@ export function OperationsTab({
   loading,
   onSchedule,
   onUpdate,
+  onDelete,
   onTeamChanged,
   isSubmitting,
+  isDeleting,
   readOnly = false,
 }: OperationsTabProps) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
@@ -98,37 +98,14 @@ export function OperationsTab({
                   />
                 </TableCell>
                 <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                  <Stack direction="row" spacing={0.5} flexWrap="wrap" justifyContent="flex-end">
-                    {!readOnly && (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<EditOutlined />}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setEditingOperation(op)
-                        }}
-                      >
-                        تعديل
-                      </Button>
-                    )}
-                    <OperationInvoiceButton operation={op} />
-                    <Tooltip title="أعضاء الفريق الطبي">
-                      <Badge badgeContent={op.team_members?.length ?? 0} color="primary">
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<TeamOutlined />}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setTeamOperationId(op.id)
-                          }}
-                        >
-                          الفريق
-                        </Button>
-                      </Badge>
-                    </Tooltip>
-                  </Stack>
+                  <OperationActionsMenu
+                    operation={op}
+                    readOnly={readOnly}
+                    isDeleting={isDeleting}
+                    onEdit={() => setEditingOperation(op)}
+                    onOpenTeam={() => setTeamOperationId(op.id)}
+                    onDelete={() => onDelete(op.id)}
+                  />
                 </TableCell>
               </TableRow>
             ))}

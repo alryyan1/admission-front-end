@@ -212,14 +212,15 @@ export function AdmissionsPage() {
               <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
               {!!row.operations_count && <Tag>عملية</Tag>}
             </Flex>
-            {(() => {
-              const { hoursElapsed, days, dayProgress } = getStayDuration(row)
-              return (
-                <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
-                  <Progress percent={dayProgress} size="small" showInfo={false} />
-                </Tooltip>
-              )
-            })()}
+            {row.status === 'admitted' &&
+              (() => {
+                const { hoursElapsed, days, dayProgress } = getStayDuration(row)
+                return (
+                  <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
+                    <Progress percent={dayProgress} size="small" showInfo={false} />
+                  </Tooltip>
+                )
+              })()}
           </Flex>
         )
       },

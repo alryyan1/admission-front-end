@@ -34,9 +34,6 @@ import type { OperationTeamMember, TeamRole } from '@/types/admission'
 import type { Doctor } from '@/types/patient'
 import type { PaymentMethod } from '@/types/paymentMethod'
 
-/** Slugs of the core roles every operation needs, added in one click by the "الافتراضي" button. */
-const DEFAULT_TEAM_ROLE_SLUGS = ['surgeon', 'anesthesiologist', 'assistant_surgeon', 'circulating_nurse']
-
 interface OperationTeamModalProps {
   open: boolean
   onClose: () => void
@@ -184,9 +181,7 @@ export function OperationTeamModal({
   function handleAddDefaultTeam() {
     const roles = teamRolesQuery.data ?? []
     const existingRoleIds = new Set(existingMembers.map((m) => m.role_id))
-    const rolesToAdd = DEFAULT_TEAM_ROLE_SLUGS.map((slug) => roles.find((r) => r.slug === slug)).filter(
-      (role): role is TeamRole => !!role && !existingRoleIds.has(role.id),
-    )
+    const rolesToAdd = roles.filter((role) => role.is_default_team_member && !existingRoleIds.has(role.id))
 
     if (rolesToAdd.length === 0) {
       toast.info('الأدوار الأساسية مضافة بالفعل')
@@ -201,13 +196,11 @@ export function OperationTeamModal({
       teamMemberId: number
       entitlement_amount?: number | null
       payment_method_id?: number | null
-      entitlement_paid_at?: string | null
       doctor_id?: number | null
     }) =>
       updateTeamMemberEntitlement(payload.teamMemberId, {
         entitlement_amount: payload.entitlement_amount,
         payment_method_id: payload.payment_method_id,
-        entitlement_paid_at: payload.entitlement_paid_at,
         doctor_id: payload.doctor_id,
       }),
     onSuccess: () => {
@@ -264,14 +257,13 @@ export function OperationTeamModal({
               <TableCell>العضو</TableCell>
               <TableCell>الاستحقاق</TableCell>
               <TableCell>طريقة الدفع</TableCell>
-              <TableCell>تاريخ الدفع</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
           <TableBody>
             {existingMembers.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={5}>
                   <Typography variant="body2" color="text.secondary">
                     لا يوجد أعضاء بعد
                   </Typography>
@@ -323,19 +315,6 @@ export function OperationTeamModal({
                         entitlementMutation.mutate({ teamMemberId: m.id, payment_method_id: pm?.id ?? null })
                       }
                       renderInput={(params) => <TextField {...params} size="small" placeholder="طريقة الدفع" />}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <TextField
-                      type="date"
-                      size="small"
-                      value={m.entitlement_paid_at ?? ''}
-                      onChange={(e) =>
-                        entitlementMutation.mutate({
-                          teamMemberId: m.id,
-                          entitlement_paid_at: e.target.value || null,
-                        })
-                      }
                     />
                   </TableCell>
                   <TableCell align="right">

@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Box,
-  Chip,
   Paper,
   Stack,
   Table,
@@ -93,22 +92,6 @@ export function DoctorEntitlementsReportPage() {
                 {formatNumber(report.summary.total)}
               </Typography>
             </Paper>
-            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                المدفوع
-              </Typography>
-              <Typography variant="h6" fontWeight={700} color="success.main">
-                {formatNumber(report.summary.paid)}
-              </Typography>
-            </Paper>
-            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                غير المدفوع
-              </Typography>
-              <Typography variant="h6" fontWeight={700} color="warning.main">
-                {formatNumber(report.summary.unpaid)}
-              </Typography>
-            </Paper>
           </Stack>
 
           <TableContainer component={Paper} variant="outlined">
@@ -118,8 +101,6 @@ export function DoctorEntitlementsReportPage() {
                   <TableCell>الطبيب</TableCell>
                   <TableCell>الدور</TableCell>
                   <TableCell align="center">عدد العمليات</TableCell>
-                  <TableCell align="right">المدفوع</TableCell>
-                  <TableCell align="right">غير المدفوع</TableCell>
                   <TableCell align="right">الإجمالي</TableCell>
                 </TableRow>
               </TableHead>
@@ -129,8 +110,6 @@ export function DoctorEntitlementsReportPage() {
                     <TableCell>{doctor.name}</TableCell>
                     <TableCell>{doctor.role ?? '—'}</TableCell>
                     <TableCell align="center">{formatNumber(doctor.operations_count)}</TableCell>
-                    <TableCell align="right">{formatNumber(doctor.paid)}</TableCell>
-                    <TableCell align="right">{formatNumber(doctor.unpaid)}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
                       {formatNumber(doctor.total)}
                     </TableCell>
@@ -144,12 +123,6 @@ export function DoctorEntitlementsReportPage() {
                   </TableCell>
                   <TableCell align="center" sx={{ fontWeight: 700 }}>
                     {formatNumber(report.summary.operations_count)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {formatNumber(report.summary.paid)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {formatNumber(report.summary.unpaid)}
                   </TableCell>
                   <TableCell align="right" sx={{ fontWeight: 700 }}>
                     {formatNumber(report.summary.total)}
@@ -170,7 +143,6 @@ export function DoctorEntitlementsReportPage() {
                   <TableCell>الطبيب</TableCell>
                   <TableCell>الدور</TableCell>
                   <TableCell align="right">المبلغ</TableCell>
-                  <TableCell>الحالة</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -184,13 +156,6 @@ export function DoctorEntitlementsReportPage() {
                     <TableCell>{row.role ?? '—'}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 600 }}>
                       {formatNumber(row.amount)}
-                    </TableCell>
-                    <TableCell>
-                      {row.paid_at ? (
-                        <Chip size="small" color="success" variant="outlined" label={`مدفوع ${dayjs(row.paid_at).format('DD/MM/YYYY')}`} />
-                      ) : (
-                        <Chip size="small" color="warning" variant="outlined" label="غير مدفوع" />
-                      )}
                     </TableCell>
                   </TableRow>
                 ))}
