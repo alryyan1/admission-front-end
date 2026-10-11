@@ -50,6 +50,13 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
   const { token } = antdThemeApi.useToken()
   const summaryPdf = usePdfPreview()
 
+  const cardBackground =
+    admission.status === 'cancelled'
+      ? token.colorErrorBg
+      : admission.status === 'discharged'
+        ? token.colorInfoBg
+        : undefined
+
   const [mode, setMode] = useState<Mode>('menu')
   const [dischargeSummary, setDischargeSummary] = useState('')
   const [cancelReason, setCancelReason] = useState('')
@@ -103,7 +110,10 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
 
   return (
     <>
-      <Card style={{ position: 'sticky', top: 16 }} className="animate-in fade-in slide-in-from-left-4 duration-300">
+      <Card
+        style={{ position: 'sticky', top: 16, backgroundColor: cardBackground }}
+        className="animate-in fade-in slide-in-from-left-4 duration-300"
+      >
         <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
           <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
             <Text strong style={{ fontSize: 24, lineHeight: 1.2,border: `1px solid ${token.colorBorder}`,textAlign: 'center',padding: '4px 0' }}>

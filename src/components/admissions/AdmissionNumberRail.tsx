@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import { Card, Flex, Tooltip, Typography, theme as antdThemeApi } from 'antd'
 import type { GlobalToken } from 'antd/es/theme/interface'
-import { CheckCircleFilled, DollarCircleFilled, HeartFilled } from '@ant-design/icons'
+import { CheckCircleFilled, CloseCircleFilled, DollarCircleFilled, HeartFilled, LogoutOutlined } from '@ant-design/icons'
 import type { Admission, AdmissionStatus } from '@/types/admission'
 import { formatNumber } from '@/lib/utils'
 import dayjs from 'dayjs'
@@ -119,6 +119,49 @@ export function AdmissionInsuranceBadge({ admission }: { admission: Admission })
   )
 }
 
+/** Bottom corner icon marking a discharged or cancelled admission; no badge for an active one. */
+export function AdmissionStatusBadge({ admission }: { admission: Admission }) {
+  const { token } = antdThemeApi.useToken()
+
+  if (admission.status === 'discharged') {
+    return (
+      <Tooltip title="مخرّجة">
+        <LogoutOutlined
+          style={{
+            position: 'absolute',
+            bottom: -5,
+            insetInlineEnd: -5,
+            fontSize: 14,
+            color: token.colorInfo,
+            background: token.colorBgContainer,
+            borderRadius: '50%',
+          }}
+        />
+      </Tooltip>
+    )
+  }
+
+  if (admission.status === 'cancelled') {
+    return (
+      <Tooltip title="ملغاة">
+        <CloseCircleFilled
+          style={{
+            position: 'absolute',
+            bottom: -5,
+            insetInlineEnd: -5,
+            fontSize: 14,
+            color: token.colorError,
+            background: token.colorBgContainer,
+            borderRadius: '50%',
+          }}
+        />
+      </Tooltip>
+    )
+  }
+
+  return null
+}
+
 /** Right-column compact rail of admission-number squares on {@link AdmissionsPage}. */
 export function AdmissionNumberRail({ admissions, activeId, onSelect }: AdmissionNumberRailProps) {
   const { token } = antdThemeApi.useToken()
@@ -196,6 +239,7 @@ export function AdmissionNumberRail({ admissions, activeId, onSelect }: Admissio
                 </Tooltip>
                 <AdmissionBalanceBadge admission={admission} />
                 <AdmissionInsuranceBadge admission={admission} />
+                <AdmissionStatusBadge admission={admission} />
               </div>
             </div>
           )
