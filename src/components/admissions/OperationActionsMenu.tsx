@@ -2,7 +2,9 @@ import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import {
+  Box,
   IconButton,
+  Badge,
   Menu,
   MenuItem,
   ListItemIcon,
@@ -60,15 +62,34 @@ export function OperationActionsMenu({ operation, readOnly = false, isDeleting, 
 
   return (
     <>
-      <IconButton
-        size="small"
-        onClick={(e) => {
-          e.stopPropagation()
-          setAnchorEl(e.currentTarget)
-        }}
-      >
-        <MoreOutlined />
-      </IconButton>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Tooltip title="الفريق الطبي">
+          <IconButton
+            size="small"
+            color="primary"
+            onClick={(e) => {
+              e.stopPropagation()
+              onOpenTeam()
+            }}
+          >
+            <Badge badgeContent={operation.team_members?.length ?? 0} color="primary">
+              <TeamOutlined />
+            </Badge>
+          </IconButton>
+        </Tooltip>
+        <Tooltip title="خيارات أخرى">
+          <IconButton
+            size="small"
+            sx={{ border: '1px solid', borderColor: 'divider' }}
+            onClick={(e) => {
+              e.stopPropagation()
+              setAnchorEl(e.currentTarget)
+            }}
+          >
+            <MoreOutlined />
+          </IconButton>
+        </Tooltip>
+      </Box>
       <Menu anchorEl={anchorEl} open={!!anchorEl} onClose={close} onClick={(e) => e.stopPropagation()}>
         {!readOnly && (
           <MenuItem
@@ -115,17 +136,6 @@ export function OperationActionsMenu({ operation, readOnly = false, isDeleting, 
             </MenuItem>
           </span>
         </Tooltip>
-        <MenuItem
-          onClick={() => {
-            close()
-            onOpenTeam()
-          }}
-        >
-          <ListItemIcon>
-            <TeamOutlined />
-          </ListItemIcon>
-          <ListItemText>الفريق الطبي ({operation.team_members?.length ?? 0})</ListItemText>
-        </MenuItem>
         {!readOnly && <Divider />}
         {!readOnly && (
           <MenuItem
