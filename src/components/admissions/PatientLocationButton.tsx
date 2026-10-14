@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Popover, Popconfirm, Button, Flex, Typography, Tag, theme as antdThemeApi } from 'antd'
-import { BankOutlined, ApartmentOutlined, HomeOutlined, BorderOutlined, EnvironmentOutlined } from '@ant-design/icons'
+import { BankOutlined, ApartmentOutlined, HomeOutlined, BorderOutlined, EnvironmentOutlined, SwapOutlined } from '@ant-design/icons'
 import { toast } from 'sonner'
 import { getRoomTypes } from '@/services/roomTypeService'
 import { releaseAdmissionBed } from '@/services/admissionService'
@@ -33,6 +33,7 @@ export function PatientLocationButton({
   const queryClient = useQueryClient()
   const roomTypesQuery = useQuery({ queryKey: ['room-types'], queryFn: getRoomTypes })
   const [assignBedOpen, setAssignBedOpen] = useState(false)
+  const [transferBedOpen, setTransferBedOpen] = useState(false)
 
   const releaseMutation = useMutation({
     mutationFn: (admissionId: number) => releaseAdmissionBed(admissionId),
@@ -82,24 +83,33 @@ export function PatientLocationButton({
         <Text style={{ fontSize: 13, fontWeight: 600 }}>سرير {bed?.bed_number ?? '—'}</Text>
       </Flex>
       {bed && bedAdmissionId !== undefined && (
-        <Popconfirm
-          title="إلغاء السرير؟"
-          description="سيصبح السرير متاحاً، ويبقى التنويم بدون سرير."
-          okText="نعم، إلغاء"
-          cancelText="تراجع"
-          onConfirm={() => releaseMutation.mutate(bedAdmissionId)}
-        >
-          <Button danger size="small" loading={releaseMutation.isPending}>
-            إلغاء السرير
+        <Flex gap={6} wrap="wrap">
+          <Button size="small" icon={<SwapOutlined />} onClick={() => setTransferBedOpen(true)}>
+            نقل السرير
           </Button>
-        </Popconfirm>
+          <Popconfirm
+            title="إلغاء السرير؟"
+            description="سيصبح السرير متاحاً، ويبقى التنويم بدون سرير."
+            okText="نعم، إلغاء"
+            cancelText="تراجع"
+            onConfirm={() => releaseMutation.mutate(bedAdmissionId)}
+          >
+            <Button danger size="small" loading={releaseMutation.isPending}>
+              إلغاء السرير
+            </Button>
+          </Popconfirm>
+        </Flex>
       )}
     </Flex>
   )
 
+  const transferDialog = transferBedOpen && bedAdmissionId !== undefined && (
+    <AssignBedDialog open mode="transfer" admissionId={bedAdmissionId} onClose={() => setTransferBedOpen(false)} />
+  )
+
   if (variant === 'compact') {
     return (
-      <Flex align="center" gap={4}>
+      <Flex align="center" gap={4} onClick={(e) => e.stopPropagation()}>
         <Text style={{ fontWeight: 600 }}>{bed?.room?.room_number ?? '—'}</Text>
         <Popover content={content} title="الموقع" trigger="click" placement="bottomLeft">
           <Button
@@ -109,15 +119,21 @@ export function PatientLocationButton({
             onClick={(e) => e.stopPropagation()}
           />
         </Popover>
+        {transferDialog}
       </Flex>
     )
   }
 
   return (
-    <Popover content={content} title="الموقع" trigger="click" placement="bottomLeft">
-      <Button size={size} icon={<EnvironmentOutlined />} onClick={(e) => e.stopPropagation()}>
-        {bed?.room?.room_number ? `غرفة ${bed.room.room_number}` : 'الموقع'}
-      </Button>
-    </Popover>
+    <Flex onClick={(e) => e.stopPropagation()}>
+      <Popover content={content} title="الموقع" trigger="click" placement="bottomLeft">
+        <Button size={size} icon={<EnvironmentOutlined />} onClick={(e) => e.stopPropagation()}>
+          {bed?.room?.room_number
+            ? `غرفة ${bed.room.room_number} (${getRoomTypeName(roomTypesQuery.data, bed.room.room_type)})`
+            : 'الموقع'}
+        </Button>
+      </Popover>
+      {transferDialog}
+    </Flex>
   )
 }

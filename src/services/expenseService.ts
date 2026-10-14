@@ -13,6 +13,12 @@ export async function getExpenses(filters: ExpenseFilters = {}): Promise<Expense
   return data
 }
 
+/** Distinct categories already used on recorded expenses, for the category picker's suggestions. */
+export async function getExpenseCategories(): Promise<string[]> {
+  const { data } = await apiClient.get<string[]>('/expenses/categories')
+  return data
+}
+
 export interface ExpensePayload {
   expense_date?: string
   category: string

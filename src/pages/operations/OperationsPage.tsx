@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Input, Table, Typography, Flex, Space, Button, Badge, Tooltip } from 'antd'
+import { ConfigProvider, Card, Input, Select, Table, Typography, Flex, Space, Button, Badge, Tooltip } from 'antd'
 import { FileTextOutlined, FileExcelOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { useAntTheme } from '@/lib/antdTheme'
 import { formatDateTime, formatNumber } from '@/lib/utils'
 import { getAllOperations } from '@/services/operationService'
+import { getProcedures } from '@/services/procedureService'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
@@ -37,10 +38,13 @@ export function OperationsPage() {
   const [dateFrom, setDateFrom] = useState(dayjs().startOf('month').format('YYYY-MM-DD'))
   const [dateTo, setDateTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'))
   const [search, setSearch] = useState('')
+  const [procedureId, setProcedureId] = useState<number | undefined>(undefined)
   const [page, setPage] = useState(1)
   const [perPage, setPerPage] = useState(15)
   const [excelLoading, setExcelLoading] = useState(false)
   const pdf = usePdfPreview()
+
+  const proceduresQuery = useQuery({ queryKey: ['procedures'], queryFn: () => getProcedures() })
 
   function reportQuery(): string {
     const params = new URLSearchParams()
@@ -48,6 +52,7 @@ export function OperationsPage() {
     if (dateFrom) params.set('date_from', dateFrom)
     if (dateTo) params.set('date_to', dateTo)
     if (search) params.set('search', search)
+    if (procedureId) params.set('procedure_id', String(procedureId))
     return params.toString()
   }
 
@@ -73,13 +78,14 @@ export function OperationsPage() {
   }
 
   const operationsQuery = useQuery({
-    queryKey: ['operations', date, dateFrom, dateTo, search, page, perPage],
+    queryKey: ['operations', date, dateFrom, dateTo, search, procedureId, page, perPage],
     queryFn: () =>
       getAllOperations({
         date: date || undefined,
         date_from: dateFrom || undefined,
         date_to: dateTo || undefined,
         search: search || undefined,
+        procedure_id: procedureId,
         page,
         per_page: perPage,
       }),
@@ -200,6 +206,22 @@ export function OperationsPage() {
                 setSearch(e.target.value)
                 setPage(1)
               }}
+            />
+          </FieldLabel>
+          <FieldLabel label="نوع العملية">
+            <Select
+              style={{ width: 220 }}
+              allowClear
+              placeholder="كل الأنواع"
+              showSearch
+              optionFilterProp="label"
+              loading={proceduresQuery.isLoading}
+              value={procedureId}
+              onChange={(v) => {
+                setProcedureId(v ?? undefined)
+                setPage(1)
+              }}
+              options={(proceduresQuery.data ?? []).map((p) => ({ label: p.name_ar, value: p.id }))}
             />
           </FieldLabel>
         </Flex>

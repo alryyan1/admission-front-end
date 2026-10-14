@@ -111,6 +111,58 @@ export interface DoctorRevenueAdmissionRow {
   total_revenue: number
 }
 
+export interface ExpenseCategoryBreakdown {
+  category: string
+  count: number
+  total: number
+}
+
+export interface ExpenseReportRow {
+  id: number
+  expense_date: string
+  category: string
+  description: string | null
+  amount: number
+  payment_method: string | null
+  recorded_by: string | null
+}
+
+export interface ExpensesReport {
+  range: { from: string; to: string }
+  summary: { count: number; total_amount: number }
+  by_category: ExpenseCategoryBreakdown[]
+  by_method: PaymentMethodBreakdown[]
+  expenses: ExpenseReportRow[]
+}
+
+export interface RoomTypeRevenueBreakdown {
+  room_type_code: string | null
+  room_type_name: string
+  admissions_count: number
+  total: number
+}
+
+export interface AdmissionRevenueRow {
+  admission_id: number
+  admission_number: string | null
+  patient_name: string | null
+  admission_date: string | null
+  discharge_date: string | null
+  status: string
+  room_type_code: string | null
+  room_type_name: string
+  ward_name: string | null
+  room_number: string | null
+  room_revenue: number
+}
+
+export interface AdmissionRevenueReport {
+  range: { from: string; to: string }
+  summary: { admissions_count: number; room_revenue: number }
+  by_room_type: RoomTypeRevenueBreakdown[]
+  admissions: AdmissionRevenueRow[]
+}
+
 export interface DoctorRevenueReport {
   doctor: { id: number; name: string; specialist: string | null }
   doctor_role: DoctorRevenueRole

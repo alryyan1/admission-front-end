@@ -19,6 +19,7 @@ export interface OccupancyStatistics {
     available_beds: number
     available_rooms: number
     maintenance_beds: number
+    discharged_today: number
     occupancy_rate: number
   }
   by_ward: WardOccupancy[]

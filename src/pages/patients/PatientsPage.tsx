@@ -1,10 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { ConfigProvider, Card, Input, Table, Typography } from 'antd'
+import { ConfigProvider, Card, Input, Table, Typography, Button, Flex } from 'antd'
+import { EyeOutlined, HistoryOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { searchLocalPatients } from '@/services/patientService'
+import { getAdmissions } from '@/services/admissionService'
+import { AdmissionHistoryTab } from '@/components/patients/AdmissionHistoryTab'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import type { Patient } from '@/types/patient'
 
@@ -17,6 +20,7 @@ export function PatientsPage() {
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
+  const [expandedPatientIds, setExpandedPatientIds] = useState<number[]>([])
 
   const patientsQuery = useQuery({
     queryKey: ['patients', debouncedSearch],
@@ -43,6 +47,28 @@ export function PatientsPage() {
       key: 'insurance_card_number',
       render: (_, patient) => patient.insurance_card_number ?? '—',
     },
+    {
+      title: '',
+      key: 'actions',
+      render: (_, patient) => (
+        <Flex gap={8}>
+          <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/patients/${patient.id}`)}>
+            عرض الملف
+          </Button>
+          <Button
+            size="small"
+            icon={<HistoryOutlined />}
+            onClick={() =>
+              setExpandedPatientIds((ids) =>
+                ids.includes(patient.id) ? ids.filter((id) => id !== patient.id) : [...ids, patient.id],
+              )
+            }
+          >
+            سجل التنويم
+          </Button>
+        </Flex>
+      ),
+    },
   ]
 
   return (
@@ -65,12 +91,29 @@ export function PatientsPage() {
           columns={columns}
           dataSource={patientsQuery.data ?? []}
           pagination={false}
-          onRow={(patient) => ({
-            className: 'cursor-pointer',
-            onClick: () => navigate(`/patients/${patient.id}`),
-          })}
+          expandable={{
+            expandedRowRender: (patient) => <PatientAdmissionHistory patientId={patient.id} />,
+            expandedRowKeys: expandedPatientIds,
+            showExpandColumn: false,
+          }}
         />
       </Card>
     </ConfigProvider>
+  )
+}
+
+/** Lazily loads and shows a patient's admission history inline when their row is expanded. */
+function PatientAdmissionHistory({ patientId }: { patientId: number }) {
+  const admissionsQuery = useQuery({
+    queryKey: ['patient', patientId, 'admissions'],
+    queryFn: () => getAdmissions({ patient_id: patientId }),
+  })
+
+  return (
+    <AdmissionHistoryTab
+      patientId={patientId}
+      admissions={admissionsQuery.data?.data}
+      isLoading={admissionsQuery.isLoading}
+    />
   )
 }

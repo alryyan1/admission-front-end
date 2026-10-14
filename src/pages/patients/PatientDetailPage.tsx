@@ -121,7 +121,11 @@ export function PatientDetailPage() {
 
         <MedicalInfoTab patient={patient} editable={canEdit} />
 
-        <AdmissionHistoryTab admissions={admissionsQuery.data?.data} isLoading={admissionsQuery.isLoading} />
+        <AdmissionHistoryTab
+          patientId={id}
+          admissions={admissionsQuery.data?.data}
+          isLoading={admissionsQuery.isLoading}
+        />
       </Space>
 
       <Modal

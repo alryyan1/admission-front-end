@@ -26,6 +26,21 @@ export const admissionPdfPaths = {
   admissionSummary: (admissionId: number) => `/admissions/${admissionId}/summary.pdf`,
   operationInvoice: (operationId: number) => `/operations/${operationId}/invoice.pdf`,
   operationTeam: (operationId: number) => `/operations/${operationId}/team.pdf`,
+  admissionsPaymentsReport: (filters: {
+    from?: string
+    to?: string
+    search?: string
+    room_id?: number
+    bed_id?: number
+  }) => {
+    const query = new URLSearchParams()
+    if (filters.from) query.set('from', filters.from)
+    if (filters.to) query.set('to', filters.to)
+    if (filters.search) query.set('search', filters.search)
+    if (filters.room_id) query.set('room_id', String(filters.room_id))
+    if (filters.bed_id) query.set('bed_id', String(filters.bed_id))
+    return `/reports/admissions-payments.pdf?${query.toString()}`
+  },
 }
 
 export async function getAdmissions(
@@ -69,6 +84,12 @@ export async function registerAdmission(patientId: number): Promise<Admission> {
 
 export async function assignAdmissionBed(id: number, bedId: number): Promise<Admission> {
   const { data } = await apiClient.patch<Admission>(`/admissions/${id}/bed`, { bed_id: bedId })
+  return data
+}
+
+/** Moves an already-bedded admission to a different bed (e.g. out of a private room into a ward). */
+export async function transferAdmissionBed(id: number, bedId: number): Promise<Admission> {
+  const { data } = await apiClient.patch<Admission>(`/admissions/${id}/bed/transfer`, { bed_id: bedId })
   return data
 }
 

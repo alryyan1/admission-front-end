@@ -8,7 +8,14 @@ import { useAntTheme } from '@/lib/antdTheme'
 import { formatDate, formatNumber } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { StatTile } from '@/components/statistics/StatTile'
-import { getExpenses, createExpense, updateExpense, deleteExpense, type ExpensePayload } from '@/services/expenseService'
+import {
+  getExpenses,
+  getExpenseCategories,
+  createExpense,
+  updateExpense,
+  deleteExpense,
+  type ExpensePayload,
+} from '@/services/expenseService'
 import { ExpenseFormModal, EXPENSE_CATEGORIES } from '@/components/expenses/ExpenseFormModal'
 import type { Expense } from '@/types/expense'
 
@@ -35,6 +42,9 @@ export function ExpensesPage() {
     queryKey: ['expenses', dateFrom, dateTo, category, debouncedSearch],
     queryFn: () => getExpenses({ date_from: dateFrom, date_to: dateTo, category, search: debouncedSearch || undefined }),
   })
+
+  const categoriesQuery = useQuery({ queryKey: ['expenses', 'categories'], queryFn: getExpenseCategories })
+  const categoryOptions = Array.from(new Set([...EXPENSE_CATEGORIES, ...(categoriesQuery.data ?? [])]))
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['expenses'] })
@@ -115,7 +125,7 @@ export function ExpensesPage() {
             placeholder="كل التصنيفات"
             value={category}
             onChange={(v) => setCategory(v ?? undefined)}
-            options={EXPENSE_CATEGORIES.map((c) => ({ label: c, value: c }))}
+            options={categoryOptions.map((c) => ({ label: c, value: c }))}
           />
           <Input
             style={{ maxWidth: 220 }}

@@ -74,6 +74,8 @@ const reportsNavItems: NavItem[] = [
   { to: '/reports/daily-revenue', label: 'الإيراد اليومي', roles: ['admin', 'cashier'] },
   { to: '/reports/doctor-entitlements', label: 'استحقاقات الأطباء', roles: ['admin', 'cashier'] },
   { to: '/reports/doctor-revenue', label: 'أداء الأطباء (الإيرادات)', roles: ['admin', 'cashier'] },
+  { to: '/reports/expenses', label: 'تقرير المصروفات', roles: ['admin', 'cashier'] },
+  { to: '/reports/admission-revenue', label: 'إيرادات التنويم (الغرف)', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [

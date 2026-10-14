@@ -1,9 +1,11 @@
 import apiClient from '@/services/api'
 import type {
+  AdmissionRevenueReport,
   DailyRevenueReport,
   DoctorEntitlementsReport,
   DoctorRevenueReport,
   DoctorRevenueRole,
+  ExpensesReport,
   PaymentRecorder,
   PaymentsReport,
   RevenueCalculatorReport,
@@ -57,5 +59,20 @@ export async function getDoctorRevenueReport(filters: {
   to: string
 }): Promise<DoctorRevenueReport> {
   const { data } = await apiClient.get<DoctorRevenueReport>('/reports/doctor-revenue', { params: filters })
+  return data
+}
+
+export async function getAdmissionRevenueReport(filters: { from: string; to: string }): Promise<AdmissionRevenueReport> {
+  const { data } = await apiClient.get<AdmissionRevenueReport>('/reports/admission-revenue', { params: filters })
+  return data
+}
+
+export async function getExpensesReport(filters: {
+  from: string
+  to: string
+  category?: string
+  search?: string
+}): Promise<ExpensesReport> {
+  const { data } = await apiClient.get<ExpensesReport>('/reports/expenses', { params: filters })
   return data
 }

@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Tooltip, theme as antdThemeApi } from 'antd'
-import { CalendarOutlined, TeamOutlined, TableOutlined, CalculatorOutlined } from '@ant-design/icons'
+import { CalendarOutlined, TeamOutlined, TableOutlined, CalculatorOutlined, WhatsAppOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
 import { formatNumber } from '@/lib/utils'
-import { getAdmissions } from '@/services/admissionService'
+import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
+import { getAdmissions, admissionPdfPaths } from '@/services/admissionService'
 import { RegisterPatientDialog } from '@/components/admissions/RegisterPatientDialog'
 import { RevenueCalculatorDialog } from '@/components/admissions/RevenueCalculatorDialog'
 import {
@@ -89,6 +91,7 @@ export function AdmissionsPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
+  const pdf = usePdfPreview()
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -116,6 +119,7 @@ export function AdmissionsPage() {
     } else if (urlAdmissionId !== null) {
       const parsed = Number(urlAdmissionId)
       setAdmissionIdFilter(Number.isNaN(parsed) ? undefined : parsed)
+      setActiveAdmissionId(Number.isNaN(parsed) ? null : parsed)
       setSearch('')
     }
     setSearchParams({}, { replace: true })
@@ -136,13 +140,12 @@ export function AdmissionsPage() {
   const to = dateRange?.[1]?.endOf('day').toISOString()
 
   const admissionsQuery = useQuery({
-    queryKey: ['admissions', from, to, debouncedSearch, admissionIdFilter, roomId, bedId],
+    queryKey: ['admissions', from, to, debouncedSearch, roomId, bedId],
     queryFn: () =>
       getAdmissions({
         from,
         to,
         search: debouncedSearch || undefined,
-        admission_id: admissionIdFilter,
         room_id: roomId ?? undefined,
         bed_id: bedId ?? undefined,
       }),
@@ -210,6 +213,7 @@ export function AdmissionsPage() {
           <Flex vertical gap={4} style={{ minWidth: 180 }}>
             <Flex align="center" gap={6}>
               <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
+              {row.status === 'discharged' && <Tag color="purple">تم الخروج</Tag>}
               {!!row.operations_count && <Tag>عملية</Tag>}
             </Flex>
             {row.status === 'admitted' &&
@@ -251,7 +255,18 @@ export function AdmissionsPage() {
       key: 'referred_by_doctor',
       render: (_, row) => {
         if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
-        return row.patient?.referred_by_doctor?.name ?? '—'
+        const doctorName = row.patient?.referred_by_doctor?.name
+        if (!doctorName) return '—'
+        return (
+          <Flex align="center" gap={6}>
+            {doctorName}
+            {row.doctor_notice_sent_at && (
+              <Tooltip title="تم إرسال إشعار واتساب للطبيب">
+                <WhatsAppOutlined style={{ color: token.colorSuccess }} />
+              </Tooltip>
+            )}
+          </Flex>
+        )
       },
     },
 
@@ -298,10 +313,40 @@ export function AdmissionsPage() {
         </Flex>
         <Flex align="center" gap={8}>
           {activeAdmission && (
-            <Button icon={<TableOutlined />} onClick={() => setActiveAdmissionId(null)}>
+            <Button
+              icon={<TableOutlined />}
+              onClick={() => {
+                setActiveAdmissionId(null)
+                if (admissionIdFilter !== undefined) {
+                  setAdmissionIdFilter(undefined)
+                  if (search.trim() === '') {
+                    setDateRange(defaultDateRange())
+                    setDateRangeClearedBySearch(false)
+                  }
+                }
+              }}
+            >
               العودة إلى الجدول
             </Button>
           )}
+          <Button
+            icon={<FileTextOutlined />}
+            loading={pdf.isLoading()}
+            onClick={() =>
+              pdf.open(
+                admissionPdfPaths.admissionsPaymentsReport({
+                  from,
+                  to,
+                  search: debouncedSearch || undefined,
+                  room_id: roomId ?? undefined,
+                  bed_id: bedId ?? undefined,
+                }),
+                'معاينة تقرير بيانات التنويم والمدفوعات',
+              )
+            }
+          >
+            طباعة PDF
+          </Button>
           <Button icon={<CalculatorOutlined />} onClick={() => setCalculatorOpen(true)}>
             الحاسبة
           </Button>
@@ -334,7 +379,7 @@ export function AdmissionsPage() {
             pagination={false}
             onRow={(row) =>
               isDayHeaderRow(row)
-                ? { style: { backgroundColor: token.colorFillAlter } }
+                ? { style: { backgroundColor: '' } }
                 : {
                     className: 'cursor-pointer',
                     onClick: () => setActiveAdmissionId(row.id),
@@ -345,6 +390,7 @@ export function AdmissionsPage() {
 
       {dialogOpen && <RegisterPatientDialog open onClose={() => setDialogOpen(false)} />}
       <RevenueCalculatorDialog open={calculatorOpen} onClose={() => setCalculatorOpen(false)} />
+      <PdfPreviewModal url={pdf.url} title={pdf.title} onClose={pdf.close} />
       </div>
     </ConfigProvider>
   )

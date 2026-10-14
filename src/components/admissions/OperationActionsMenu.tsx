@@ -63,20 +63,21 @@ export function OperationActionsMenu({ operation, readOnly = false, isDeleting, 
   return (
     <>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <Tooltip title="الفريق الطبي">
-          <IconButton
-            size="small"
-            color="primary"
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpenTeam()
-            }}
-          >
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={
             <Badge badgeContent={operation.team_members?.length ?? 0} color="primary">
               <TeamOutlined />
             </Badge>
-          </IconButton>
-        </Tooltip>
+          }
+          onClick={(e) => {
+            e.stopPropagation()
+            onOpenTeam()
+          }}
+        >
+          الفريق الطبي
+        </Button>
         <Tooltip title="خيارات أخرى">
           <IconButton
             size="small"

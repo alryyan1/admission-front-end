@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Modal, Row, Col, Input, InputNumber, Select, DatePicker, Typography, Space } from 'antd'
+import { Modal, Row, Col, Input, InputNumber, Select, DatePicker, Typography, Space, Button, Divider } from 'antd'
+import { PlusOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import { getPaymentMethods } from '@/services/paymentMethodService'
+import { getExpenseCategories } from '@/services/expenseService'
 import type { Expense } from '@/types/expense'
 import type { ExpensePayload } from '@/services/expenseService'
 
@@ -47,9 +49,12 @@ export function ExpenseFormModal({ open, onClose, expense, onSubmit, isSubmittin
   const [description, setDescription] = useState('')
   const [amount, setAmount] = useState<number | null>(null)
   const [paymentMethodId, setPaymentMethodId] = useState<number | undefined>(undefined)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods, enabled: open })
   const activePaymentMethods = (paymentMethodsQuery.data ?? []).filter((pm) => pm.is_active)
+  const categoriesQuery = useQuery({ queryKey: ['expenses', 'categories'], queryFn: getExpenseCategories, enabled: open })
+  const categoryOptions = Array.from(new Set([...EXPENSE_CATEGORIES, ...(categoriesQuery.data ?? [])]))
 
   useEffect(() => {
     if (!open) return
@@ -57,8 +62,24 @@ export function ExpenseFormModal({ open, onClose, expense, onSubmit, isSubmittin
     setCategory(expense?.category)
     setDescription(expense?.description ?? '')
     setAmount(expense?.amount ?? null)
-    setPaymentMethodId(expense?.payment_method_id ?? undefined)
-  }, [open, expense])
+    setNewCategoryName('')
+    if (expense) {
+      setPaymentMethodId(expense.payment_method_id ?? undefined)
+      return
+    }
+    // New expenses default to the bank payment method, matching the deposit form's convention.
+    // Re-runs once payment methods finish loading, since they may not be ready on the first pass.
+    const preferred = activePaymentMethods.find((pm) => pm.name === 'بنكك')
+    setPaymentMethodId(preferred?.id)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, expense, activePaymentMethods.length])
+
+  function handleAddCategory() {
+    const trimmed = newCategoryName.trim()
+    if (!trimmed) return
+    setCategory(trimmed)
+    setNewCategoryName('')
+  }
 
   function handleSubmit() {
     if (!category?.trim() || amount === null) return
@@ -109,12 +130,37 @@ export function ExpenseFormModal({ open, onClose, expense, onSubmit, isSubmittin
           <FieldLabel label="التصنيف">
             <Select
               style={{ width: '100%' }}
-              mode="tags"
-              maxCount={1}
-              placeholder="اختر أو اكتب تصنيفاً"
-              value={category ? [category] : []}
-              onChange={(values) => setCategory(values[values.length - 1])}
-              options={EXPENSE_CATEGORIES.map((c) => ({ label: c, value: c }))}
+              placeholder="اختر تصنيفاً"
+              value={category}
+              onChange={setCategory}
+              options={categoryOptions.map((c) => ({ label: c, value: c }))}
+              popupRender={(menu) => (
+                <>
+                  {menu}
+                  <Divider style={{ margin: '8px 0' }} />
+                  <Space style={{ padding: '0 8px 4px' }}>
+                    <Input
+                      placeholder="تصنيف جديد"
+                      value={newCategoryName}
+                      onChange={(e) => setNewCategoryName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          handleAddCategory()
+                        }
+                      }}
+                    />
+                    <Button
+                      type="text"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddCategory}
+                      disabled={!newCategoryName.trim()}
+                    >
+                      إضافة
+                    </Button>
+                  </Space>
+                </>
+              )}
             />
           </FieldLabel>
         </Col>

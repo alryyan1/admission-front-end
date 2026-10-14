@@ -3,6 +3,7 @@ import type { Operation, OperationListResponse } from '@/types/admission'
 
 export interface OperationFilters {
   surgeon_id?: number
+  procedure_id?: number
   date?: string
   date_from?: string
   date_to?: string

@@ -28,6 +28,8 @@ export interface Admission {
   discharge_summary: string | null
   cancellation_reason: string | null
   cancelled_at: string | null
+  /** When the WhatsApp admission notice was successfully sent to the referring doctor, if ever. */
+  doctor_notice_sent_at: string | null
   patient?: Patient
   bed?: Bed | null
   vital_signs?: VitalSign[]
@@ -44,7 +46,7 @@ export interface Admission {
   /** Live services + priced operations minus deposits, as computed by the admissions index endpoint. */
   balance_due?: number
   /** Outcome of the synchronous WhatsApp notice sent to the referring doctor on admission (POST /admissions only). */
-  whatsapp_doctor_notice?: { sent: boolean; message: string }
+  whatsapp_doctor_notice?: { sent: boolean; message: string; response?: Record<string, unknown> }
 }
 
 export interface VitalSign {

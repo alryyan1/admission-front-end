@@ -54,7 +54,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
     admission.status === 'cancelled'
       ? token.colorErrorBg
       : admission.status === 'discharged'
-        ? token.colorInfoBg
+        ? token.green2
         : undefined
 
   const [mode, setMode] = useState<Mode>('menu')
@@ -111,19 +111,18 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
   return (
     <>
       <Card
-        style={{ position: 'sticky', top: 16, backgroundColor: cardBackground }}
+        style={{ position: 'sticky', top: 16 }}
         className="animate-in fade-in slide-in-from-left-4 duration-300"
       >
         <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
           <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
-            <Text strong style={{ fontSize: 24, lineHeight: 1.2,border: `1px solid ${token.colorBorder}`,textAlign: 'center',padding: '4px 0' }}>
+            <Text strong style={{ fontSize: 24, lineHeight: 1.2,border: `1px solid ${token.colorBorder}`,textAlign: 'center',padding: '4px 0',backgroundColor: cardBackground,borderRadius: 4 }}>
               {admission.id ?? '—'}
             </Text>
             <Text strong style={{ fontSize: 16, textAlign: 'center', lineHeight: 1.2,borderBottom: `1px solid ${token.colorBorder}` }}>
               {admission.patient?.name}
             </Text>
             <Flex align="center" gap={8}>
-              <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
               {admission.patient?.insurance_company && (
                 <Tag color="red" icon={<HeartFilled />}>
                   {admission.patient.insurance_company.name}
@@ -140,7 +139,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
           />
         </Flex>
 
-        <Descriptions size="small" column={1} bordered={false}>
+        <Descriptions size="small" column={1} bordered={true}>
           {/* <Descriptions.Item label="رقم الملف">{admission.id}</Descriptions.Item> */}
           <Descriptions.Item label="الغرفة">
             <PatientLocationButton
@@ -148,6 +147,13 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
               variant="compact"
               bedAdmissionId={admission.status === 'admitted' ? admission.id : undefined}
             />
+          </Descriptions.Item>
+          <Descriptions.Item label="تاريخ الدخول">{dayjs(admission.admission_date).format('YYYY-MM-DD hh:mm A')}</Descriptions.Item>
+          {admission.discharge_date && (
+            <Descriptions.Item label="تاريخ الخروج">{dayjs(admission.discharge_date).format('YYYY-MM-DD hh:mm A')}</Descriptions.Item>
+          )}
+          <Descriptions.Item label="الحالة">
+            <Tag color={STATUS_COLOR[admission.status]}>{STATUS_LABEL[admission.status]}</Tag>
           </Descriptions.Item>
           <Descriptions.Item label="الطبيب المعالج">{admission.patient?.admitting_doctor?.name ?? '—'}</Descriptions.Item>
           {admission.patient?.referred_by_doctor && (

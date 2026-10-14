@@ -77,7 +77,7 @@ export function DashboardPage() {
               value={formatNumber(admissionsQuery.data?.active_admissions ?? 0)}
             />
             <StatTile label="غرف متاحة" value={formatNumber(occupancyQuery.data?.summary.available_rooms ?? 0)} />
-     
+            <StatTile label="أسرّة متاحة" value={formatNumber(occupancyQuery.data?.summary.available_beds ?? 0)} />
           </div>
 
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">

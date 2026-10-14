@@ -23,6 +23,7 @@ import dayjs from '@/lib/dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
 import { PageLoader } from '@/components/common/PageLoader'
 import { getFloors, getFloor } from '@/services/facilityService'
+import { getOccupancyStatistics } from '@/services/statisticsService'
 import { getRoomTypes } from '@/services/roomTypeService'
 import { getRoomTypeName, getRoomTypeStyle } from '@/lib/roomTypes'
 import type { Bed, BedStatus, Floor, Room, Ward } from '@/types/facility'
@@ -153,7 +154,7 @@ function MapLegend() {
   )
 }
 
-function SummaryBar({ beds }: { beds: Bed[] }) {
+function SummaryBar({ beds, dischargedToday }: { beds: Bed[]; dischargedToday: number }) {
   const s = bedStats(beds)
   return (
     <Card styles={{ body: { padding: 16 } }}>
@@ -188,6 +189,9 @@ function SummaryBar({ beds }: { beds: Bed[] }) {
         </Col>
         <Col xs={12} md={4}>
           <Statistic title="صيانة" value={s.maintenance} valueStyle={{ color: BED_STATUS_COLORS.maintenance.color }} />
+        </Col>
+        <Col xs={12} md={4}>
+          <Statistic title="خروج اليوم" value={dischargedToday} />
         </Col>
       </Row>
     </Card>
@@ -426,6 +430,7 @@ export function FacilityMapPage() {
   const [activeFloor, setActiveFloor] = useState<string>('all')
 
   const floorsQuery = useQuery({ queryKey: ['floors'], queryFn: getFloors })
+  const occupancyQuery = useQuery({ queryKey: ['statistics', 'occupancy'], queryFn: getOccupancyStatistics })
 
   const floorDetailsQuery = useQuery({
     queryKey: ['floors', 'map', floorsQuery.data?.map((f) => f.id)],
@@ -493,7 +498,7 @@ export function FacilityMapPage() {
 
         {!isLoading && !isError && floors.length > 0 && (
           <>
-            <SummaryBar beds={allBeds} />
+            <SummaryBar beds={allBeds} dischargedToday={occupancyQuery.data?.summary.discharged_today ?? 0} />
 
             {floors.length > 1 && (
               <Segmented

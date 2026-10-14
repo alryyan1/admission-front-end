@@ -16,16 +16,23 @@ import {
 import { getAvailableBeds, getBeds, getFloors, getRooms, getWards } from '@/services/facilityService'
 import { getRoomTypes } from '@/services/roomTypeService'
 import { getRoomTypeName } from '@/lib/roomTypes'
-import { assignAdmissionBed } from '@/services/admissionService'
+import { assignAdmissionBed, transferAdmissionBed } from '@/services/admissionService'
 
-/** Picks an available bed and assigns it to an admission that was registered without one. */
+/**
+ * Picks an available bed and assigns it to an admission. In 'assign' mode that's a
+ * bedless admission's first bed; in 'transfer' mode it moves an already-bedded
+ * admission to a different bed (e.g. out of a private room into a ward), freeing
+ * the old bed in the same request.
+ */
 export function AssignBedDialog({
   open,
   admissionId,
+  mode = 'assign',
   onClose,
 }: {
   open: boolean
   admissionId: number
+  mode?: 'assign' | 'transfer'
   onClose: () => void
 }) {
   const queryClient = useQueryClient()
@@ -74,22 +81,26 @@ export function AssignBedDialog({
   }, [bedsQuery.data])
 
   const assignMutation = useMutation({
-    mutationFn: () => assignAdmissionBed(admissionId, Number(bedId)),
+    mutationFn: () =>
+      mode === 'transfer'
+        ? transferAdmissionBed(admissionId, Number(bedId))
+        : assignAdmissionBed(admissionId, Number(bedId)),
     onMutate: () => {
+      if (mode === 'transfer') return { whatsappToastId: undefined }
       const whatsappToastId = toast.loading('جاري إرسال إشعار واتساب للطبيب المحوِّل...')
       return { whatsappToastId }
     },
     onSuccess: (admission, _variables, context) => {
-      toast.success('تم تعيين السرير')
+      toast.success(mode === 'transfer' ? 'تم نقل السرير' : 'تم تعيين السرير')
 
       const notice = admission.whatsapp_doctor_notice
-      if (notice) {
+      if (notice && context.whatsappToastId) {
         if (notice.sent) {
           toast.success(notice.message, { id: context.whatsappToastId })
         } else {
           toast.warning(notice.message, { id: context.whatsappToastId })
         }
-      } else {
+      } else if (context.whatsappToastId) {
         toast.dismiss(context.whatsappToastId)
       }
 
@@ -98,7 +109,7 @@ export function AssignBedDialog({
       onClose()
     },
     onError: (_error, _variables, context) => {
-      toast.dismiss(context?.whatsappToastId)
+      if (context?.whatsappToastId) toast.dismiss(context.whatsappToastId)
     },
   })
 
@@ -109,7 +120,7 @@ export function AssignBedDialog({
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>تعيين سرير</DialogTitle>
+      <DialogTitle>{mode === 'transfer' ? 'نقل السرير' : 'تعيين سرير'}</DialogTitle>
       <DialogContent>
         <Stack spacing={2.5} sx={{ pt: 1 }}>
           <Box sx={{ display: 'flex', gap: 2 }}>
@@ -154,6 +165,7 @@ export function AssignBedDialog({
               disabled={wardId === ''}
               options={roomsQuery.data ?? []}
               getOptionLabel={(room) => `غرفة ${room.room_number} (${getRoomTypeName(roomTypesQuery.data, room.room_type)})`}
+              getOptionDisabled={(room) => (room.beds ?? []).every((bed) => bed.status !== 'available')}
               isOptionEqualToValue={(option, value) => option.id === value.id}
               value={selectedRoom}
               onChange={(_, room) => {
@@ -191,7 +203,7 @@ export function AssignBedDialog({
           onClick={() => assignMutation.mutate()}
           disabled={bedId === '' || assignMutation.isPending}
         >
-          تعيين
+          {mode === 'transfer' ? 'نقل' : 'تعيين'}
         </Button>
       </DialogActions>
     </Dialog>
