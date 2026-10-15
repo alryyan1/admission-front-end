@@ -69,8 +69,6 @@ const navItems: NavItem[] = [
 ]
 
 const reportsNavItems: NavItem[] = [
-  { to: '/statistics', label: 'الإحصائيات' },
-  { to: '/reports/payments', label: 'تقرير المدفوعات تفصيلي', roles: ['admin', 'cashier'] },
   { to: '/reports/daily-revenue', label: 'الإيراد اليومي', roles: ['admin', 'cashier'] },
   { to: '/reports/doctor-entitlements', label: 'استحقاقات الأطباء', roles: ['admin', 'cashier'] },
   { to: '/reports/doctor-revenue', label: 'أداء الأطباء (الإيرادات)', roles: ['admin', 'cashier'] },

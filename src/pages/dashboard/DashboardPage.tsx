@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { Card, DatePicker, Flex } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
-import { StatTile } from '@/components/statistics/StatTile'
 import { PageLoader } from '@/components/common/PageLoader'
+import { ServiceRevenueCard } from '@/components/statistics/ServiceRevenueCard'
+import { OperationRevenueCard } from '@/components/statistics/OperationRevenueCard'
+import { FacilityOccupancySummary } from '@/components/facility/FacilityOccupancyMap'
 import {
   getAdmissionsStatistics,
-  getFinancialStatistics,
-  getOccupancyStatistics,
-  getOperationsStatistics,
+  getOperationRevenueStatistics,
+  getServiceRevenueStatistics,
 } from '@/services/statisticsService'
 import { formatNumber } from '@/lib/utils'
 
@@ -20,22 +20,21 @@ export function DashboardPage() {
   const dateFrom = dateRange[0].format('YYYY-MM-DD')
   const dateTo = dateRange[1].format('YYYY-MM-DD')
 
-  const occupancyQuery = useQuery({ queryKey: ['statistics', 'occupancy'], queryFn: getOccupancyStatistics })
+  const serviceRevenueQuery = useQuery({
+    queryKey: ['statistics', 'service-revenue', 'dashboard', dateFrom, dateTo],
+    queryFn: () => getServiceRevenueStatistics({ from: dateFrom, to: dateTo }),
+  })
+
+  const operationRevenueQuery = useQuery({
+    queryKey: ['statistics', 'operation-revenue', 'dashboard', dateFrom, dateTo],
+    queryFn: () => getOperationRevenueStatistics({ from: dateFrom, to: dateTo }),
+  })
+
   const admissionsQuery = useQuery({
     queryKey: ['statistics', 'admissions', 'dashboard', dateFrom, dateTo],
     queryFn: () => getAdmissionsStatistics({ from: dateFrom, to: dateTo }),
   })
-  const operationsQuery = useQuery({
-    queryKey: ['statistics', 'operations', 'dashboard'],
-    queryFn: () => getOperationsStatistics(),
-  })
-  const financialsQuery = useQuery({
-    queryKey: ['statistics', 'financials', 'dashboard', dateFrom, dateTo],
-    queryFn: () => getFinancialStatistics({ from: dateFrom, to: dateTo }),
-  })
-
-  const loading =
-    occupancyQuery.isLoading || admissionsQuery.isLoading || operationsQuery.isLoading || financialsQuery.isLoading
+  const admittedCount = Object.values(admissionsQuery.data?.status_counts ?? {}).reduce((sum, n) => sum + n, 0)
 
   return (
     <div className="flex flex-col gap-4">
@@ -43,59 +42,44 @@ export function DashboardPage() {
         <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
           <div>
             <h1 className="text-xl font-semibold">لوحة التحكم</h1>
-            <p className="text-sm text-muted-foreground">نظرة عامة على الإشغال وحالات التنويم والعمليات خلال الفترة المحددة.</p>
+            <p className="text-sm text-muted-foreground">نظرة عامة على الإيرادات خلال الفترة المحددة.</p>
           </div>
-          <RangePicker
-            value={dateRange}
-            onChange={(values) => {
-              if (values && values[0] && values[1]) {
-                setDateRange([values[0], values[1]])
-              }
-            }}
-            allowClear={false}
-            format="YYYY-MM-DD"
-          />
+          <Flex align="center" gap={16}>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">عدد المرضى المسجلين خلال الفترة المحددة</p>
+              <p className="text-lg font-semibold">{formatNumber(admittedCount)}</p>
+            </div>
+            <RangePicker
+              value={dateRange}
+              onChange={(values) => {
+                if (values && values[0] && values[1]) {
+                  setDateRange([values[0], values[1]])
+                }
+              }}
+              allowClear={false}
+              format="YYYY-MM-DD"
+            />
+          </Flex>
         </Flex>
       </Card>
 
-      {loading ? (
-        <PageLoader />
-      ) : (
-        <>
-           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatTile label="إيرادات الغرف" value={formatNumber(financialsQuery.data?.rooms_total ?? 0)} />
-            <StatTile label="إيرادات الخدمات" value={formatNumber(financialsQuery.data?.services_total ?? 0)} />
-            <StatTile label="إيرادات العمليات" value={formatNumber(financialsQuery.data?.operations_total ?? 0)} />
-            <StatTile
-              label="استحقاقات الفريق الطبي"
-              value={formatNumber(financialsQuery.data?.entitlements_total ?? 0)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            <StatTile
-              label="المرضى المنومون حالياً"
-              value={formatNumber(admissionsQuery.data?.active_admissions ?? 0)}
-            />
-            <StatTile label="غرف متاحة" value={formatNumber(occupancyQuery.data?.summary.available_rooms ?? 0)} />
-            <StatTile label="أسرّة متاحة" value={formatNumber(occupancyQuery.data?.summary.available_beds ?? 0)} />
-          </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          {serviceRevenueQuery.isLoading ? (
+            <PageLoader />
+          ) : serviceRevenueQuery.data ? (
+            <ServiceRevenueCard data={serviceRevenueQuery.data} />
+          ) : null}
 
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <StatTile label="إجمالي المدفوع" value={formatNumber(financialsQuery.data?.deposits_total ?? 0)} />
-            <StatTile label="إجمالي الاستحقاقات" value={formatNumber(financialsQuery.data?.entitlements_total ?? 0)} />
-            <StatTile label="إجمالي المصروفات" value={formatNumber(financialsQuery.data?.expenses_total ?? 0)} />
-            <StatTile
-              label="الصافي"
-              value={formatNumber(financialsQuery.data?.net_total ?? 0)}
-              valueClassName={(financialsQuery.data?.net_total ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}
-            />
-          </div>
+          {operationRevenueQuery.isLoading ? (
+            <PageLoader />
+          ) : operationRevenueQuery.data ? (
+            <OperationRevenueCard data={operationRevenueQuery.data} />
+          ) : null}
+        </div>
 
-       
-
-   
-        </>
-      )}
+        <FacilityOccupancySummary />
+      </div>
     </div>
   )
 }

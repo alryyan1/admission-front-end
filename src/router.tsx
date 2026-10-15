@@ -21,8 +21,6 @@ import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
 import { PatientsPage } from '@/pages/patients/PatientsPage'
 import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
-import { StatisticsPage } from '@/pages/statistics/StatisticsPage'
-import { PaymentsReportPage } from '@/pages/reports/PaymentsReportPage'
 import { DailyRevenueReportPage } from '@/pages/reports/DailyRevenueReportPage'
 import { DoctorEntitlementsReportPage } from '@/pages/reports/DoctorEntitlementsReportPage'
 import { DoctorRevenueReportPage } from '@/pages/reports/DoctorRevenueReportPage'
@@ -52,12 +50,10 @@ export const router = createBrowserRouter([
               { path: '/patients', element: <PatientsPage /> },
               { path: '/patients/:patientId', element: <PatientDetailPage /> },
               { path: '/operations', element: <OperationsPage /> },
-              { path: '/statistics', element: <StatisticsPage /> },
               {
                 element: <RequireRole roles={['admin', 'cashier']} />,
                 children: [
                   { path: '/expenses', element: <ExpensesPage /> },
-                  { path: '/reports/payments', element: <PaymentsReportPage /> },
                   { path: '/reports/daily-revenue', element: <DailyRevenueReportPage /> },
                   { path: '/reports/doctor-entitlements', element: <DoctorEntitlementsReportPage /> },
                   { path: '/reports/doctor-revenue', element: <DoctorRevenueReportPage /> },

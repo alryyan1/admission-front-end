@@ -277,6 +277,7 @@ export function OperationsPage() {
           operationPrice={teamOperation.price}
           operationName={teamOperation.procedure?.name_ar}
           onAdded={invalidateOperations}
+          entitlementsApproved={teamOperation.entitlements_approved}
         />
       )}
     </ConfigProvider>

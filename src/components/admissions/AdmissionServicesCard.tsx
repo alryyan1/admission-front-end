@@ -22,25 +22,36 @@ import {
   Typography,
   Tooltip,
   Skeleton,
+  MenuItem,
 } from '@mui/material'
-import { ThunderboltFilled } from '@ant-design/icons'
+import { ThunderboltFilled, DollarOutlined, CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
 import { getChartOpeningServiceSetting, getServices } from '@/services/serviceService'
+import { getPaymentMethods } from '@/services/paymentMethodService'
 import type { RequestedService } from '@/types/admission'
 import type { Service } from '@/types/service'
 
 interface AdmissionServicesCardProps {
   services: RequestedService[]
   isLoading?: boolean
-  onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => void
-  onUpdateService: (serviceId: number, payload: { quantity?: number; unit_price?: number }) => void
+  onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => Promise<unknown>
+  onUpdateService: (
+    serviceId: number,
+    payload: { quantity?: number; unit_price?: number; payment_method_id?: number | null },
+  ) => void
   onRemoveService: (serviceId: number) => void
   onCalculateAccommodationFee: () => void
+  /** Marks a service paid and records its linked deposit (see the "سداد" button). */
+  onPayService: (serviceId: number, paymentMethodId?: number | null) => void
+  /** Reverts onPayService: deletes its deposit and clears the paid flag (see "إلغاء السداد"). */
+  onCancelPayment: (serviceId: number) => void
   isSubmittingService: boolean
   isUpdatingService: boolean
   isRemovingService: boolean
   isCalculatingAccommodationFee: boolean
+  isPayingService?: boolean
+  isCancellingPayment?: boolean
   /** When true, services can't be removed (the admission already has payments). */
   hasPayments?: boolean
   /** Set to false when the host page renders its own "رسوم فتح الملف"/"رسوم الإقامة" quick-add buttons elsewhere (e.g. next to a payments button). Defaults to true. */
@@ -108,10 +119,14 @@ export function AdmissionServicesCard({
   onUpdateService,
   onRemoveService,
   onCalculateAccommodationFee,
+  onPayService,
+  onCancelPayment,
   isSubmittingService,
   isUpdatingService,
   isRemovingService,
   isCalculatingAccommodationFee,
+  isPayingService = false,
+  isCancellingPayment = false,
   hasPayments = false,
   showQuickActions = true,
   readOnly = false,
@@ -122,6 +137,14 @@ export function AdmissionServicesCard({
     queryFn: getChartOpeningServiceSetting,
     enabled: showQuickActions,
   })
+  const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
+  const preferredPaymentMethodId = (paymentMethodsQuery.data ?? []).find(
+    (pm) => pm.is_active && pm.name === 'بنكك',
+  )?.id
+
+  function handlePayService(service: RequestedService) {
+    onPayService(service.id, service.payment_method_id ?? preferredPaymentMethodId ?? null)
+  }
 
   const [addDialogOpen, setAddDialogOpen] = useState(false)
   const [selectedService, setSelectedService] = useState<Service | null>(null)
@@ -142,10 +165,14 @@ export function AdmissionServicesCard({
     setTimeout(() => unitPriceRef.current?.focus(), 0)
   }
 
-  function handleAddService() {
+  async function handleAddService() {
     if (!selectedService || unitPrice === null) return
-    onAddService({ name: selectedService.name_ar, quantity: quantity ?? 1, unit_price: unitPrice })
-    closeAddDialog()
+    try {
+      await onAddService({ name: selectedService.name_ar, quantity: quantity ?? 1, unit_price: unitPrice })
+      closeAddDialog()
+    } catch {
+      // Error toast is already shown by the apiClient interceptor; keep the dialog open so the user can retry.
+    }
   }
 
   const servicesTotal = services.reduce((sum, s) => sum + Number(s.total_price), 0)
@@ -197,6 +224,8 @@ export function AdmissionServicesCard({
               <TableCell>العدد</TableCell>
               <TableCell>سعر الوحدة</TableCell>
               <TableCell>الإجمالي</TableCell>
+              <TableCell align="center">مدفوع</TableCell>
+              <TableCell>طريقة الدفع</TableCell>
               <TableCell />
             </TableRow>
           </TableHead>
@@ -216,12 +245,18 @@ export function AdmissionServicesCard({
                   <TableCell>
                     <Skeleton variant="text" width={70} />
                   </TableCell>
+                  <TableCell align="center">
+                    <Skeleton variant="circular" width={20} height={20} sx={{ mx: 'auto' }} />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton variant="text" width={100} />
+                  </TableCell>
                   <TableCell />
                 </TableRow>
               ))}
             {!isLoading && services.length === 0 && !isSubmittingService && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={7}>
                   <Typography variant="body2" color="text.secondary">
                     لا توجد خدمات بعد
                   </Typography>
@@ -245,7 +280,7 @@ export function AdmissionServicesCard({
                     value={s.quantity}
                     min={1}
                     integer
-                    disabled={isUpdatingService || readOnly}
+                    disabled={isUpdatingService || readOnly || s.is_paid}
                     onCommit={(quantity) => onUpdateService(s.id, { quantity })}
                   />
                 </TableCell>
@@ -254,17 +289,75 @@ export function AdmissionServicesCard({
                     value={Number(s.unit_price)}
                     min={0}
                     currency
-                    disabled={isUpdatingService || readOnly}
+                    disabled={isUpdatingService || readOnly || s.is_paid}
                     onCommit={(unit_price) => onUpdateService(s.id, { unit_price })}
                   />
                 </TableCell>
                 <TableCell>{formatNumber(s.total_price)}</TableCell>
+                <TableCell align="center">
+                  <Tooltip title={s.is_paid ? 'مدفوعة' : 'غير مدفوعة'}>
+                    {s.is_paid ? (
+                      <CheckCircleFilled style={{ color: '#52c41a', fontSize: 18 }} />
+                    ) : (
+                      <CloseCircleOutlined style={{ color: '#bfbfbf', fontSize: 18 }} />
+                    )}
+                  </Tooltip>
+                </TableCell>
+                <TableCell>
+                  <TextField
+                    select
+                    size="small"
+                    disabled={isUpdatingService || readOnly}
+                    value={s.payment_method_id ?? preferredPaymentMethodId ?? ''}
+                    onChange={(e) =>
+                      onUpdateService(s.id, { payment_method_id: e.target.value === '' ? null : Number(e.target.value) })
+                    }
+                    sx={{ width: 140 }}
+                    slotProps={{ select: { displayEmpty: true } }}
+                  >
+                    <MenuItem value="">
+                      <em>بدون تحديد</em>
+                    </MenuItem>
+                    {(paymentMethodsQuery.data ?? []).map((pm) => (
+                      <MenuItem key={pm.id} value={pm.id}>
+                        {pm.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </TableCell>
                 <TableCell align="right">
-                  <ConfirmRemoveButton
-                    loading={isRemovingService}
-                    disabled={hasPayments || readOnly}
-                    onConfirm={() => onRemoveService(s.id)}
-                  />
+                  <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                    {s.is_paid ? (
+                      <ConfirmRemoveButton
+                        label="إلغاء السداد"
+                        confirmLabel="إلغاء السداد"
+                        description="إلغاء حالة السداد لهذه الخدمة؟ سيتم حذف الدفعة المرتبطة بها."
+                        iconOnly
+                        loading={isCancellingPayment}
+                        disabled={readOnly}
+                        onConfirm={() => onCancelPayment(s.id)}
+                      />
+                    ) : (
+                      <Tooltip title="تسجيل دفعة بقيمة هذه الخدمة">
+                        <span>
+                          <Button
+                            size="small"
+                            color="success"
+                            startIcon={<DollarOutlined />}
+                            disabled={readOnly || isPayingService}
+                            onClick={() => handlePayService(s)}
+                          >
+                            سداد
+                          </Button>
+                        </span>
+                      </Tooltip>
+                    )}
+                    <ConfirmRemoveButton
+                      loading={isRemovingService}
+                      disabled={hasPayments || readOnly}
+                      onConfirm={() => onRemoveService(s.id)}
+                    />
+                  </Stack>
                 </TableCell>
               </TableRow>
             ))}
@@ -282,6 +375,12 @@ export function AdmissionServicesCard({
                 <TableCell>
                   <Skeleton variant="text" width={70} />
                 </TableCell>
+                <TableCell align="center">
+                  <Skeleton variant="circular" width={20} height={20} sx={{ mx: 'auto' }} />
+                </TableCell>
+                <TableCell>
+                  <Skeleton variant="text" width={100} />
+                </TableCell>
                 <TableCell />
               </TableRow>
             )}
@@ -297,7 +396,7 @@ export function AdmissionServicesCard({
                     {formatNumber(servicesTotal)}
                   </Typography>
                 </TableCell>
-                <TableCell />
+                <TableCell colSpan={3} />
               </TableRow>
             )}
           </TableBody>

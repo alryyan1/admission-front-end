@@ -10,7 +10,6 @@ import {
   TextField,
   Autocomplete,
   Box,
-  Chip,
   Table,
   TableHead,
   TableBody,
@@ -18,16 +17,23 @@ import {
   TableCell,
   Typography,
 } from '@mui/material'
-import { FileTextOutlined } from '@ant-design/icons'
+import { FileTextOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { MessageCircle } from 'lucide-react'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { useAuth } from '@/contexts/AuthContext'
 import { formatNumber } from '@/lib/utils'
 import { getDoctors } from '@/services/patientService'
 import { getTeamRoles } from '@/services/teamRoleService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
-import { addOperationTeamMember, admissionPdfPaths, removeOperationTeamMember } from '@/services/admissionService'
+import {
+  addOperationTeamMember,
+  admissionPdfPaths,
+  approveOperationEntitlements,
+  removeOperationTeamMember,
+  unapproveOperationEntitlements,
+} from '@/services/admissionService'
 import { updateTeamMemberEntitlement } from '@/services/accountantService'
 import { sendOperationTeamPdfWhatsApp } from '@/services/whatsappService'
 import type { OperationTeamMember, TeamRole } from '@/types/admission'
@@ -45,6 +51,8 @@ interface OperationTeamModalProps {
   onAdded?: () => void
   /** When true, team members can't be added or removed (the admission is discharged or cancelled). */
   readOnly?: boolean
+  /** Once approved, the distribution (roles/doctors/entitlements/payment methods) is locked. */
+  entitlementsApproved?: boolean
 }
 
 interface MemberForm {
@@ -56,10 +64,12 @@ function EntitlementAmountCell({
   member,
   maxAmount,
   onCommit,
+  disabled,
 }: {
   member: OperationTeamMember
   maxAmount: number | null
   onCommit: (value: number | null) => void
+  disabled?: boolean
 }) {
   const [draft, setDraft] = useState(member.entitlement_amount ?? '')
 
@@ -87,6 +97,7 @@ function EntitlementAmountCell({
       value={draft}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={commit}
+      disabled={disabled}
     />
   )
 }
@@ -95,10 +106,12 @@ function MemberDoctorCell({
   member,
   doctors,
   onCommit,
+  disabled,
 }: {
   member: OperationTeamMember
   doctors: Doctor[]
   onCommit: (doctorId: number | null) => void
+  disabled?: boolean
 }) {
   return (
     <Autocomplete<Doctor>
@@ -110,6 +123,7 @@ function MemberDoctorCell({
       value={member.doctor ?? null}
       onChange={(_, doctor) => onCommit(doctor?.id ?? null)}
       noOptionsText="لا يوجد أطباء بهذا الدور"
+      disabled={disabled}
       renderInput={(params) => <TextField {...params} size="small" placeholder="اختر الطبيب" />}
     />
   )
@@ -126,12 +140,16 @@ export function OperationTeamModal({
   operationName,
   onAdded,
   readOnly = false,
+  entitlementsApproved = false,
 }: OperationTeamModalProps) {
   const [addMemberOpen, setAddMemberOpen] = useState(false)
+  const { user } = useAuth()
+  const isAdmin = user?.role === 'admin'
+  const locked = readOnly || entitlementsApproved
   const teamPdf = usePdfPreview()
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
-  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors(), staleTime: Infinity })
   const teamRoleLabel = (roleId: number | undefined) =>
     teamRolesQuery.data?.find((r) => r.id === roleId)?.name ?? '—'
 
@@ -210,6 +228,24 @@ export function OperationTeamModal({
     onError: () => onAdded?.(),
   })
 
+  const approveMutation = useMutation({
+    mutationFn: () => approveOperationEntitlements(operationId),
+    onSuccess: () => {
+      toast.success('تم اعتماد توزيع الاستحقاقات')
+      onAdded?.()
+    },
+    onError: () => toast.error('تعذر اعتماد التوزيع'),
+  })
+
+  const unapproveMutation = useMutation({
+    mutationFn: () => unapproveOperationEntitlements(operationId),
+    onSuccess: () => {
+      toast.success('تم إلغاء اعتماد التوزيع')
+      onAdded?.()
+    },
+    onError: () => toast.error('تعذر إلغاء اعتماد التوزيع'),
+  })
+
   const price = operationPrice != null ? Number(operationPrice) : null
   const totalEntitlements = existingMembers.reduce(
     (sum, m) => sum + (m.entitlement_amount != null ? Number(m.entitlement_amount) : 0),
@@ -223,31 +259,73 @@ export function OperationTeamModal({
         sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         الفريق الطبي
-        {!readOnly && (
-          <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {!readOnly && !locked && (
+            <>
+              <Button
+                size="small"
+                variant="outlined"
+                loading={addDefaultTeamMutation.isPending}
+                onClick={handleAddDefaultTeam}
+              >
+                + الفريق الافتراضي
+              </Button>
+              <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
+                + إضافة عضو
+              </Button>
+            </>
+          )}
+          {!readOnly && !entitlementsApproved && (
             <Button
               size="small"
-              variant="outlined"
-              loading={addDefaultTeamMutation.isPending}
-              onClick={handleAddDefaultTeam}
+              color="success"
+              variant="contained"
+              startIcon={<LockOutlined />}
+              loading={approveMutation.isPending}
+              onClick={() => approveMutation.mutate()}
             >
-              + الفريق الافتراضي
+              اعتماد التوزيع
             </Button>
-            <Button size="small" variant="contained" onClick={() => setAddMemberOpen(true)}>
-              + إضافة عضو
-            </Button>
-          </Box>
-        )}
+          )}
+          {!readOnly && entitlementsApproved && (
+            <>
+              <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+                معتمد
+              </Typography>
+              {isAdmin && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<UnlockOutlined />}
+                  loading={unapproveMutation.isPending}
+                  onClick={() => unapproveMutation.mutate()}
+                >
+                  إلغاء الاعتماد
+                </Button>
+              )}
+            </>
+          )}
+        </Box>
       </DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 1.5 }}>
-          {operationName && <Chip label={`العملية: ${operationName}`} />}
-          {price != null && <Chip label={`السعر: ${formatNumber(price)}`} />}
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 1.5 }}>
+          {operationName && (
+            <Typography variant="body2" color="text.secondary">
+              العملية: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{operationName}</Box>
+            </Typography>
+          )}
+          {price != null && (
+            <Typography variant="body2" color="text.secondary">
+              السعر: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatNumber(price)}</Box>
+            </Typography>
+          )}
           {remaining != null && (
-            <Chip
-              label={`المتبقي بعد الاستحقاقات: ${formatNumber(remaining)}`}
-              color={remaining < 0 ? 'error' : 'success'}
-            />
+            <Typography variant="body2" color="text.secondary">
+              المتبقي بعد الاستحقاقات:{' '}
+              <Box component="span" sx={{ color: remaining < 0 ? 'error.main' : 'success.main', fontWeight: 600 }}>
+                {formatNumber(remaining)}
+              </Box>
+            </Typography>
           )}
         </Box>
         <Table size="small" sx={{ mt: 0.5 }}>
@@ -293,6 +371,7 @@ export function OperationTeamModal({
                       member={m}
                       doctors={roleDoctors}
                       onCommit={(doctorId) => entitlementMutation.mutate({ teamMemberId: m.id, doctor_id: doctorId })}
+                      disabled={locked}
                     />
                   </TableCell>
                   <TableCell>
@@ -300,6 +379,7 @@ export function OperationTeamModal({
                       member={m}
                       maxAmount={maxAmount}
                       onCommit={(value) => entitlementMutation.mutate({ teamMemberId: m.id, entitlement_amount: value })}
+                      disabled={locked}
                     />
                   </TableCell>
                   <TableCell>
@@ -314,13 +394,14 @@ export function OperationTeamModal({
                       onChange={(_, pm) =>
                         entitlementMutation.mutate({ teamMemberId: m.id, payment_method_id: pm?.id ?? null })
                       }
+                      disabled={locked}
                       renderInput={(params) => <TextField {...params} size="small" placeholder="طريقة الدفع" />}
                     />
                   </TableCell>
                   <TableCell align="right">
                     <ConfirmRemoveButton
                       loading={removeMutation.isPending && removeMutation.variables === m.id}
-                      disabled={readOnly}
+                      disabled={locked}
                       onConfirm={() => removeMutation.mutate(m.id)}
                       description="إزالة هذا العضو؟"
                     />
@@ -374,7 +455,7 @@ interface AddTeamMemberDialogProps {
 function AddTeamMemberDialog({ open, onClose, operationId, existingMembers, onAdded }: AddTeamMemberDialogProps) {
   const [form, setForm] = useState<MemberForm>({})
 
-  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors(), staleTime: Infinity })
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles })
   const defaultTeamRoleId = teamRolesQuery.data?.find((r) => r.slug === 'assistant_surgeon')?.id
   const teamRoleLabel = (roleId: number | undefined) =>

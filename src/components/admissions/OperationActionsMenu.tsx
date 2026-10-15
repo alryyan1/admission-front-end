@@ -1,6 +1,4 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import {
   Box,
   IconButton,
@@ -18,11 +16,10 @@ import {
   DialogActions,
   Button,
 } from '@mui/material'
-import { EditOutlined, TeamOutlined, FileTextOutlined, WhatsAppOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons'
+import { EditOutlined, TeamOutlined, FileTextOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { admissionPdfPaths } from '@/services/admissionService'
-import { sendOperationInvoicePdfWhatsApp } from '@/services/whatsappService'
 import type { Operation } from '@/types/admission'
 
 interface OperationActionsMenuProps {
@@ -39,22 +36,6 @@ export function OperationActionsMenu({ operation, readOnly = false, isDeleting, 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
   const pdf = usePdfPreview()
-
-  const sendWhatsAppMutation = useMutation({
-    mutationFn: () => sendOperationInvoicePdfWhatsApp(operation.id),
-    onSuccess: ({ sent, message }) => {
-      if (sent) {
-        toast.success(message)
-      } else {
-        toast.warning(message)
-      }
-    },
-    onError: (error: unknown) => {
-      const message =
-        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'تعذر إرسال الفاتورة عبر واتساب'
-      toast.error(message)
-    },
-  })
 
   const close = () => setAnchorEl(null)
   const hasPrice = operation.price != null
@@ -118,22 +99,6 @@ export function OperationActionsMenu({ operation, readOnly = false, isDeleting, 
                 <FileTextOutlined />
               </ListItemIcon>
               <ListItemText>فاتورة</ListItemText>
-            </MenuItem>
-          </span>
-        </Tooltip>
-        <Tooltip title={priceTooltip} placement="right">
-          <span>
-            <MenuItem
-              disabled={!hasPrice}
-              onClick={() => {
-                close()
-                sendWhatsAppMutation.mutate()
-              }}
-            >
-              <ListItemIcon>
-                <WhatsAppOutlined />
-              </ListItemIcon>
-              <ListItemText>إرسال الفاتورة عبر واتساب</ListItemText>
             </MenuItem>
           </span>
         </Tooltip>

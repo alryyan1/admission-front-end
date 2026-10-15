@@ -28,7 +28,7 @@ function DoctorField({
   editable: boolean
   onSave: (doctorId: number | null) => Promise<void>
 }) {
-  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors() })
+  const doctorsQuery = useQuery({ queryKey: ['doctors', ''], queryFn: () => getDoctors(), staleTime: Infinity })
 
   if (!editable) {
     return <>{doctor?.name ?? '—'}</>
@@ -52,7 +52,7 @@ function DoctorField({
 
 export function OverviewTab({ patient, editable }: OverviewTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
-  const insuranceCompaniesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies })
+  const insuranceCompaniesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies, staleTime: Infinity })
   const insuranceOptions = [
     { label: 'بدون تأمين', value: '' },
     ...(insuranceCompaniesQuery.data ?? []).map((company) => ({ label: company.name, value: String(company.id) })),
@@ -79,7 +79,7 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
       <CardContent>
         <DetailGrid
           items={[
-            { key: 'id', label: 'رقم الملف', value: patient.id },
+            // { key: 'id', label: 'رقم الملف', value: patient.id },
             {
               key: 'name',
               label: 'الاسم',
@@ -191,11 +191,11 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
                 />
               ),
             },
-            {
-              key: 'source',
-              label: 'مصدر الملف',
-              value: patient.is_local_only ? 'محلي' : 'مستورد من جودة الطبية',
-            },
+            // {
+            //   key: 'source',
+            //   label: 'مصدر الملف',
+            //   value: patient.is_local_only ? 'محلي' : 'مستورد من جودة الطبية',
+            // },
           ]}
         />
       </CardContent>

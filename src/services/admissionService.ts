@@ -198,7 +198,7 @@ export async function calculateAccommodationFee(admissionId: number): Promise<Re
 export async function updateRequestedService(
   admissionId: number,
   requestedServiceId: number,
-  payload: { quantity?: number; unit_price?: number },
+  payload: { quantity?: number; unit_price?: number; payment_method_id?: number | null },
 ): Promise<RequestedService> {
   const { data } = await apiClient.patch<RequestedService>(
     `/admissions/${admissionId}/services/${requestedServiceId}`,
@@ -209,6 +209,30 @@ export async function updateRequestedService(
 
 export async function removeRequestedService(admissionId: number, requestedServiceId: number): Promise<void> {
   await apiClient.delete(`/admissions/${admissionId}/services/${requestedServiceId}`)
+}
+
+/** Marks a service paid and records the matching deposit in one atomic step (see cancelRequestedServicePayment). */
+export async function payRequestedService(
+  admissionId: number,
+  requestedServiceId: number,
+  paymentMethodId?: number | null,
+): Promise<RequestedService> {
+  const { data } = await apiClient.post<RequestedService>(
+    `/admissions/${admissionId}/services/${requestedServiceId}/pay`,
+    { payment_method_id: paymentMethodId },
+  )
+  return data
+}
+
+/** Reverts payRequestedService(): deletes the deposit it created and clears the paid flag. */
+export async function cancelRequestedServicePayment(
+  admissionId: number,
+  requestedServiceId: number,
+): Promise<RequestedService> {
+  const { data } = await apiClient.delete<RequestedService>(
+    `/admissions/${admissionId}/services/${requestedServiceId}/pay`,
+  )
+  return data
 }
 
 export async function getInvoice(admissionId: number): Promise<AdmissionInvoice> {
@@ -255,6 +279,7 @@ export async function updateOperation(
     surgeon_id: number
     procedure_id: number
     price: number | null
+    payment_method_id: number | null
     scheduled_at: string | null
   }>,
 ): Promise<Operation> {
@@ -264,6 +289,20 @@ export async function updateOperation(
 
 export async function deleteOperation(operationId: number): Promise<void> {
   await apiClient.delete(`/operations/${operationId}`)
+}
+
+/** Marks an operation paid and records the matching deposit in one atomic step (see cancelOperationPayment). */
+export async function payOperation(operationId: number, paymentMethodId?: number | null): Promise<Operation> {
+  const { data } = await apiClient.post<Operation>(`/operations/${operationId}/pay`, {
+    payment_method_id: paymentMethodId,
+  })
+  return data
+}
+
+/** Reverts payOperation(): deletes the deposit it created and clears the paid flag. */
+export async function cancelOperationPayment(operationId: number): Promise<Operation> {
+  const { data } = await apiClient.delete<Operation>(`/operations/${operationId}/pay`)
+  return data
 }
 
 export async function addOperationTeamMember(
@@ -276,6 +315,18 @@ export async function addOperationTeamMember(
 
 export async function removeOperationTeamMember(operationId: number, teamMemberId: number): Promise<void> {
   await apiClient.delete(`/operations/${operationId}/team-members/${teamMemberId}`)
+}
+
+/** Locks the team's entitlement distribution against further edits. */
+export async function approveOperationEntitlements(operationId: number): Promise<Operation> {
+  const { data } = await apiClient.post<Operation>(`/operations/${operationId}/approve-entitlements`)
+  return data
+}
+
+/** Reopens the entitlement distribution for editing (admin-only). */
+export async function unapproveOperationEntitlements(operationId: number): Promise<Operation> {
+  const { data } = await apiClient.delete<Operation>(`/operations/${operationId}/approve-entitlements`)
+  return data
 }
 
 export async function addOperationSupply(

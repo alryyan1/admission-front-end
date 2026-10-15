@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Button, Popover, Stack, Typography } from '@mui/material'
+import { Button, IconButton, Popover, Stack, Tooltip, Typography, type ButtonProps } from '@mui/material'
+import { CloseOutlined } from '@ant-design/icons'
 
 interface ConfirmRemoveButtonProps {
   label?: string
@@ -7,6 +8,9 @@ interface ConfirmRemoveButtonProps {
   description?: string
   loading?: boolean
   disabled?: boolean
+  variant?: ButtonProps['variant']
+  /** Render as a small red cross icon button (tooltip shows `label`) instead of a labeled button. */
+  iconOnly?: boolean
   onConfirm: () => void
 }
 
@@ -17,15 +21,39 @@ export function ConfirmRemoveButton({
   description = 'حذف هذا العنصر؟ لا يمكن التراجع عن هذا الإجراء.',
   loading,
   disabled,
+  variant = 'text',
+  iconOnly = false,
   onConfirm,
 }: ConfirmRemoveButtonProps) {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
   return (
     <>
-      <Button size="small" color="error" loading={loading} disabled={disabled} onClick={(e) => setAnchorEl(e.currentTarget)}>
-        {label}
-      </Button>
+      {iconOnly ? (
+        <Tooltip title={label}>
+          <span>
+            <IconButton
+              size="small"
+              color="error"
+              disabled={disabled || loading}
+              onClick={(e) => setAnchorEl(e.currentTarget)}
+            >
+              <CloseOutlined />
+            </IconButton>
+          </span>
+        </Tooltip>
+      ) : (
+        <Button
+          size="small"
+          color="error"
+          variant={variant}
+          loading={loading}
+          disabled={disabled}
+          onClick={(e) => setAnchorEl(e.currentTarget)}
+        >
+          {label}
+        </Button>
+      )}
       <Popover
         open={!!anchorEl}
         anchorEl={anchorEl}

@@ -125,6 +125,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
     queryKey: ['insurance-companies'],
     queryFn: getInsuranceCompanies,
     enabled: createPatientOpen,
+    staleTime: Infinity,
   })
 
   const createPatientMutation = useMutation({
@@ -141,7 +142,7 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
   const admitMutation = useMutation({
     mutationFn: createAdmission,
     onMutate: () => {
-      const whatsappToastId = toast.loading('جاري إرسال إشعار واتساب للطبيب المحوِّل...')
+      const whatsappToastId = toast.loading('جاري إرسال إشعار واتساب للطبيب المحوِّل...', { position: 'bottom-right' })
       return { whatsappToastId }
     },
     onSuccess: (admission, _variables, context) => {
@@ -150,9 +151,9 @@ export function NewAdmissionDialog({ open, onClose }: { open: boolean; onClose: 
       const notice = admission.whatsapp_doctor_notice
       if (notice) {
         if (notice.sent) {
-          toast.success(notice.message, { id: context.whatsappToastId })
+          toast.success(notice.message, { id: context.whatsappToastId, position: 'bottom-right' })
         } else {
-          toast.warning(notice.message, { id: context.whatsappToastId })
+          toast.warning(notice.message, { id: context.whatsappToastId, position: 'bottom-right' })
         }
       } else {
         toast.dismiss(context.whatsappToastId)

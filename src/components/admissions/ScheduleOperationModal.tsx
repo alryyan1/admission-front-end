@@ -55,6 +55,7 @@ export function ScheduleOperationModal({
     queryKey: ['doctors', '', surgeonRoleId],
     queryFn: () => getDoctors(undefined, surgeonRoleId),
     enabled: surgeonRoleId !== undefined,
+    staleTime: Infinity,
   })
 
   useEffect(() => {

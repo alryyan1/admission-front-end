@@ -12,6 +12,7 @@ import {
   AccountBookOutlined,
   ProfileOutlined,
   HeartFilled,
+  PrinterOutlined,
 } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
@@ -129,7 +130,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 </Tag>
               )}
             </Flex>
-            <Text type="secondary">دخول {dayjs(admission.admission_date).format('YYYY-MM-DD hh:mm A')}</Text>
           </Flex>
           <Button
             type="text"
@@ -171,13 +171,13 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
 
         {(admission.patient?.phone || admission.patient?.age_year != null || admission.patient?.gender || admission.patient?.blood_type || admission.patient?.insurance_card_number) && (
           <>
-            <Divider style={{ margin: '8px 0' }} titlePlacement="right" plain>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+            {/* <Divider style={{ margin: '8px 0' }} titlePlacement="right" plain> */}
+              {/* <Text type="secondary" style={{ fontSize: 12 }}>
                 بيانات المريض
               </Text>
-            </Divider>
-            <Descriptions size="small" column={1} bordered={false}>
-              {admission.patient?.phone && (
+            </Divider> */}
+            <Descriptions size="small" column={1} bordered={true} style={{ marginTop: 8 }}>
+              {/* {admission.patient?.phone && (
                 <Descriptions.Item label="هاتف المريض">{admission.patient.phone}</Descriptions.Item>
               )}
               {(admission.patient?.age_year != null || admission.patient?.gender) && (
@@ -189,12 +189,12 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                     .filter(Boolean)
                     .join(' — ') || '—'}
                 </Descriptions.Item>
-              )}
-              {admission.patient?.blood_type && (
+              )} */}
+              {/* {admission.patient?.blood_type && (
                 <Descriptions.Item label="فصيلة الدم">
                   <Tag color="red">{admission.patient.blood_type}</Tag>
                 </Descriptions.Item>
-              )}
+              )} */}
               {admission.patient?.insurance_card_number && (
                 <Descriptions.Item label="رقم البطاقة">{admission.patient.insurance_card_number}</Descriptions.Item>
               )}
@@ -239,7 +239,7 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
             {mode === 'menu' && (
               <Flex gap={8}>
                 <Button danger icon={<LogoutOutlined />} onClick={() => setMode('discharge')} block>
-                  إخراج المريض
+                 تخريج المريض
                 </Button>
                 <Button icon={<CloseCircleOutlined />} onClick={() => setMode('cancel')} block>
                   إلغاء التنويم
@@ -293,14 +293,14 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
         <Divider style={{ margin: '12px 0' }} />
 
         <Flex gap={8} wrap="wrap">
-          <Tooltip title="عرض التفاصيل الكاملة">
+          {/* <Tooltip title="عرض التفاصيل الكاملة">
             <Button
               type="primary"
               icon={<FileTextOutlined />}
               onClick={() => navigate(`/admissions/${admission.id}`)}
             />
-          </Tooltip>
-          <Tooltip title="طباعة الفاتورة المبدئية">
+          </Tooltip> */}
+          {/* <Tooltip title="طباعة الفاتورة المبدئية">
             <Button
               icon={<FileDoneOutlined />}
               loading={summaryPdf.isLoading('preliminary')}
@@ -308,25 +308,29 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
                 summaryPdf.open(admissionPdfPaths.preliminaryInvoice(admission.id), 'معاينة الفاتورة المبدئية', 'preliminary')
               }
             />
-          </Tooltip>
-          <Tooltip title="طباعة كشف الحساب">
+          </Tooltip> */}
+          {/* <Tooltip title="طباعة كشف الحساب"> */}
             <Button
-              icon={<AccountBookOutlined />}
+            icon={<PrinterOutlined />}
+              type="default"
               loading={summaryPdf.isLoading('statement')}
               onClick={() =>
                 summaryPdf.open(admissionPdfPaths.accountStatement(admission.id), 'معاينة كشف الحساب', 'statement')
               }
-            />
-          </Tooltip>
-          <Tooltip title="طباعة ملف التنويم">
+            >
+              كشف الحساب
+              </Button>
+          {/* </Tooltip> */}
             <Button
-              icon={<ProfileOutlined />}
+            icon={<PrinterOutlined />}
+              type="default"
               loading={summaryPdf.isLoading('summary')}
               onClick={() =>
                 summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملف التنويم', 'summary')
               }
-            />
-          </Tooltip>
+            >
+              ملف التنويم
+            </Button>
         </Flex>
       </Card>
 

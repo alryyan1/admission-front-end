@@ -104,6 +104,9 @@ export interface RequestedService {
   unit_price: string
   total_price: number
   is_auto_added: boolean
+  is_paid: boolean
+  payment_method_id: number | null
+  payment_method?: PaymentMethod | null
   created_at: string
 }
 
@@ -177,6 +180,11 @@ export interface Operation {
   procedure_id: number
   /** Price of the operation (decimal string, e.g. "75000.00"). */
   price: string | null
+  payment_method_id: number | null
+  is_paid: boolean
+  entitlements_approved: boolean
+  entitlements_approved_at: string | null
+  entitlements_approved_by: number | null
   scheduled_at: string | null
   created_at: string
   surgeon?: Doctor
@@ -184,6 +192,7 @@ export interface Operation {
   team_members?: OperationTeamMember[]
   supplies?: OperationSupply[]
   procedure?: Procedure
+  payment_method?: PaymentMethod | null
 }
 
 export interface OperationListResponse {

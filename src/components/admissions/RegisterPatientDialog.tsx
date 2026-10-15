@@ -40,6 +40,7 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
     queryKey: ['insurance-companies'],
     queryFn: getInsuranceCompanies,
     enabled: open,
+    staleTime: Infinity,
   })
 
   const registerMutation = useMutation({

@@ -8,14 +8,19 @@ import { AdmissionServicesCard } from '@/components/admissions/AdmissionServices
 import { AdmissionDepositsDialog } from '@/components/admissions/AdmissionDepositsDialog'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { formatDateTime } from '@/lib/utils'
+import { playPaymentSuccessSound } from '@/lib/sound'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   addDeposit,
   addOperation,
   addRequestedService,
   calculateAccommodationFee,
+  cancelOperationPayment,
+  cancelRequestedServicePayment,
   deleteOperation,
   getAdmission,
+  payOperation,
+  payRequestedService,
   removeDeposit,
   removeRequestedService,
   updateOperation,
@@ -77,9 +82,33 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
   })
 
   const updateServiceMutation = useMutation({
-    mutationFn: ({ serviceId, ...payload }: { serviceId: number; quantity?: number; unit_price?: number }) =>
-      updateRequestedService(admission.id, serviceId, payload),
+    mutationFn: (
+      { serviceId, ...payload }: {
+        serviceId: number
+        quantity?: number
+        unit_price?: number
+        payment_method_id?: number | null
+      },
+    ) => updateRequestedService(admission.id, serviceId, payload),
     onSuccess: invalidateAfterChange,
+  })
+
+  const payServiceMutation = useMutation({
+    mutationFn: ({ serviceId, paymentMethodId }: { serviceId: number; paymentMethodId?: number | null }) =>
+      payRequestedService(admission.id, serviceId, paymentMethodId),
+    onSuccess: () => {
+      toast.success('تم تسجيل سداد الخدمة')
+      playPaymentSuccessSound()
+      invalidateAfterChange()
+    },
+  })
+
+  const cancelPaymentMutation = useMutation({
+    mutationFn: (serviceId: number) => cancelRequestedServicePayment(admission.id, serviceId),
+    onSuccess: () => {
+      toast.success('تم إلغاء السداد')
+      invalidateAfterChange()
+    },
   })
 
   const removeServiceMutation = useMutation({
@@ -99,6 +128,7 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
     mutationFn: (payload: Parameters<typeof addDeposit>[1]) => addDeposit(admission.id, payload),
     onSuccess: () => {
       toast.success('تم تسجيل الدفعة')
+      playPaymentSuccessSound()
       invalidateAfterChange()
     },
   })
@@ -122,6 +152,30 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
   const deleteOperationMutation = useMutation({
     mutationFn: (operationId: number) => deleteOperation(operationId),
     onSuccess: invalidateAfterChange,
+  })
+
+  const updateOperationPaymentMethodMutation = useMutation({
+    mutationFn: ({ operationId, paymentMethodId }: { operationId: number; paymentMethodId: number | null }) =>
+      updateOperation(operationId, { payment_method_id: paymentMethodId }),
+    onSuccess: invalidateAfterChange,
+  })
+
+  const payOperationMutation = useMutation({
+    mutationFn: ({ operationId, paymentMethodId }: { operationId: number; paymentMethodId?: number | null }) =>
+      payOperation(operationId, paymentMethodId),
+    onSuccess: () => {
+      toast.success('تم تسجيل سداد العملية')
+      playPaymentSuccessSound()
+      invalidateAfterChange()
+    },
+  })
+
+  const cancelOperationPaymentMutation = useMutation({
+    mutationFn: (operationId: number) => cancelOperationPayment(operationId),
+    onSuccess: () => {
+      toast.success('تم إلغاء السداد')
+      invalidateAfterChange()
+    },
   })
 
   function handleAddFileOpeningFee() {
@@ -190,14 +244,18 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
           <AdmissionServicesCard
             services={admissionQuery.data?.requested_services ?? []}
             isLoading={admissionQuery.isLoading}
-            onAddService={(payload) => serviceMutation.mutate(payload)}
+            onAddService={(payload) => serviceMutation.mutateAsync(payload)}
             onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
             onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}
             onCalculateAccommodationFee={() => accommodationFeeMutation.mutate()}
+            onPayService={(serviceId, paymentMethodId) => payServiceMutation.mutate({ serviceId, paymentMethodId })}
+            onCancelPayment={(serviceId) => cancelPaymentMutation.mutate(serviceId)}
             isSubmittingService={serviceMutation.isPending}
             isUpdatingService={updateServiceMutation.isPending}
             isRemovingService={removeServiceMutation.isPending}
             isCalculatingAccommodationFee={accommodationFeeMutation.isPending}
+            isPayingService={payServiceMutation.isPending}
+            isCancellingPayment={cancelPaymentMutation.isPending}
             hasPayments={(admissionQuery.data?.deposits?.length ?? 0) > 0}
             showQuickActions={false}
             readOnly={isReadOnly}
@@ -212,8 +270,15 @@ export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
             onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
             onDelete={(operationId) => deleteOperationMutation.mutate(operationId)}
             onTeamChanged={invalidateAfterChange}
+            onUpdatePaymentMethod={(operationId, paymentMethodId) =>
+              updateOperationPaymentMethodMutation.mutate({ operationId, paymentMethodId })
+            }
+            onPayOperation={(operationId, paymentMethodId) => payOperationMutation.mutate({ operationId, paymentMethodId })}
+            onCancelPayment={(operationId) => cancelOperationPaymentMutation.mutate(operationId)}
             isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
             isDeleting={deleteOperationMutation.isPending}
+            isPayingOperation={payOperationMutation.isPending}
+            isCancellingPayment={cancelOperationPaymentMutation.isPending}
             readOnly={isReadOnly}
           />
         )}

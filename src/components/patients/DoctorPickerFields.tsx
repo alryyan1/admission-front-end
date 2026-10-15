@@ -58,10 +58,12 @@ export function DoctorPickerFields({
   const doctorsQuery = useQuery({
     queryKey: ['doctors', debouncedDoctorSearch],
     queryFn: () => getDoctors(debouncedDoctorSearch),
+    staleTime: Infinity,
   })
   const referralDoctorsQuery = useQuery({
     queryKey: ['doctors', 'referral', debouncedReferralDoctorSearch],
     queryFn: () => getDoctors(debouncedReferralDoctorSearch),
+    staleTime: Infinity,
   })
   const teamRolesQuery = useQuery({ queryKey: ['team-roles'], queryFn: getTeamRoles, enabled: quickAddDoctorOpen })
   const specialistsQuery = useQuery({ queryKey: ['specialists'], queryFn: getSpecialists, enabled: quickAddDoctorOpen })

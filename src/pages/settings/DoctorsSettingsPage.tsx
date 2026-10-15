@@ -18,7 +18,7 @@ export function DoctorsSettingsPage() {
     doctor: null,
   })
 
-  const doctorsQuery = useQuery({ queryKey: ['doctors'], queryFn: () => getDoctors() })
+  const doctorsQuery = useQuery({ queryKey: ['doctors'], queryFn: () => getDoctors(), staleTime: Infinity })
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['doctors'] })

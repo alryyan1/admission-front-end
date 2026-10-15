@@ -79,6 +79,18 @@ export interface DoctorsServicesStatistics {
   top_services: TopService[]
 }
 
+export interface ServiceRevenueStatistics {
+  range: DateRange
+  services: TopService[]
+  total_revenue: number
+}
+
+export interface OperationRevenueStatistics {
+  range: DateRange
+  operations: TopService[]
+  total_revenue: number
+}
+
 export interface TopSurgeon {
   id: number
   name: string | null

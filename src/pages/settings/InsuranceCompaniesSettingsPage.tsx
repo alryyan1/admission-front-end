@@ -27,7 +27,7 @@ export function InsuranceCompaniesSettingsPage() {
   const queryClient = useQueryClient()
   const [formOpen, setFormOpen] = useState(false)
 
-  const companiesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies })
+  const companiesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies, staleTime: Infinity })
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ['insurance-companies'] })

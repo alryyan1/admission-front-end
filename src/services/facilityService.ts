@@ -103,6 +103,22 @@ export async function deleteRoom(id: number): Promise<void> {
   await apiClient.delete(`/rooms/${id}`)
 }
 
+/**
+ * Bulk-sets every bed in the room to "available" or "maintenance" in one request
+ * (e.g. closing a whole room for cleaning). Beds with a currently admitted patient
+ * are left untouched; the response reports how many were updated vs. skipped.
+ */
+export async function setRoomBedsStatus(
+  roomId: number,
+  status: Extract<BedStatus, 'available' | 'maintenance'>,
+): Promise<{ room: Room; updated: number; skipped: number }> {
+  const { data } = await apiClient.patch<{ room: Room; updated: number; skipped: number }>(
+    `/rooms/${roomId}/beds-status`,
+    { status },
+  )
+  return data
+}
+
 export async function createBed(payload: { room_id: number; bed_number: string; unit_type?: BedUnitType }): Promise<Bed> {
   const { data } = await apiClient.post<Bed>('/beds', payload)
   return data
