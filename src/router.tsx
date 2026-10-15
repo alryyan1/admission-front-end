@@ -23,7 +23,6 @@ import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
 import { DailyRevenueReportPage } from '@/pages/reports/DailyRevenueReportPage'
 import { DoctorEntitlementsReportPage } from '@/pages/reports/DoctorEntitlementsReportPage'
-import { DoctorRevenueReportPage } from '@/pages/reports/DoctorRevenueReportPage'
 import { ExpensesReportPage } from '@/pages/reports/ExpensesReportPage'
 import { AdmissionRevenueReportPage } from '@/pages/reports/AdmissionRevenueReportPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
@@ -56,7 +55,6 @@ export const router = createBrowserRouter([
                   { path: '/expenses', element: <ExpensesPage /> },
                   { path: '/reports/daily-revenue', element: <DailyRevenueReportPage /> },
                   { path: '/reports/doctor-entitlements', element: <DoctorEntitlementsReportPage /> },
-                  { path: '/reports/doctor-revenue', element: <DoctorRevenueReportPage /> },
                   { path: '/reports/expenses', element: <ExpensesReportPage /> },
                   { path: '/reports/admission-revenue', element: <AdmissionRevenueReportPage /> },
                 ],

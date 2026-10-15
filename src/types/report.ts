@@ -53,7 +53,7 @@ export interface DoctorEntitlementRow {
   id: number
   operation_id: number
   operation_number: string | null
-  scheduled_at: string | null
+  created_at: string | null
   patient_name: string | null
   procedure_name: string | null
   doctor_name: string
@@ -66,31 +66,8 @@ export interface DoctorEntitlementsReport {
   range: { from: string; to: string }
   summary: { operations_count: number; total: number }
   doctors: DoctorEntitlementDoctorRow[]
+  by_method: PaymentMethodBreakdown[]
   entitlements: DoctorEntitlementRow[]
-}
-
-export type DoctorRevenueRole = 'admitting' | 'referring'
-
-export interface DoctorRevenueRoomTypeRow {
-  room_type_code: string | null
-  room_type_name: string
-  total: number
-}
-
-export interface DoctorRevenueAdmissionRow {
-  admission_id: number
-  admission_number: string | null
-  patient_id: number
-  patient_name: string | null
-  admission_date: string | null
-  discharge_date: string | null
-  status: string
-  room_type_code: string | null
-  room_type_name: string | null
-  room_revenue: number
-  services_revenue: number
-  operations_revenue: number
-  total_revenue: number
 }
 
 export interface ExpenseCategoryBreakdown {
@@ -143,20 +120,4 @@ export interface AdmissionRevenueReport {
   summary: { admissions_count: number; room_revenue: number }
   by_room_type: RoomTypeRevenueBreakdown[]
   admissions: AdmissionRevenueRow[]
-}
-
-export interface DoctorRevenueReport {
-  doctor: { id: number; name: string; specialist: string | null }
-  doctor_role: DoctorRevenueRole
-  range: { from: string; to: string }
-  summary: {
-    patients_count: number
-    admissions_count: number
-    room_revenue: number
-    services_revenue: number
-    operations_revenue: number
-    total_revenue: number
-  }
-  room_revenue_by_type: DoctorRevenueRoomTypeRow[]
-  admissions: DoctorRevenueAdmissionRow[]
 }

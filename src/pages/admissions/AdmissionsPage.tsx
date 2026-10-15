@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Tooltip, theme as antdThemeApi } from 'antd'
+import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Switch, Tooltip, theme as antdThemeApi } from 'antd'
 import { CalendarOutlined, TeamOutlined, TableOutlined, CalculatorOutlined, WhatsAppOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
@@ -88,9 +88,12 @@ export function AdmissionsPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [calculatorOpen, setCalculatorOpen] = useState(false)
   const [activeAdmissionId, setActiveAdmissionId] = useState<number | null>(null)
+  const [operationsFocusToken, setOperationsFocusToken] = useState(0)
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebouncedValue(search)
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
+  const [balanceDueOnly, setBalanceDueOnly] = useState(false)
+  const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
   const pdf = usePdfPreview()
 
   useEffect(() => {
@@ -153,6 +156,9 @@ export function AdmissionsPage() {
 
   const columnCount = 9
 
+  const hasUnapprovedOperations = (row: Admission): boolean =>
+    (row.operations ?? []).some((operation) => !operation.entitlements_approved)
+
   const getStayDuration = (row: Admission) => {
     const end = row.discharge_date ? dayjs(row.discharge_date) : dayjs()
     const hoursElapsed = Math.max(0, end.diff(dayjs(row.admission_date), 'hour'))
@@ -214,7 +220,19 @@ export function AdmissionsPage() {
             <Flex align="center" gap={6}>
               <span style={{ fontSize: 16, fontWeight: 700 }}>{row.patient?.name}</span>
               {row.status === 'discharged' && <Tag color="purple">تم الخروج</Tag>}
-              {!!row.operations_count && <Tag>عملية</Tag>}
+              {!!row.operations_count && (
+                <Tag
+                  color={hasUnapprovedOperations(row) ? 'red' : 'green'}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setActiveAdmissionId(row.id)
+                    setOperationsFocusToken((t) => t + 1)
+                  }}
+                  style={{ cursor: 'pointer' }}
+                >
+                  عملية {hasUnapprovedOperations(row) ? '(غير معتمدة)' : '(معتمدة)'}
+                </Tag>
+              )}
             </Flex>
             {row.status === 'admitted' &&
               (() => {
@@ -297,8 +315,13 @@ export function AdmissionsPage() {
     },
   ]
 
-  const tableData = groupAdmissionsByDay(admissionsQuery.data?.data ?? [])
-  const sortedAdmissions = [...(admissionsQuery.data?.data ?? [])].sort(
+  const filteredAdmissions = (admissionsQuery.data?.data ?? []).filter(
+    (a) =>
+      (!balanceDueOnly || (a.balance_due ?? 0) > 0) &&
+      (!unapprovedOperationsOnly || hasUnapprovedOperations(a)),
+  )
+  const tableData = groupAdmissionsByDay(filteredAdmissions)
+  const sortedAdmissions = [...filteredAdmissions].sort(
     (a, b) => dayjs(b.admission_date).valueOf() - dayjs(a.admission_date).valueOf(),
   )
   const activeAdmission = sortedAdmissions.find((a) => a.id === activeAdmissionId) ?? null
@@ -308,8 +331,15 @@ export function AdmissionsPage() {
       <div style={{ userSelect: 'none' }}>
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Flex align="center" gap={10}>
-        
-          <Tag color="blue">{admissionsQuery.data?.data.length ?? 0} حالة</Tag>
+          <Tag color="blue">{filteredAdmissions.length} حالة</Tag>
+          <Flex align="center" gap={6}>
+            <Switch checked={balanceDueOnly} onChange={setBalanceDueOnly} size="small" />
+            <Typography.Text>متبقي فقط</Typography.Text>
+          </Flex>
+          <Flex align="center" gap={6}>
+            <Switch checked={unapprovedOperationsOnly} onChange={setUnapprovedOperationsOnly} size="small" />
+            <Typography.Text>عمليات غير معتمدة فقط</Typography.Text>
+          </Flex>
         </Flex>
         <Flex align="center" gap={8}>
           {activeAdmission && (
@@ -364,7 +394,7 @@ export function AdmissionsPage() {
             onSelect={setActiveAdmissionId}
           />
           <div style={{ flex: '1 1 420px', minWidth: 0 }}>
-            <AdmissionWorkArea admission={activeAdmission} />
+            <AdmissionWorkArea admission={activeAdmission} focusOperationsToken={operationsFocusToken} />
           </div>
           <div style={{ flex: '0 1 340px', minWidth: 300 }}>
             <AdmissionInfoPanel admission={activeAdmission} onClear={() => setActiveAdmissionId(null)} />

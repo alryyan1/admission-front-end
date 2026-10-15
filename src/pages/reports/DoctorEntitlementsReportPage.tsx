@@ -1,29 +1,23 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import {
-  Box,
-  Paper,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableFooter,
-  TableHead,
-  TableRow,
-  TextField,
-  Typography,
-} from '@mui/material'
-import dayjs from 'dayjs'
-import { PageLoader } from '@/components/common/PageLoader'
+import { ConfigProvider, Card, DatePicker, Table, Typography, Flex, Statistic, Row, Col } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
+import dayjs, { type Dayjs } from 'dayjs'
+import { useAntTheme } from '@/lib/antdTheme'
 import { getDoctorEntitlementsReport } from '@/services/reportService'
 import { formatNumber } from '@/lib/utils'
+import type { DoctorEntitlementDoctorRow, PaymentMethodBreakdown } from '@/types/report'
+
+const { Title, Text } = Typography
+const { RangePicker } = DatePicker
 
 export function DoctorEntitlementsReportPage() {
-  const [from, setFrom] = useState(() => dayjs().startOf('month').format('YYYY-MM-DD'))
-  const [to, setTo] = useState(() => dayjs().endOf('month').format('YYYY-MM-DD'))
+  const antTheme = useAntTheme()
+  const [range, setRange] = useState<[Dayjs, Dayjs]>(() => [dayjs().startOf('month'), dayjs().endOf('month')])
 
-  const isRangeValid = !!from && !!to && !dayjs(to).isBefore(dayjs(from), 'day')
+  const from = range[0].format('YYYY-MM-DD')
+  const to = range[1].format('YYYY-MM-DD')
+  const isRangeValid = !range[1].isBefore(range[0], 'day')
 
   const reportQuery = useQuery({
     queryKey: ['reports', 'doctor-entitlements', from, to],
@@ -33,137 +27,121 @@ export function DoctorEntitlementsReportPage() {
 
   const report = reportQuery.data
 
-  return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-      <Paper
-        variant="outlined"
-        sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 1.5 }}
-      >
-        <Box>
-          <Typography variant="subtitle1" fontWeight={700}>
-            استحقاقات الأطباء من العمليات
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            مبالغ استحقاقات أعضاء فريق العمليات حسب تاريخ العملية
-          </Typography>
-        </Box>
-        <Stack direction="row" sx={{ gap: 1.5 }}>
-          <TextField
-            label="من"
-            type="date"
-            size="small"
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            slotProps={{ inputLabel: { shrink: true } }}
-            sx={{ width: 170 }}
-          />
-          <TextField
-            label="إلى"
-            type="date"
-            size="small"
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            error={!isRangeValid}
-            helperText={!isRangeValid ? 'تاريخ النهاية قبل البداية' : undefined}
-            slotProps={{ inputLabel: { shrink: true } }}
-            sx={{ width: 170 }}
-          />
-        </Stack>
-      </Paper>
+  const columns: ColumnsType<DoctorEntitlementDoctorRow> = [
+    { title: 'الطبيب', dataIndex: 'name', key: 'name' },
+    { title: 'الدور', key: 'role', render: (_, row) => row.role ?? '—' },
+    {
+      title: 'عدد العمليات',
+      key: 'operations_count',
+      align: 'center',
+      render: (_, row) => formatNumber(row.operations_count),
+    },
+    {
+      title: 'الإجمالي',
+      key: 'total',
+      align: 'end',
+      render: (_, row) => <strong>{formatNumber(row.total)}</strong>,
+    },
+  ]
 
-      {reportQuery.isLoading && <PageLoader />}
+  const methodColumns: ColumnsType<PaymentMethodBreakdown> = [
+    { title: 'طريقة الدفع', dataIndex: 'method', key: 'method' },
+    { title: 'العدد', dataIndex: 'count', key: 'count', align: 'center', render: (value) => formatNumber(value) },
+    {
+      title: 'الإجمالي',
+      key: 'total',
+      align: 'end',
+      render: (_, row) => <strong>{formatNumber(row.total)}</strong>,
+    },
+  ]
+
+  return (
+    <ConfigProvider direction="rtl" theme={antTheme}>
+      <Flex justify="space-between" align="center" wrap="wrap" gap={12} style={{ marginBottom: 16 }}>
+        <div>
+          <Title level={3} style={{ margin: 0 }}>
+            استحقاقات الأطباء من العمليات
+          </Title>
+          <Text type="secondary">مبالغ استحقاقات أعضاء فريق العمليات حسب تاريخ إنشاء العملية</Text>
+        </div>
+        <RangePicker
+          size="small"
+          value={range}
+          onChange={(value) => value?.[0] && value?.[1] && setRange([value[0], value[1]])}
+          allowClear={false}
+          status={isRangeValid ? undefined : 'error'}
+          format="YYYY-MM-DD"
+        />
+      </Flex>
 
       {report && (
-        <>
-          <Stack direction="row" flexWrap="wrap" sx={{ gap: 1.5 }}>
-            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                عدد العمليات
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                {formatNumber(report.summary.operations_count)}
-              </Typography>
-            </Paper>
-            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 160 }}>
-              <Typography variant="caption" color="text.secondary">
-                إجمالي الاستحقاقات
-              </Typography>
-              <Typography variant="h6" fontWeight={700}>
-                {formatNumber(report.summary.total)}
-              </Typography>
-            </Paper>
-          </Stack>
-
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>الطبيب</TableCell>
-                  <TableCell>الدور</TableCell>
-                  <TableCell align="center">عدد العمليات</TableCell>
-                  <TableCell align="right">الإجمالي</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {report.doctors.map((doctor) => (
-                  <TableRow key={doctor.name} hover>
-                    <TableCell>{doctor.name}</TableCell>
-                    <TableCell>{doctor.role ?? '—'}</TableCell>
-                    <TableCell align="center">{formatNumber(doctor.operations_count)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {formatNumber(doctor.total)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-              <TableFooter>
-                <TableRow>
-                  <TableCell colSpan={2} sx={{ fontWeight: 700 }}>
-                    الإجمالي
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: 700 }}>
-                    {formatNumber(report.summary.operations_count)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 700 }}>
-                    {formatNumber(report.summary.total)}
-                  </TableCell>
-                </TableRow>
-              </TableFooter>
-            </Table>
-          </TableContainer>
-
-          <TableContainer component={Paper} variant="outlined">
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>تاريخ العملية</TableCell>
-                  <TableCell>رقم العملية</TableCell>
-                  <TableCell>المريض</TableCell>
-                  <TableCell>الإجراء</TableCell>
-                  <TableCell>الطبيب</TableCell>
-                  <TableCell>الدور</TableCell>
-                  <TableCell align="right">المبلغ</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {report.entitlements.map((row) => (
-                  <TableRow key={row.id} hover>
-                    <TableCell>{row.scheduled_at ? dayjs(row.scheduled_at).format('DD/MM/YYYY HH:mm') : '—'}</TableCell>
-                    <TableCell>{row.operation_number ?? row.operation_id}</TableCell>
-                    <TableCell>{row.patient_name ?? '—'}</TableCell>
-                    <TableCell>{row.procedure_name ?? '—'}</TableCell>
-                    <TableCell>{row.doctor_name}</TableCell>
-                    <TableCell>{row.role ?? '—'}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {formatNumber(row.amount)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </>
+        <Flex gap={12} wrap="wrap" style={{ marginBottom: 16 }}>
+          <Card size="small" style={{ minWidth: 160 }}>
+            <Statistic title="عدد العمليات" value={report.summary.operations_count} />
+          </Card>
+          <Card size="small" style={{ minWidth: 160 }}>
+            <Statistic title="إجمالي الاستحقاقات" value={formatNumber(report.summary.total)} />
+          </Card>
+        </Flex>
       )}
-    </Box>
+
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={14}>
+          <Card size="small" title="الاستحقاقات حسب الطبيب">
+            <Table<DoctorEntitlementDoctorRow>
+              size="small"
+              rowKey="name"
+              loading={reportQuery.isLoading}
+              columns={columns}
+              dataSource={report?.doctors ?? []}
+              pagination={false}
+              summary={() =>
+                report && (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={0} colSpan={2}>
+                        <Text strong>الإجمالي</Text>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2} align="center">
+                        <Text strong>{formatNumber(report.summary.operations_count)}</Text>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={3} align="end">
+                        <Text strong>{formatNumber(report.summary.total)}</Text>
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )
+              }
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={10}>
+          <Card size="small" title="الاستحقاقات حسب طريقة الدفع">
+            <Table<PaymentMethodBreakdown>
+              size="small"
+              rowKey="method"
+              loading={reportQuery.isLoading}
+              columns={methodColumns}
+              dataSource={report?.by_method ?? []}
+              pagination={false}
+              summary={() =>
+                report && (
+                  <Table.Summary fixed>
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={0} colSpan={2}>
+                        <Text strong>الإجمالي</Text>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={2} align="end">
+                        <Text strong>{formatNumber(report.summary.total)}</Text>
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  </Table.Summary>
+                )
+              }
+            />
+          </Card>
+        </Col>
+      </Row>
+    </ConfigProvider>
   )
 }

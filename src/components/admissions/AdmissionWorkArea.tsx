@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Tabs, Tab, Alert, Typography } from '@mui/material'
@@ -31,14 +31,23 @@ import type { Admission } from '@/types/admission'
 
 interface AdmissionWorkAreaProps {
   admission: Admission
+  /** Bumped by the parent (e.g. clicking the "عملية" tag on the admissions list) to force-switch to the operations tab. */
+  focusOperationsToken?: number
 }
 
 /** Middle "main work area" — services and operations management, with payments in a dialog, for the active admission on {@link AdmissionsPage}. */
-export function AdmissionWorkArea({ admission }: AdmissionWorkAreaProps) {
+export function AdmissionWorkArea({ admission, focusOperationsToken }: AdmissionWorkAreaProps) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'services' | 'operations'>('services')
+
+  useEffect(() => {
+    if (focusOperationsToken) {
+      setActiveTab('operations')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusOperationsToken])
 
   const admissionQuery = useQuery({
     queryKey: ['admissions', admission.id],
