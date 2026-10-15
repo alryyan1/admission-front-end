@@ -229,6 +229,7 @@ export function OperationsPage() {
 
       <Card>
         <Table
+          size="small"
           rowKey="id"
           loading={operationsQuery.isLoading}
           columns={columns}

@@ -106,7 +106,7 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
         <div className="col-span-12 md:col-span-6">
           <Card>
             <h2 className="mb-3 text-sm font-semibold">تفاصيل الودائع</h2>
-            <Table rowKey="method" columns={depositColumns} dataSource={depositsByMethod} pagination={false} />
+            <Table size="small" rowKey="method" columns={depositColumns} dataSource={depositsByMethod} pagination={false} />
           </Card>
         </div>
       </div>

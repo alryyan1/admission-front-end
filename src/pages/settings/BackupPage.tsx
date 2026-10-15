@@ -133,6 +133,7 @@ export function BackupPage() {
 
       <Card>
         <Table
+          size="small"
           rowKey="filename"
           loading={backupsQuery.isLoading}
           columns={columns}

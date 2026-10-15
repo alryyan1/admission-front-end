@@ -209,6 +209,7 @@ export function ActivityLogPage() {
 
       <Card>
         <Table
+          size="small"
           rowKey="id"
           loading={logsQuery.isLoading}
           columns={columns}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -30,6 +30,7 @@ import type { MenuProps } from 'antd'
 import { useAntTheme } from '@/lib/antdTheme'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getRooms, getBeds } from '@/services/facilityService'
 import type { UserRole } from '@/types/auth'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -121,6 +122,8 @@ function AppLayoutContent() {
   const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [globalSearch, setGlobalSearch] = useState('')
+  const debouncedGlobalSearch = useDebouncedValue(globalSearch)
+  const isFirstGlobalSearchRender = useRef(true)
   const [dateRange, setDateRange] = useState<[Dayjs, Dayjs] | null>(defaultDateRange())
   const [dateRangeClearedBySearch, setDateRangeClearedBySearch] = useState(false)
   const [roomId, setRoomId] = useState<number | null>(null)
@@ -146,6 +149,15 @@ function AppLayoutContent() {
     params.set(/^\d+$/.test(value) ? 'admission_id' : 'search', value)
     navigate(`/admissions?${params.toString()}`)
   }
+
+  useEffect(() => {
+    if (isFirstGlobalSearchRender.current) {
+      isFirstGlobalSearchRender.current = false
+      return
+    }
+    handleGlobalSearch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedGlobalSearch])
 
   const visibleNavItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)))
   const visibleReportsNavItems = reportsNavItems.filter(
@@ -246,7 +258,6 @@ function AppLayoutContent() {
             prefix={<Search size={14} color={token.colorTextQuaternary} />}
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
-            onPressEnter={handleGlobalSearch}
             onClear={() => navigate('/admissions?search=')}
             style={{ flex: '0 1 320px' }}
           />

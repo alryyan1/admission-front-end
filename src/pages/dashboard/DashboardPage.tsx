@@ -5,12 +5,14 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { PageLoader } from '@/components/common/PageLoader'
 import { ServiceRevenueCard } from '@/components/statistics/ServiceRevenueCard'
 import { OperationRevenueCard } from '@/components/statistics/OperationRevenueCard'
+import { RoomRevenueCard } from '@/components/statistics/RoomRevenueCard'
 import { FacilityOccupancySummary } from '@/components/facility/FacilityOccupancyMap'
 import {
   getAdmissionsStatistics,
   getOperationRevenueStatistics,
   getServiceRevenueStatistics,
 } from '@/services/statisticsService'
+import { getAdmissionRevenueReport } from '@/services/reportService'
 import { formatNumber } from '@/lib/utils'
 
 const { RangePicker } = DatePicker
@@ -28,6 +30,11 @@ export function DashboardPage() {
   const operationRevenueQuery = useQuery({
     queryKey: ['statistics', 'operation-revenue', 'dashboard', dateFrom, dateTo],
     queryFn: () => getOperationRevenueStatistics({ from: dateFrom, to: dateTo }),
+  })
+
+  const roomRevenueQuery = useQuery({
+    queryKey: ['reports', 'admission-revenue', 'dashboard', dateFrom, dateTo],
+    queryFn: () => getAdmissionRevenueReport({ from: dateFrom, to: dateTo }),
   })
 
   const admissionsQuery = useQuery({
@@ -75,6 +82,12 @@ export function DashboardPage() {
             <PageLoader />
           ) : operationRevenueQuery.data ? (
             <OperationRevenueCard data={operationRevenueQuery.data} />
+          ) : null}
+
+          {roomRevenueQuery.isLoading ? (
+            <PageLoader />
+          ) : roomRevenueQuery.data ? (
+            <RoomRevenueCard data={roomRevenueQuery.data} />
           ) : null}
         </div>
 

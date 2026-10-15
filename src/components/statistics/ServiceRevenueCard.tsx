@@ -27,7 +27,7 @@ export function ServiceRevenueCard({ data }: ServiceRevenueCardProps) {
 
    
 
-      <Table className="mt-3" rowKey="name" columns={columns} dataSource={data.services} pagination={false} />
+      <Table className="mt-3" size="small" rowKey="name" columns={columns} dataSource={data.services} pagination={false} />
     </Card>
   )
 }

@@ -87,6 +87,7 @@ export function DoctorsSettingsPage() {
         }
       >
         <Table
+          size="small"
           rowKey="id"
           loading={doctorsQuery.isLoading}
           columns={columns}

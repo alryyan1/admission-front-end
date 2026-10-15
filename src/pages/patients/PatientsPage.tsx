@@ -86,6 +86,7 @@ export function PatientsPage() {
 
       <Card>
         <Table
+          size="small"
           rowKey="id"
           loading={patientsQuery.isLoading}
           columns={columns}

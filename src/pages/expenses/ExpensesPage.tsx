@@ -147,6 +147,7 @@ export function ExpensesPage() {
 
       <Card>
         <Table
+          size="small"
           rowKey="id"
           loading={expensesQuery.isLoading}
           columns={columns}

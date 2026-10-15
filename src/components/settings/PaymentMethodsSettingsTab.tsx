@@ -97,6 +97,7 @@ export function PaymentMethodsSettingsTab() {
       }
     >
       <Table
+        size="small"
         rowKey="id"
         loading={paymentMethodsQuery.isLoading}
         columns={columns}

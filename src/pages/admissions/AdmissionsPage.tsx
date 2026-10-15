@@ -402,6 +402,7 @@ export function AdmissionsPage() {
         </Flex>
       ) : (
           <Table<AdmissionRow>
+            size="small"
             rowKey={(row) => (isDayHeaderRow(row) ? row.key : row.id)}
             loading={admissionsQuery.isLoading}
             columns={columns}

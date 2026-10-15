@@ -90,6 +90,7 @@ export function VitalsTab({ vitals, onAdd, isSubmitting }: VitalsTabProps) {
 
       <Card>
         <Table
+          size="small"
           rowKey="id"
           columns={columns}
           dataSource={vitals}

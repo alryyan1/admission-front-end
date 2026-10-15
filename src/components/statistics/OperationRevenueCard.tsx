@@ -24,7 +24,7 @@ export function OperationRevenueCard({ data }: OperationRevenueCardProps) {
         </span>
       </div>
 
-      <Table className="mt-3" rowKey="name" columns={columns} dataSource={data.operations} pagination={false} />
+      <Table className="mt-3" size="small" rowKey="name" columns={columns} dataSource={data.operations} pagination={false} />
     </Card>
   )
 }

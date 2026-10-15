@@ -63,6 +63,7 @@ export function RoomTypesSettingsTab() {
       }
     >
       <Table
+        size="small"
         rowKey="id"
         loading={roomTypesQuery.isLoading}
         columns={columns}

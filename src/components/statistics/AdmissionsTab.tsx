@@ -91,13 +91,13 @@ export function AdmissionsTab({ data, from, to, onFromChange, onToChange }: Admi
         <div className="col-span-12 md:col-span-6">
           <Card>
             <h2 className="mb-3 text-sm font-semibold">الحالات حسب النوع</h2>
-            <Table rowKey="type" columns={typeColumns} dataSource={typeCountRows} pagination={false} />
+            <Table size="small" rowKey="type" columns={typeColumns} dataSource={typeCountRows} pagination={false} />
           </Card>
         </div>
         <div className="col-span-12 md:col-span-6">
           <Card>
             <h2 className="mb-3 text-sm font-semibold">الحالات حسب الوضع</h2>
-            <Table rowKey="status" columns={statusColumns} dataSource={statusCountRows} pagination={false} />
+            <Table size="small" rowKey="status" columns={statusColumns} dataSource={statusCountRows} pagination={false} />
           </Card>
         </div>
       </div>

@@ -235,6 +235,7 @@ export function ProcedureCatalogSettingsPage() {
             }
           >
             <Table
+              size="small"
               rowKey="id"
               loading={proceduresQuery.isLoading}
               columns={columns}

@@ -319,6 +319,14 @@ export function OperationTeamModal({
               السعر: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatNumber(price)}</Box>
             </Typography>
           )}
+          {existingMembers.length > 0 && (
+            <Typography variant="body2" color="text.secondary">
+              مجموع الاستحقاق:{' '}
+              <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>
+                {formatNumber(totalEntitlements)}
+              </Box>
+            </Typography>
+          )}
           {remaining != null && (
             <Typography variant="body2" color="text.secondary">
               المتبقي بعد الاستحقاقات:{' '}

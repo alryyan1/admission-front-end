@@ -94,6 +94,7 @@ export function UsersSettingsPage() {
         }
       >
         <Table
+          size="small"
           rowKey="id"
           loading={usersQuery.isLoading}
           columns={columns}

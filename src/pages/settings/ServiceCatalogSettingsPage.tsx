@@ -198,6 +198,7 @@ export function ServiceCatalogSettingsPage() {
             }
           >
             <Table
+              size="small"
               rowKey="id"
               loading={servicesQuery.isLoading}
               columns={columns}
