@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useOutletContext, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Switch, Tooltip, theme as antdThemeApi } from 'antd'
+import { ConfigProvider, Button, Typography, Table, Tag, Flex, Progress, Segmented, Switch, Tooltip, theme as antdThemeApi } from 'antd'
 import { CalendarOutlined, TeamOutlined, TableOutlined, CalculatorOutlined, WhatsAppOutlined, FileTextOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
@@ -94,6 +94,7 @@ export function AdmissionsPage() {
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
   const [balanceDueOnly, setBalanceDueOnly] = useState(false)
   const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all'>('all')
   const pdf = usePdfPreview()
 
   useEffect(() => {
@@ -317,6 +318,7 @@ export function AdmissionsPage() {
 
   const filteredAdmissions = (admissionsQuery.data?.data ?? []).filter(
     (a) =>
+      (statusFilter === 'all' || a.status === statusFilter) &&
       (!balanceDueOnly || (a.balance_due ?? 0) > 0) &&
       (!unapprovedOperationsOnly || hasUnapprovedOperations(a)),
   )
@@ -332,6 +334,16 @@ export function AdmissionsPage() {
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
         <Flex align="center" gap={10}>
           <Tag color="blue">{filteredAdmissions.length} حالة</Tag>
+          <Segmented
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value as AdmissionStatus | 'all')}
+            options={[
+              { label: 'الكل', value: 'all' },
+              { label: STATUS_LABEL.admitted, value: 'admitted' },
+              { label: STATUS_LABEL.discharged, value: 'discharged' },
+              { label: STATUS_LABEL.cancelled, value: 'cancelled' },
+            ]}
+          />
           <Flex align="center" gap={6}>
             <Switch checked={balanceDueOnly} onChange={setBalanceDueOnly} size="small" />
             <Typography.Text>متبقي فقط</Typography.Text>
