@@ -3,6 +3,8 @@ import type {
   AdmissionRevenueReport,
   DailyRevenueReport,
   DoctorEntitlementsReport,
+  DoctorRevenueReport,
+  DoctorRevenueRole,
   ExpensesReport,
   PaymentRecorder,
   RevenueCalculatorReport,
@@ -39,6 +41,16 @@ export async function getDoctorEntitlementsReport(filters: { from: string; to: s
 
 export async function getAdmissionRevenueReport(filters: { from: string; to: string }): Promise<AdmissionRevenueReport> {
   const { data } = await apiClient.get<AdmissionRevenueReport>('/reports/admission-revenue', { params: filters })
+  return data
+}
+
+export async function getDoctorRevenueReport(filters: {
+  doctor_id: number
+  doctor_role: DoctorRevenueRole
+  from: string
+  to: string
+}): Promise<DoctorRevenueReport> {
+  const { data } = await apiClient.get<DoctorRevenueReport>('/reports/doctor-revenue', { params: filters })
   return data
 }
 

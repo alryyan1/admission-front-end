@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Armchair, BedDouble, Building2, CalendarClock, DoorClosed, SlidersHorizontal, Wrench } from 'lucide-react'
+import { Armchair, BedDouble, Building2, CalendarClock, DoorClosed, Pencil, SlidersHorizontal, Wrench } from 'lucide-react'
 import {
   Alert,
   Button,
@@ -21,6 +21,7 @@ import {
 } from 'antd'
 import dayjs from '@/lib/dayjs'
 import { PageLoader } from '@/components/common/PageLoader'
+import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { getFloors, getFloor, setRoomBedsStatus } from '@/services/facilityService'
 import { getOccupancyStatistics } from '@/services/statisticsService'
 import { getRoomTypes } from '@/services/roomTypeService'
@@ -368,16 +369,19 @@ function RoomMaintenanceAction({ room }: { room: Room }) {
         </Space>
       }
     >
-      <Button
-        size="small"
-        type="text"
-        icon={<Wrench size={14} />}
-        onClick={(e) => {
-          e.stopPropagation()
-          setOpen((v) => !v)
-        }}
-      />
+      <Button size="small" type="text" icon={<Wrench size={14} />} onClick={(e) => e.stopPropagation()} />
     </Popover>
+  )
+}
+
+function RoomEditAction({ room }: { room: Room }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <Button size="small" type="text" icon={<Pencil size={14} />} onClick={(e) => { e.stopPropagation(); setOpen(true) }} />
+      <RoomFormDialog open={open} onOpenChange={setOpen} wardId={room.ward_id} room={room} />
+    </>
   )
 }
 
@@ -387,22 +391,33 @@ function RoomCard({ room, onOpen }: { room: Room; onOpen: (id: number) => void }
   const occupied = beds.filter((b) => b.status === 'occupied').length
 
   return (
-    <Card size="small" style={{ height: '100%' }} styles={{ body: { padding: 12 } }}>
+    <Card
+      size="small"
+      className="group"
+      style={{ height: '100%', position: 'relative' }}
+      styles={{ body: { padding: 12 } }}
+    >
+      <div
+        className="opacity-0 group-hover:opacity-100 transition-opacity"
+        style={{ position: 'absolute', top: 6, left: 6, zIndex: 1 }}
+      >
+        <RoomEditAction room={room} />
+      </div>
       <Flex justify="space-between" align="center" gap={8} style={{ marginBottom: 10 }}>
-        <Space size={6}>
+        <Space size={6} wrap>
           <DoorClosed size={14} />
           <Text strong style={{ fontSize: 13 }}>
-            غرفة {room.room_number}    <Tag color={getRoomTypeStyle(room.room_type).tagColor} style={{ marginInlineEnd: 0 }}>
+            غرفة {room.room_number}
+          </Text>
+          <Tag color={getRoomTypeStyle(room.room_type).tagColor} style={{ marginInlineEnd: 0 }}>
             {getRoomTypeName(roomTypesQuery.data, room.room_type)}
           </Tag>
-          </Text>
+          {room.price_per_day && (
+            <Tag style={{ marginInlineEnd: 0 }}>{Number(room.price_per_day).toLocaleString()} / يوم</Tag>
+          )}
         </Space>
         <Space size={6}>
-          {beds.length > 0 && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {occupied}/{beds.length}
-            </Text>
-          )}
+      
           <RoomMaintenanceAction room={room} />
         </Space>
       </Flex>

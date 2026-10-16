@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { Plus } from 'lucide-react'
 import {
   Box,
   Button,
@@ -10,11 +11,15 @@ import {
   DialogContent,
   DialogTitle,
   FormControlLabel,
+  IconButton,
   MenuItem,
+  Stack,
   TextField,
+  Tooltip,
 } from '@mui/material'
 import { createRoom, updateRoom } from '@/services/facilityService'
 import { getRoomTypes } from '@/services/roomTypeService'
+import { RoomTypeFormDialog } from '@/components/settings/RoomTypeFormDialog'
 import type { Room } from '@/types/facility'
 
 interface RoomFormDialogProps {
@@ -36,6 +41,7 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
   const [pricePerDay, setPricePerDay] = useState('')
   const [roomNumberError, setRoomNumberError] = useState(false)
   const [capacityError, setCapacityError] = useState(false)
+  const [roomTypeDialogOpen, setRoomTypeDialogOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
@@ -63,6 +69,10 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
     },
   })
 
+  function handleRoomTypeCreated(createdRoomType: { code: string }) {
+    setRoomType(createdRoomType.code)
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const isRoomNumberMissing = !roomNumber.trim()
@@ -82,67 +92,81 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
 
   return (
     <Dialog open={open} onClose={() => onOpenChange(false)} fullWidth maxWidth="xs">
-      <DialogTitle>{isEditing ? `تعديل غرفة ${room.room_number}` : 'إضافة غرفة جديدة'}</DialogTitle>
+      <DialogTitle sx={{ pb: 1 }}>{isEditing ? `تعديل غرفة ${room.room_number}` : 'إضافة غرفة جديدة'}</DialogTitle>
       <Box component="form" onSubmit={handleSubmit} noValidate>
-        <DialogContent>
-          <TextField
-            fullWidth
-            autoFocus
-            margin="normal"
-            label="رقم الغرفة"
-            value={roomNumber}
-            onChange={(e) => {
-              setRoomNumber(e.target.value)
-              setRoomNumberError(false)
-            }}
-            error={roomNumberError}
-            helperText={roomNumberError ? 'هذا الحقل مطلوب' : undefined}
-          />
-          <TextField
-            select
-            fullWidth
-            margin="normal"
-            label="نوع الغرفة"
-            value={roomType}
-            onChange={(e) => setRoomType(e.target.value)}
-            disabled={roomTypesQuery.isLoading}
-          >
-            {roomTypesQuery.data?.map((type) => (
-              <MenuItem key={type.code} value={type.code}>
-                {type.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            fullWidth
-            margin="normal"
-            type="number"
-            label="عدد السراير"
-            value={capacity}
-            onChange={(e) => {
-              setCapacity(e.target.value)
-              setCapacityError(false)
-            }}
-            error={capacityError}
-            helperText={capacityError ? 'هذا الحقل مطلوب' : undefined}
-            slotProps={{ htmlInput: { min: 0 } }}
-          />
-          {!isEditing && (
-            <FormControlLabel
-              control={<Checkbox checked={autoCreateBeds} onChange={(e) => setAutoCreateBeds(e.target.checked)} />}
-              label="إنشاء عدد السراير المحدد تلقائياً"
+        <DialogContent sx={{ pt: 1 }}>
+          <Stack spacing={1.5}>
+            <Stack direction="row" spacing={1.5}>
+              <TextField
+                fullWidth
+                autoFocus
+                size="small"
+                label="رقم الغرفة"
+                value={roomNumber}
+                onChange={(e) => {
+                  setRoomNumber(e.target.value)
+                  setRoomNumberError(false)
+                }}
+                error={roomNumberError}
+                helperText={roomNumberError ? 'هذا الحقل مطلوب' : undefined}
+              />
+              <TextField
+                fullWidth
+                size="small"
+                type="number"
+                label="عدد السراير"
+                value={capacity}
+                onChange={(e) => {
+                  setCapacity(e.target.value)
+                  setCapacityError(false)
+                }}
+                error={capacityError}
+                helperText={capacityError ? 'هذا الحقل مطلوب' : undefined}
+                slotProps={{ htmlInput: { min: 0 } }}
+              />
+            </Stack>
+
+            <Stack direction="row" spacing={0.5} alignItems="center">
+              <TextField
+                select
+                fullWidth
+                size="small"
+                label="نوع الغرفة"
+                value={roomType}
+                onChange={(e) => setRoomType(e.target.value)}
+                disabled={roomTypesQuery.isLoading}
+              >
+                {roomTypesQuery.data?.map((type) => (
+                  <MenuItem key={type.code} value={type.code}>
+                    {type.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <Tooltip title="إضافة نوع غرفة جديد">
+                <IconButton size="small" onClick={() => setRoomTypeDialogOpen(true)}>
+                  <Plus size={16} />
+                </IconButton>
+              </Tooltip>
+            </Stack>
+
+            <TextField
+              fullWidth
+              size="small"
+              type="number"
+              label="السعر لليوم"
+              placeholder="غير محدد بعد"
+              value={pricePerDay}
+              onChange={(e) => setPricePerDay(e.target.value)}
+              className="amount-input"
             />
-          )}
-          <TextField
-            fullWidth
-            margin="normal"
-            type="number"
-            label="السعر لليوم"
-            placeholder="غير محدد بعد"
-            value={pricePerDay}
-            onChange={(e) => setPricePerDay(e.target.value)}
-            className="amount-input"
-          />
+
+            {!isEditing && (
+              <FormControlLabel
+                control={<Checkbox size="small" checked={autoCreateBeds} onChange={(e) => setAutoCreateBeds(e.target.checked)} />}
+                label="إنشاء عدد السراير المحدد تلقائياً"
+              />
+            )}
+          </Stack>
         </DialogContent>
         <DialogActions>
           <Button variant="text" onClick={() => onOpenChange(false)}>
@@ -153,6 +177,12 @@ export function RoomFormDialog({ open, onOpenChange, wardId, room }: RoomFormDia
           </Button>
         </DialogActions>
       </Box>
+
+      <RoomTypeFormDialog
+        open={roomTypeDialogOpen}
+        onOpenChange={setRoomTypeDialogOpen}
+        onSaved={handleRoomTypeCreated}
+      />
     </Dialog>
   )
 }

@@ -74,6 +74,7 @@ const reportsNavItems: NavItem[] = [
   { to: '/reports/doctor-entitlements', label: 'استحقاقات الأطباء', roles: ['admin', 'cashier'] },
   { to: '/reports/expenses', label: 'تقرير المصروفات', roles: ['admin', 'cashier'] },
   { to: '/reports/admission-revenue', label: 'إيرادات التنويم (الغرف)', roles: ['admin', 'cashier'] },
+  { to: '/reports/referring-doctor-revenue', label: 'إيراد مرضى الطبيب المحول', roles: ['admin', 'cashier'] },
 ]
 
 const settingsNavItems: NavItem[] = [

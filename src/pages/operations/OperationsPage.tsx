@@ -246,7 +246,7 @@ export function OperationsPage() {
           }}
           onRow={(op) => ({
             className: 'cursor-pointer',
-            onClick: () => navigate(`/admissions/${op.admission_id}`),
+            onClick: () => navigate(`/admissions?admission_id=${op.admission_id}`),
           })}
           summary={() => (
             <Table.Summary fixed>

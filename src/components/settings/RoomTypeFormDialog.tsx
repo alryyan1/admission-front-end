@@ -1,6 +1,7 @@
+import { useEffect, useState, type FormEvent } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Modal, Form, Input, Button } from 'antd'
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material'
 import { createRoomType, updateRoomType } from '@/services/roomTypeService'
 import type { RoomType } from '@/types/facility'
 
@@ -8,56 +9,72 @@ interface RoomTypeFormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   roomType?: RoomType | null
+  onSaved?: (roomType: RoomType) => void
 }
 
-interface RoomTypeFormValues {
-  name: string
-}
-
-export function RoomTypeFormDialog({ open, onOpenChange, roomType }: RoomTypeFormDialogProps) {
+export function RoomTypeFormDialog({ open, onOpenChange, roomType, onSaved }: RoomTypeFormDialogProps) {
   const queryClient = useQueryClient()
   const isEditing = !!roomType
-  const [form] = Form.useForm<RoomTypeFormValues>()
+
+  const [name, setName] = useState('')
+  const [nameError, setNameError] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setName(roomType?.name ?? '')
+    setNameError(false)
+  }, [open, roomType])
 
   const mutation = useMutation({
     mutationFn: (payload: { name: string }) =>
       isEditing ? updateRoomType(roomType.id, payload) : createRoomType(payload),
-    onSuccess: () => {
+    onSuccess: (savedRoomType) => {
       toast.success(isEditing ? 'تم تحديث نوع الغرفة' : 'تم إضافة نوع الغرفة')
       queryClient.invalidateQueries({ queryKey: ['room-types'] })
       onOpenChange(false)
+      onSaved?.(savedRoomType)
     },
   })
 
-  function handleFinish(values: RoomTypeFormValues) {
-    mutation.mutate({ name: values.name.trim() })
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setNameError(true)
+      return
+    }
+    mutation.mutate({ name: trimmed })
   }
 
   return (
-    <Modal
-      open={open}
-      onCancel={() => onOpenChange(false)}
-      title={isEditing ? `تعديل ${roomType.name}` : 'إضافة نوع غرفة جديد'}
-      width={340}
-      destroyOnHidden
-      footer={[
-        <Button key="cancel" type="text" onClick={() => onOpenChange(false)}>
-          إلغاء
-        </Button>,
-        <Button key="submit" type="primary" onClick={() => form.submit()} loading={mutation.isPending}>
-          حفظ
-        </Button>,
-      ]}
-    >
-      <Form form={form} layout="vertical" initialValues={{ name: roomType?.name ?? '' }} onFinish={handleFinish}>
-        <Form.Item
-          name="name"
-          label="اسم نوع الغرفة"
-          rules={[{ required: true, whitespace: true, message: 'هذا الحقل مطلوب' }]}
-        >
-          <Input placeholder="مثال: غرفة عزل" />
-        </Form.Item>
-      </Form>
-    </Modal>
+    <Dialog open={open} onClose={() => onOpenChange(false)} fullWidth maxWidth="xs">
+      <DialogTitle sx={{ pb: 1 }}>{isEditing ? `تعديل ${roomType.name}` : 'إضافة نوع غرفة جديد'}</DialogTitle>
+      <Box component="form" onSubmit={handleSubmit} noValidate>
+        <DialogContent sx={{ pt: 1 }}>
+          <TextField
+            fullWidth
+            autoFocus
+            size="small"
+            label="اسم نوع الغرفة"
+            placeholder="مثال: غرفة عزل"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value)
+              setNameError(false)
+            }}
+            error={nameError}
+            helperText={nameError ? 'هذا الحقل مطلوب' : undefined}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button variant="text" onClick={() => onOpenChange(false)}>
+            إلغاء
+          </Button>
+          <Button type="submit" variant="contained" disabled={mutation.isPending}>
+            حفظ
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
   )
 }

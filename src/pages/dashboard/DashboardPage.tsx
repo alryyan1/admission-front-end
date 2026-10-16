@@ -6,9 +6,11 @@ import { PageLoader } from '@/components/common/PageLoader'
 import { ServiceRevenueCard } from '@/components/statistics/ServiceRevenueCard'
 import { OperationRevenueCard } from '@/components/statistics/OperationRevenueCard'
 import { RoomRevenueCard } from '@/components/statistics/RoomRevenueCard'
+import { NetProfitCard } from '@/components/statistics/NetProfitCard'
 import { FacilityOccupancySummary } from '@/components/facility/FacilityOccupancyMap'
 import {
   getAdmissionsStatistics,
+  getFinancialStatistics,
   getOperationRevenueStatistics,
   getServiceRevenueStatistics,
 } from '@/services/statisticsService'
@@ -43,6 +45,11 @@ export function DashboardPage() {
   })
   const admittedCount = Object.values(admissionsQuery.data?.status_counts ?? {}).reduce((sum, n) => sum + n, 0)
 
+  const financialsQuery = useQuery({
+    queryKey: ['statistics', 'financials', 'dashboard', dateFrom, dateTo],
+    queryFn: () => getFinancialStatistics({ from: dateFrom, to: dateTo }),
+  })
+
   return (
     <div className="flex flex-col gap-4">
       <Card className="p-4">
@@ -55,6 +62,18 @@ export function DashboardPage() {
             <div className="text-center">
               <p className="text-xs text-muted-foreground">عدد المرضى المسجلين خلال الفترة المحددة</p>
               <p className="text-lg font-semibold">{formatNumber(admittedCount)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">المرضى النشطون حالياً</p>
+              <p className="text-lg font-semibold">{formatNumber(admissionsQuery.data?.active_admissions ?? 0)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground">متوسط مدة الإقامة (أيام)</p>
+              <p className="text-lg font-semibold">
+                {admissionsQuery.data?.average_length_of_stay_hours != null
+                  ? formatNumber(Math.round((admissionsQuery.data.average_length_of_stay_hours / 24) * 10) / 10)
+                  : '—'}
+              </p>
             </div>
             <RangePicker
               value={dateRange}
@@ -69,6 +88,12 @@ export function DashboardPage() {
           </Flex>
         </Flex>
       </Card>
+
+      {financialsQuery.isLoading ? (
+        <PageLoader />
+      ) : financialsQuery.data ? (
+        <NetProfitCard data={financialsQuery.data} />
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">

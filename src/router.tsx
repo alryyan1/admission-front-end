@@ -25,6 +25,7 @@ import { DailyRevenueReportPage } from '@/pages/reports/DailyRevenueReportPage'
 import { DoctorEntitlementsReportPage } from '@/pages/reports/DoctorEntitlementsReportPage'
 import { ExpensesReportPage } from '@/pages/reports/ExpensesReportPage'
 import { AdmissionRevenueReportPage } from '@/pages/reports/AdmissionRevenueReportPage'
+import { ReferringDoctorRevenueReportPage } from '@/pages/reports/ReferringDoctorRevenueReportPage'
 import { ExpensesPage } from '@/pages/expenses/ExpensesPage'
 import { ErrorPage } from '@/pages/errors/ErrorPage'
 
@@ -57,6 +58,7 @@ export const router = createBrowserRouter([
                   { path: '/reports/doctor-entitlements', element: <DoctorEntitlementsReportPage /> },
                   { path: '/reports/expenses', element: <ExpensesReportPage /> },
                   { path: '/reports/admission-revenue', element: <AdmissionRevenueReportPage /> },
+                  { path: '/reports/referring-doctor-revenue', element: <ReferringDoctorRevenueReportPage /> },
                 ],
               },
               {

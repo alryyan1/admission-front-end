@@ -94,7 +94,7 @@ export function AdmissionsPage() {
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
   const [balanceDueOnly, setBalanceDueOnly] = useState(false)
   const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all'>('admitted')
   const pdf = usePdfPreview()
 
   useEffect(() => {
@@ -335,11 +335,24 @@ export function AdmissionsPage() {
         <Flex align="center" gap={10}>
           <Tag color="blue">{filteredAdmissions.length} حالة</Tag>
           <Segmented
+          type='primary'
             value={statusFilter}
             onChange={(value) => setStatusFilter(value as AdmissionStatus | 'all')}
             options={[
               { label: 'الكل', value: 'all' },
-              { label: STATUS_LABEL.admitted, value: 'admitted' },
+              {
+                label: (
+                  <span
+                    style={{
+                      color: statusFilter === 'admitted' ? token.colorSuccess : undefined,
+                      fontWeight: statusFilter === 'admitted' ? 600 : undefined,
+                    }}
+                  >
+                    {STATUS_LABEL.admitted}
+                  </span>
+                ),
+                value: 'admitted',
+              },
               { label: STATUS_LABEL.discharged, value: 'discharged' },
               { label: STATUS_LABEL.cancelled, value: 'cancelled' },
             ]}

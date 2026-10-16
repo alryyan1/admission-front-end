@@ -121,3 +121,43 @@ export interface AdmissionRevenueReport {
   by_room_type: RoomTypeRevenueBreakdown[]
   admissions: AdmissionRevenueRow[]
 }
+
+export type DoctorRevenueRole = 'admitting' | 'referring'
+
+export interface DoctorRevenueAdmissionRow {
+  admission_id: number
+  admission_number: string | null
+  patient_id: number
+  patient_name: string | null
+  admission_date: string | null
+  discharge_date: string | null
+  status: string
+  room_type_code: string | null
+  room_type_name: string | null
+  room_revenue: number
+  services_revenue: number
+  operations_revenue: number
+  total_revenue: number
+}
+
+export interface DoctorRevenueRoomTypeBreakdown {
+  room_type_code: string | null
+  room_type_name: string
+  total: number
+}
+
+export interface DoctorRevenueReport {
+  doctor: { id: number; name: string; specialist: string | null }
+  doctor_role: DoctorRevenueRole
+  range: { from: string; to: string }
+  summary: {
+    patients_count: number
+    admissions_count: number
+    room_revenue: number
+    services_revenue: number
+    operations_revenue: number
+    total_revenue: number
+  }
+  room_revenue_by_type: DoctorRevenueRoomTypeBreakdown[]
+  admissions: DoctorRevenueAdmissionRow[]
+}
