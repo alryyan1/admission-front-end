@@ -94,8 +94,7 @@ export function AdmissionsPage() {
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
   const [balanceDueOnly, setBalanceDueOnly] = useState(false)
   const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
-  const [noBedOnly, setNoBedOnly] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all'>('admitted')
+  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all' | 'unassigned'>('admitted')
   const pdf = usePdfPreview()
 
   useEffect(() => {
@@ -145,7 +144,17 @@ export function AdmissionsPage() {
   const to = dateRange?.[1]?.endOf('day').toISOString()
 
   const admissionsQuery = useQuery({
-    queryKey: ['admissions', from, to, debouncedSearch, roomId, bedId],
+    queryKey: [
+      'admissions',
+      from,
+      to,
+      debouncedSearch,
+      roomId,
+      bedId,
+      statusFilter,
+      balanceDueOnly,
+      unapprovedOperationsOnly,
+    ],
     queryFn: () =>
       getAdmissions({
         from,
@@ -153,6 +162,9 @@ export function AdmissionsPage() {
         search: debouncedSearch || undefined,
         room_id: roomId ?? undefined,
         bed_id: bedId ?? undefined,
+        status: statusFilter === 'all' ? undefined : statusFilter,
+        balance_due_only: balanceDueOnly || undefined,
+        unapproved_operations_only: unapprovedOperationsOnly || undefined,
       }),
   })
 
@@ -332,14 +344,7 @@ export function AdmissionsPage() {
     },
   ]
 
-  const filteredAdmissions = (admissionsQuery.data?.data ?? []).filter(
-    (a) =>
-      (statusFilter === 'all' || a.status === statusFilter) &&
-      (statusFilter !== 'admitted' || !!a.bed) &&
-      (!balanceDueOnly || (a.balance_due ?? 0) > 0) &&
-      (!unapprovedOperationsOnly || hasUnapprovedOperations(a)) &&
-      (!noBedOnly || !a.bed),
-  )
+  const filteredAdmissions = admissionsQuery.data?.data ?? []
   const tableData = groupAdmissionsByDay(filteredAdmissions)
   const sortedAdmissions = [...filteredAdmissions].sort(
     (a, b) => dayjs(b.admission_date).valueOf() - dayjs(a.admission_date).valueOf(),
@@ -354,23 +359,16 @@ export function AdmissionsPage() {
           <Tag color="blue">{filteredAdmissions.length} حالة</Tag>
           <Segmented
           type='primary'
-            value={noBedOnly ? 'unassigned' : statusFilter}
-            onChange={(value) => {
-              if (value === 'unassigned') {
-                setNoBedOnly(true)
-              } else {
-                setNoBedOnly(false)
-                setStatusFilter(value as AdmissionStatus | 'all')
-              }
-            }}
+            value={statusFilter}
+            onChange={(value) => setStatusFilter(value as AdmissionStatus | 'all' | 'unassigned')}
             options={[
               { label: 'الكل', value: 'all' },
               {
                 label: (
                   <span
                     style={{
-                      color: statusFilter === 'admitted' && !noBedOnly ? token.colorSuccess : undefined,
-                      fontWeight: statusFilter === 'admitted' && !noBedOnly ? 600 : undefined,
+                      color: statusFilter === 'admitted' ? token.colorSuccess : undefined,
+                      fontWeight: statusFilter === 'admitted' ? 600 : undefined,
                     }}
                   >
                     {STATUS_LABEL.admitted}

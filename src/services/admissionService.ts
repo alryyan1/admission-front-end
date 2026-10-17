@@ -32,7 +32,7 @@ export const admissionPdfPaths = {
     search?: string
     room_id?: number
     bed_id?: number
-    status?: AdmissionStatus
+    status?: AdmissionStatus | 'unassigned'
   }) => {
     const query = new URLSearchParams()
     if (filters.from) query.set('from', filters.from)
@@ -47,7 +47,7 @@ export const admissionPdfPaths = {
 
 export async function getAdmissions(
   filters?: {
-    status?: AdmissionStatus
+    status?: AdmissionStatus | 'unassigned'
     patient_id?: number
     from?: string
     to?: string
@@ -55,6 +55,8 @@ export async function getAdmissions(
     admission_id?: number
     room_id?: number
     bed_id?: number
+    balance_due_only?: boolean
+    unapproved_operations_only?: boolean
   },
 ): Promise<{ data: Admission[] }> {
   const { data } = await apiClient.get('/admissions', { params: filters ?? {} })
