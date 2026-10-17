@@ -251,7 +251,7 @@ function AppLayoutContent() {
             style={{ flex: '0 1 320px' }}
           />
         )}
-        {isDesktop && isAdmissionsPage && (
+        {/* {isDesktop && isAdmissionsPage && (
           <>
             <RangePicker
               value={dateRange}
@@ -305,7 +305,7 @@ function AppLayoutContent() {
               }))}
             />
           </>
-        )}
+        )} */}
         <div style={{ flex: 1 }} />
         <Button
           type="text"

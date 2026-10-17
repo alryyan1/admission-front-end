@@ -8,6 +8,8 @@ import { getPaymentMethods } from '@/services/paymentMethodService'
 import { admissionPdfPaths, getDepositSetting } from '@/services/admissionService'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
+import { useAuth } from '@/contexts/AuthContext'
+import { hasPermission, PERMISSION_ADD_DIRECT_DEPOSIT } from '@/lib/permissions'
 import type { AdmissionDeposit } from '@/types/admission'
 
 const { Text } = Typography
@@ -44,6 +46,8 @@ export function AdmissionDepositsCard({
   isSubmittingDeposit,
   isRemovingDeposit,
 }: AdmissionDepositsCardProps) {
+  const { user } = useAuth()
+  const canAddDeposit = hasPermission(user, PERMISSION_ADD_DIRECT_DEPOSIT)
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
   const depositSettingQuery = useQuery({ queryKey: ['deposit-setting'], queryFn: getDepositSetting })
   const receiptPdf = usePdfPreview()
@@ -123,45 +127,51 @@ export function AdmissionDepositsCard({
   return (
     <>
       <Card title="الدفعات">
-        <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
-          <FieldLabel label="المبلغ">
-            <InputNumber
-              className="amount-input"
-              style={{ width: 150 }}
-              min={0}
-              value={depositAmount}
-              onChange={(v) => setDepositAmount(v)}
-              onPressEnter={handleAddDeposit}
-            />
-          </FieldLabel>
-          <FieldLabel label="طريقة الدفع">
-            <Select
-              style={{ width: 144 }}
-              placeholder="اختر طريقة الدفع"
-              loading={paymentMethodsQuery.isLoading}
-              value={depositMethodId}
-              onChange={setDepositMethodId}
-              options={activePaymentMethods.map((pm) => ({ label: pm.name, value: pm.id }))}
-            />
-          </FieldLabel>
-          <FieldLabel label="ملاحظة">
-            <Input
-              style={{ width: 180 }}
-              placeholder="ملاحظة (اختياري)"
-              value={depositComment}
-              onChange={(e) => setDepositComment(e.target.value)}
-            />
-          </FieldLabel>
-          <Button
-            type="primary"
-            onClick={handleAddDeposit}
-            loading={isSubmittingDeposit}
-            disabled={depositAmount === null || !depositMethodId || blockedByBalance}
-          >
-            إضافة
-          </Button>
-        </Flex>
-        {blockedByBalance && (
+        {canAddDeposit ? (
+          <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
+            <FieldLabel label="المبلغ">
+              <InputNumber
+                className="amount-input"
+                style={{ width: 150 }}
+                min={0}
+                value={depositAmount}
+                onChange={(v) => setDepositAmount(v)}
+                onPressEnter={handleAddDeposit}
+              />
+            </FieldLabel>
+            <FieldLabel label="طريقة الدفع">
+              <Select
+                style={{ width: 144 }}
+                placeholder="اختر طريقة الدفع"
+                loading={paymentMethodsQuery.isLoading}
+                value={depositMethodId}
+                onChange={setDepositMethodId}
+                options={activePaymentMethods.map((pm) => ({ label: pm.name, value: pm.id }))}
+              />
+            </FieldLabel>
+            <FieldLabel label="ملاحظة">
+              <Input
+                style={{ width: 180 }}
+                placeholder="ملاحظة (اختياري)"
+                value={depositComment}
+                onChange={(e) => setDepositComment(e.target.value)}
+              />
+            </FieldLabel>
+            <Button
+              type="primary"
+              onClick={handleAddDeposit}
+              loading={isSubmittingDeposit}
+              disabled={depositAmount === null || !depositMethodId || blockedByBalance}
+            >
+              إضافة
+            </Button>
+          </Flex>
+        ) : (
+          <Text style={{ fontSize: 12, display: 'block', marginBottom: 12 }} type="secondary">
+            لا تملك صلاحية إضافة دفعة مباشرة. يرجى التواصل مع مسؤول النظام.
+          </Text>
+        )}
+        {canAddDeposit && blockedByBalance && (
           <Text style={{ fontSize: 12, display: 'block', marginBottom: 12 }} type="danger">
             لا يمكن إضافة دفعة لأنه لا يوجد رصيد مستحق على المريض حالياً.
           </Text>

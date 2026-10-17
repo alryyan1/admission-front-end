@@ -32,6 +32,7 @@ export const admissionPdfPaths = {
     search?: string
     room_id?: number
     bed_id?: number
+    status?: AdmissionStatus
   }) => {
     const query = new URLSearchParams()
     if (filters.from) query.set('from', filters.from)
@@ -39,6 +40,7 @@ export const admissionPdfPaths = {
     if (filters.search) query.set('search', filters.search)
     if (filters.room_id) query.set('room_id', String(filters.room_id))
     if (filters.bed_id) query.set('bed_id', String(filters.bed_id))
+    if (filters.status) query.set('status', filters.status)
     return `/reports/admissions-payments.pdf?${query.toString()}`
   },
 }

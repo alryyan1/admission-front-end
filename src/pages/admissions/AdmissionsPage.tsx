@@ -94,6 +94,7 @@ export function AdmissionsPage() {
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
   const [balanceDueOnly, setBalanceDueOnly] = useState(false)
   const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
+  const [noBedOnly, setNoBedOnly] = useState(false)
   const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all'>('admitted')
   const pdf = usePdfPreview()
 
@@ -244,7 +245,7 @@ export function AdmissionsPage() {
                       <span style={{ fontSize: 12, color: token.colorTextSecondary, whiteSpace: 'nowrap' }}>
                         {days + 1} يوم
                       </span>
-                      <Progress percent={dayProgress} size="small" showInfo={false} style={{ width: 60 }} />
+                      {row.bed && <Progress percent={dayProgress} size="small" showInfo={false} style={{ width: 60 }} />}
                     </Flex>
                   </Tooltip>
                 )
@@ -333,7 +334,8 @@ export function AdmissionsPage() {
     (a) =>
       (statusFilter === 'all' || a.status === statusFilter) &&
       (!balanceDueOnly || (a.balance_due ?? 0) > 0) &&
-      (!unapprovedOperationsOnly || hasUnapprovedOperations(a)),
+      (!unapprovedOperationsOnly || hasUnapprovedOperations(a)) &&
+      (!noBedOnly || !a.bed),
   )
   const tableData = groupAdmissionsByDay(filteredAdmissions)
   const sortedAdmissions = [...filteredAdmissions].sort(
@@ -378,6 +380,10 @@ export function AdmissionsPage() {
             <Switch checked={unapprovedOperationsOnly} onChange={setUnapprovedOperationsOnly} size="small" />
             <Typography.Text>عمليات غير معتمدة فقط</Typography.Text>
           </Flex>
+          <Flex align="center" gap={6}>
+            <Switch checked={noBedOnly} onChange={setNoBedOnly} size="small" />
+            <Typography.Text>بدون سرير معيّن فقط</Typography.Text>
+          </Flex>
         </Flex>
         <Flex align="center" gap={8}>
           {activeAdmission && (
@@ -408,6 +414,7 @@ export function AdmissionsPage() {
                   search: debouncedSearch || undefined,
                   room_id: roomId ?? undefined,
                   bed_id: bedId ?? undefined,
+                  status: statusFilter === 'all' ? undefined : statusFilter,
                 }),
                 'معاينة تقرير بيانات التنويم والمدفوعات',
               )

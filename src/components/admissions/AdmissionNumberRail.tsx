@@ -129,7 +129,7 @@ export function AdmissionStatusBadge({ admission }: { admission: Admission }) {
         <LogoutOutlined
           style={{
             position: 'absolute',
-            bottom: -5,
+            bottom: 35,
             insetInlineEnd: -5,
             fontSize: 14,
             color: token.colorInfo,
@@ -147,7 +147,7 @@ export function AdmissionStatusBadge({ admission }: { admission: Admission }) {
         <CloseCircleFilled
           style={{
             position: 'absolute',
-            bottom: -5,
+            bottom: 35,
             insetInlineEnd: -5,
             fontSize: 14,
             color: token.colorError,
