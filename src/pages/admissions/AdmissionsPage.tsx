@@ -242,9 +242,11 @@ export function AdmissionsPage() {
                 return (
                   <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
                     <Flex align="center" gap={6}>
-                      <span style={{ fontSize: 12, color: token.colorTextSecondary, whiteSpace: 'nowrap' }}>
-                        {days + 1} يوم
-                      </span>
+                      {row.bed && (
+                        <span style={{ fontSize: 12, color: token.colorTextSecondary, whiteSpace: 'nowrap' }}>
+                          {days + 1} يوم
+                        </span>
+                      )}
                       {row.bed && <Progress percent={dayProgress} size="small" showInfo={false} style={{ width: 60 }} />}
                     </Flex>
                   </Tooltip>
@@ -333,6 +335,7 @@ export function AdmissionsPage() {
   const filteredAdmissions = (admissionsQuery.data?.data ?? []).filter(
     (a) =>
       (statusFilter === 'all' || a.status === statusFilter) &&
+      (statusFilter !== 'admitted' || !!a.bed) &&
       (!balanceDueOnly || (a.balance_due ?? 0) > 0) &&
       (!unapprovedOperationsOnly || hasUnapprovedOperations(a)) &&
       (!noBedOnly || !a.bed),
@@ -351,16 +354,23 @@ export function AdmissionsPage() {
           <Tag color="blue">{filteredAdmissions.length} حالة</Tag>
           <Segmented
           type='primary'
-            value={statusFilter}
-            onChange={(value) => setStatusFilter(value as AdmissionStatus | 'all')}
+            value={noBedOnly ? 'unassigned' : statusFilter}
+            onChange={(value) => {
+              if (value === 'unassigned') {
+                setNoBedOnly(true)
+              } else {
+                setNoBedOnly(false)
+                setStatusFilter(value as AdmissionStatus | 'all')
+              }
+            }}
             options={[
               { label: 'الكل', value: 'all' },
               {
                 label: (
                   <span
                     style={{
-                      color: statusFilter === 'admitted' ? token.colorSuccess : undefined,
-                      fontWeight: statusFilter === 'admitted' ? 600 : undefined,
+                      color: statusFilter === 'admitted' && !noBedOnly ? token.colorSuccess : undefined,
+                      fontWeight: statusFilter === 'admitted' && !noBedOnly ? 600 : undefined,
                     }}
                   >
                     {STATUS_LABEL.admitted}
@@ -370,6 +380,7 @@ export function AdmissionsPage() {
               },
               { label: STATUS_LABEL.discharged, value: 'discharged' },
               { label: STATUS_LABEL.cancelled, value: 'cancelled' },
+              { label: 'بدون سرير معيّن', value: 'unassigned' },
             ]}
           />
           <Flex align="center" gap={6}>
@@ -379,10 +390,6 @@ export function AdmissionsPage() {
           <Flex align="center" gap={6}>
             <Switch checked={unapprovedOperationsOnly} onChange={setUnapprovedOperationsOnly} size="small" />
             <Typography.Text>عمليات غير معتمدة فقط</Typography.Text>
-          </Flex>
-          <Flex align="center" gap={6}>
-            <Switch checked={noBedOnly} onChange={setNoBedOnly} size="small" />
-            <Typography.Text>بدون سرير معيّن فقط</Typography.Text>
           </Flex>
         </Flex>
         <Flex align="center" gap={8}>
