@@ -32,7 +32,13 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 import { getRooms, getBeds } from '@/services/facilityService'
-import type { UserRole } from '@/types/auth'
+import {
+  filterNavItemsByRole,
+  isPathAllowed,
+  navItems,
+  reportsNavItems,
+  settingsNavItems,
+} from '@/lib/navigation'
 import dayjs, { type Dayjs } from 'dayjs'
 
 const { RangePicker } = DatePicker
@@ -53,43 +59,6 @@ function defaultDateRange(): [Dayjs, Dayjs] {
 
 const { Header, Sider, Content } = Layout
 const { Text } = Typography
-
-interface NavItem {
-  to: string
-  label: string
-  roles?: UserRole[]
-}
-
-const navItems: NavItem[] = [
-  { to: '/', label: 'لوحة التحكم' },
-  { to: '/admissions', label: 'سجل التنويم ' },
-  { to: '/patients', label: 'سجل المرضى' },
-  { to: '/facility-map', label: 'الغرف' },
-  { to: '/operations', label: 'العمليات' },
-  { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
-]
-
-const reportsNavItems: NavItem[] = [
-  { to: '/reports/daily-revenue', label: 'الإيراد اليومي', roles: ['admin', 'cashier'] },
-  { to: '/reports/doctor-entitlements', label: 'استحقاقات الأطباء', roles: ['admin', 'cashier'] },
-  { to: '/reports/expenses', label: 'تقرير المصروفات', roles: ['admin', 'cashier'] },
-  { to: '/reports/admission-revenue', label: 'إيرادات التنويم (الغرف)', roles: ['admin', 'cashier'] },
-  { to: '/reports/referring-doctor-revenue', label: 'إيراد مرضى الطبيب المحول', roles: ['admin', 'cashier'] },
-]
-
-const settingsNavItems: NavItem[] = [
-  { to: '/settings/facility', label: 'الإعدادات العامة' },
-  { to: '/settings/doctors', label: 'الأطباء' },
-  { to: '/settings/services', label: 'كتالوج الخدمات' },
-  { to: '/settings/procedures', label: 'كتالوج العمليات' },
-  { to: '/settings/team-roles', label: 'أدوار الفريق الطبي' },
-  { to: '/settings/insurance-companies', label: 'شركات التأمين' },
-  { to: '/settings/users', label: 'المستخدمون' },
-  { to: '/settings/whatsapp', label: 'واتساب' },
-  { to: '/settings/sessions', label: 'الجلسات النشطة' },
-  { to: '/settings/activity-log', label: 'سجل النشاط' },
-  { to: '/settings/backup', label: 'النسخ الاحتياطي' },
-]
 
 const SIDER_WIDTH = 170
 const HEADER_HEIGHT = 56
@@ -160,10 +129,25 @@ function AppLayoutContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedGlobalSearch])
 
-  const visibleNavItems = navItems.filter((item) => !item.roles || (user && item.roles.includes(user.role)))
-  const visibleReportsNavItems = reportsNavItems.filter(
-    (item) => !item.roles || (user && item.roles.includes(user.role)),
+  const allowedPages = user?.allowed_pages ?? null
+
+  const visibleNavItems = filterNavItemsByRole(navItems, user?.role).filter(
+    (item) => item.to === '/' || isPathAllowed(item.to, allowedPages),
   )
+  const visibleReportsNavItems = filterNavItemsByRole(reportsNavItems, user?.role).filter((item) =>
+    isPathAllowed(item.to, allowedPages),
+  )
+  const visibleSettingsNavItems = settingsNavItems.filter((item) => isPathAllowed(item.to, allowedPages))
+
+  // A page can become unreachable (admin revoked it, or the user navigated here before
+  // their permissions changed); bounce to the dashboard instead of showing a dead page.
+  useEffect(() => {
+    if (!user) return
+    if (!isPathAllowed(location.pathname, allowedPages)) {
+      navigate('/', { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, user, allowedPages])
 
   const selectedKey =
     visibleNavItems.find((item) =>
@@ -193,20 +177,24 @@ function AppLayoutContent() {
       disabled: true,
     },
     { type: 'divider' },
-    {
-      key: 'reports',
-      label: 'التقارير',
-      icon: <FileBarChart2 size={14} />,
-      children: visibleReportsNavItems.map((item) => ({ key: item.to, label: item.label })),
-    },
-    { type: 'divider' },
-    ...(isAdmin
+    ...(visibleReportsNavItems.length > 0
+      ? [
+          {
+            key: 'reports',
+            label: 'التقارير',
+            icon: <FileBarChart2 size={14} />,
+            children: visibleReportsNavItems.map((item) => ({ key: item.to, label: item.label })),
+          },
+          { type: 'divider' as const },
+        ]
+      : []),
+    ...(isAdmin && visibleSettingsNavItems.length > 0
       ? [
           {
             key: 'settings',
             label: 'الإعدادات',
             icon: <Settings size={14} />,
-            children: settingsNavItems.map((item) => ({ key: item.to, label: item.label })),
+            children: visibleSettingsNavItems.map((item) => ({ key: item.to, label: item.label })),
           },
           { type: 'divider' as const },
         ]

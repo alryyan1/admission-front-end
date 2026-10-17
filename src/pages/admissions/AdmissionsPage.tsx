@@ -155,7 +155,7 @@ export function AdmissionsPage() {
       }),
   })
 
-  const columnCount = 9
+  const columnCount = 10
 
   const hasUnapprovedOperations = (row: Admission): boolean =>
     (row.operations ?? []).some((operation) => !operation.entitlements_approved)
@@ -240,7 +240,12 @@ export function AdmissionsPage() {
                 const { hoursElapsed, days, dayProgress } = getStayDuration(row)
                 return (
                   <Tooltip title={`${hoursElapsed} ساعة إجمالاً — ${dayProgress}% من اليوم ${days + 1}`}>
-                    <Progress percent={dayProgress} size="small" showInfo={false} />
+                    <Flex align="center" gap={6}>
+                      <span style={{ fontSize: 12, color: token.colorTextSecondary, whiteSpace: 'nowrap' }}>
+                        {days + 1} يوم
+                      </span>
+                      <Progress percent={dayProgress} size="small" showInfo={false} style={{ width: 60 }} />
+                    </Flex>
                   </Tooltip>
                 )
               })()}
@@ -289,6 +294,14 @@ export function AdmissionsPage() {
       },
     },
 
+    {
+      title: 'سجل بواسطة',
+      key: 'admitted_by',
+      render: (_, row) => {
+        if (isDayHeaderRow(row)) return { props: { colSpan: 0 } }
+        return row.admitted_by?.name ?? '—'
+      },
+    },
     {
       title: 'الإجمالي',
       key: 'total_charges',

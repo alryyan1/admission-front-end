@@ -5,6 +5,8 @@ export interface AuthUser {
   name: string
   username: string
   role: UserRole
+  /** Sidebar/route paths this user may access; null means unrestricted (governed by role only). */
+  allowed_pages: string[] | null
 }
 
 export interface User {
@@ -12,6 +14,8 @@ export interface User {
   name: string
   username: string
   role: UserRole
+  /** Sidebar/route paths this user may access; null means unrestricted (governed by role only). */
+  allowed_pages: string[] | null
   is_active: boolean
   created_at: string
   updated_at: string

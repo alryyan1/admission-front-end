@@ -32,6 +32,8 @@ export interface Admission {
   doctor_notice_sent_at: string | null
   patient?: Patient
   bed?: Bed | null
+  /** User who registered/admitted this admission. */
+  admitted_by?: { id: number; name: string } | null
   vital_signs?: VitalSign[]
   doctor_orders?: DoctorOrder[]
   deposits?: AdmissionDeposit[]

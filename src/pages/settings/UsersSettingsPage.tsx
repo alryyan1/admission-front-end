@@ -57,6 +57,16 @@ export function UsersSettingsPage() {
       render: (_, u) => (u.is_active ? <Tag color="success">مفعّل</Tag> : <Tag color="error">غير مفعل</Tag>),
     },
     {
+      title: 'الصفحات المسموحة',
+      key: 'allowed_pages',
+      render: (_, u) =>
+        u.allowed_pages === null ? (
+          <Tag>كل الصفحات</Tag>
+        ) : (
+          <Tag color="orange">{u.allowed_pages.length} صفحة</Tag>
+        ),
+    },
+    {
       title: '',
       key: 'actions',
       render: (_, u) => (

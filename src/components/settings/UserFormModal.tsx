@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Modal, Row, Col, Input, Select, Switch, Typography, Space } from 'antd'
+import { Modal, Row, Col, Input, Select, Switch, Typography, Space, Checkbox, Divider } from 'antd'
 import { ROLE_OPTIONS } from '@/lib/roles'
+import { filterNavItemsByRole, navSections } from '@/lib/navigation'
 import type { User, UserRole } from '@/types/auth'
 import type { UserPayload } from '@/services/userService'
 
@@ -32,6 +33,8 @@ export function UserFormModal({ open, onClose, user, isSelf, onSubmit, isSubmitt
   const [password, setPassword] = useState('')
   const [role, setRole] = useState<UserRole | undefined>(undefined)
   const [isActive, setIsActive] = useState(true)
+  const [restrictPages, setRestrictPages] = useState(false)
+  const [allowedPages, setAllowedPages] = useState<string[]>([])
 
   useEffect(() => {
     if (!open) return
@@ -40,6 +43,8 @@ export function UserFormModal({ open, onClose, user, isSelf, onSubmit, isSubmitt
     setPassword('')
     setRole(user?.role ?? 'nurse')
     setIsActive(user?.is_active ?? true)
+    setRestrictPages(user?.allowed_pages !== null && user?.allowed_pages !== undefined)
+    setAllowedPages(user?.allowed_pages ?? [])
   }, [open, user])
 
   function handleSubmit() {
@@ -50,9 +55,25 @@ export function UserFormModal({ open, onClose, user, isSelf, onSubmit, isSubmitt
       username,
       role,
       is_active: isActive,
+      ...(isSelf ? {} : { allowed_pages: restrictPages ? allowedPages : null }),
       ...(password.trim() ? { password } : {}),
     })
   }
+
+  function toggleAllowedPage(path: string, checked: boolean) {
+    setAllowedPages((current) =>
+      checked ? [...current, path] : current.filter((entry) => entry !== path),
+    )
+  }
+
+  // Drop selections that the chosen role no longer has access to (e.g. switching
+  // away from admin hides the settings pages, so a stale selection there is pruned).
+  useEffect(() => {
+    const validPaths = new Set(
+      navSections.flatMap((section) => filterNavItemsByRole(section.items, role)).map((item) => item.to),
+    )
+    setAllowedPages((current) => current.filter((path) => validPaths.has(path)))
+  }, [role])
 
   const canSubmit = name.trim() && username.trim() && role && (user || password.trim())
 
@@ -98,6 +119,46 @@ export function UserFormModal({ open, onClose, user, isSelf, onSubmit, isSubmitt
           <Space>
             <Switch checked={isActive} onChange={setIsActive} disabled={isSelf} />
             <Text>مفعّل</Text>
+          </Space>
+        </Col>
+        <Col span={24}>
+          <Divider style={{ margin: '4px 0' }} />
+          <Space direction="vertical" size={8} style={{ width: '100%' }}>
+            <Space>
+              <Switch checked={restrictPages} onChange={setRestrictPages} disabled={isSelf} />
+              <Text>تقييد الصفحات المرئية في القائمة الجانبية</Text>
+            </Space>
+            {isSelf && (
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                لا يمكنك تقييد صفحاتك الخاصة.
+              </Text>
+            )}
+            {restrictPages && !isSelf && (
+              <Space direction="vertical" size={12} style={{ width: '100%' }}>
+                {navSections.map((section) => {
+                  const items = filterNavItemsByRole(section.items, role)
+                  if (items.length === 0) return null
+                  return (
+                    <div key={section.key}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {section.label}
+                      </Text>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px', marginTop: 4 }}>
+                        {items.map((item) => (
+                          <Checkbox
+                            key={item.to}
+                            checked={allowedPages.includes(item.to)}
+                            onChange={(e) => toggleAllowedPage(item.to, e.target.checked)}
+                          >
+                            {item.label}
+                          </Checkbox>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </Space>
+            )}
           </Space>
         </Col>
       </Row>

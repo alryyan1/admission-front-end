@@ -6,6 +6,7 @@ export interface UserPayload {
   username: string
   password?: string
   role: UserRole
+  allowed_pages?: string[] | null
   is_active?: boolean
 }
 
