@@ -6,6 +6,7 @@ import { ConfigProvider, Card, Input, Button, Table, Tag, Switch, Popconfirm, Ty
 import { PrinterOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useAntTheme } from '@/lib/antdTheme'
+import { formatNumber } from '@/lib/utils'
 import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import {
   getProcedureCategories,
@@ -126,6 +127,11 @@ export function ProcedureCatalogSettingsPage() {
       title: 'التصنيف',
       key: 'category',
       render: (_, p) => (p.category ? <Tag>{p.category.name}</Tag> : '—'),
+    },
+    {
+      title: 'السعر الأساسي',
+      key: 'base_price',
+      render: (_, p) => (p.base_price != null ? formatNumber(p.base_price) : '—'),
     },
     {
       title: 'الحالة',

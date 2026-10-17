@@ -112,10 +112,10 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
   return (
     <>
       <Card
-        style={{ position: 'sticky', top: 16 }}
+        style={{ position: 'sticky', top: 2 }}
         className="animate-in fade-in slide-in-from-left-4 duration-300"
       >
-        <Flex justify="space-between" align="start" style={{ marginBottom: 12 }}>
+        <Flex justify="space-between" align="start" style={{ marginBottom: 2 }}>
           <Flex vertical gap={4} style={{ flex: 1, minWidth: 0 }}>
             <Text strong style={{ fontSize: 24, lineHeight: 1.2,border: `1px solid ${token.colorBorder}`,textAlign: 'center',padding: '4px 0',backgroundColor: cardBackground,borderRadius: 4 }}>
               {admission.id ?? '—'}

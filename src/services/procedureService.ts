@@ -34,6 +34,7 @@ export async function createProcedure(payload: {
   name_ar: string
   name_en?: string
   type?: string
+  base_price?: number | null
   description?: string
   is_active?: boolean
 }): Promise<Procedure> {
@@ -48,6 +49,7 @@ export async function updateProcedure(
     name_ar: string
     name_en: string | null
     type: string | null
+    base_price: number | null
     description: string | null
     is_active: boolean
   }>,

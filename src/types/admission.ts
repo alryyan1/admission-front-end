@@ -167,6 +167,7 @@ export interface Procedure {
   name_ar: string
   name_en: string | null
   type: string | null
+  base_price: string | null
   description: string | null
   is_active: boolean
   category?: ProcedureCategory | null

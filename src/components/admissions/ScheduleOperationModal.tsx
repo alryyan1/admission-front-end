@@ -108,6 +108,7 @@ export function ScheduleOperationModal({
             value={procedure}
             onChange={(_, value) => {
               setProcedure(value)
+              setPrice(value?.base_price != null ? Number(value.base_price) : null)
               if (value) setTimeout(() => surgeonInputRef.current?.focus(), 0)
             }}
             renderInput={(params) => <TextField {...params} label="الإجراء المطلوب" required />}

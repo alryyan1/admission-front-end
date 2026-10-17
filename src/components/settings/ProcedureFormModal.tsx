@@ -15,6 +15,7 @@ interface ProcedureFormModalProps {
     name_ar: string
     name_en?: string
     type?: string
+    base_price?: number | null
     description?: string
     is_active?: boolean
   }) => void
@@ -44,6 +45,7 @@ export function ProcedureFormModal({
   const [nameEn, setNameEn] = useState('')
   const [categoryId, setCategoryId] = useState<number | undefined>(undefined)
   const [type, setType] = useState('')
+  const [basePrice, setBasePrice] = useState<number | null>(null)
   const [description, setDescription] = useState('')
   const [isActive, setIsActive] = useState(true)
 
@@ -53,6 +55,7 @@ export function ProcedureFormModal({
     setNameEn(procedure?.name_en ?? '')
     setCategoryId(procedure?.category_id ?? undefined)
     setType(procedure?.type ?? '')
+    setBasePrice(procedure?.base_price != null ? Number(procedure.base_price) : null)
     setDescription(procedure?.description ?? '')
     setIsActive(procedure?.is_active ?? true)
   }, [open, procedure])
@@ -64,6 +67,7 @@ export function ProcedureFormModal({
       name_en: nameEn || undefined,
       category_id: categoryId ?? null,
       type: type || undefined,
+      base_price: basePrice,
       description: description || undefined,
       is_active: isActive,
     })
@@ -106,6 +110,17 @@ export function ProcedureFormModal({
         <Col xs={24} md={12}>
           <FieldLabel label="النوع (اختياري)">
             <Input value={type} onChange={(e) => setType(e.target.value)} placeholder="جراحية / تشخيصية" />
+          </FieldLabel>
+        </Col>
+        <Col xs={24} md={12}>
+          <FieldLabel label="السعر الأساسي">
+            <Input
+              type="number"
+              min={0}
+              value={basePrice ?? ''}
+              onChange={(e) => setBasePrice(e.target.value === '' ? null : Number(e.target.value))}
+              placeholder="يُستخدم كسعر مبدئي عند إضافة العملية"
+            />
           </FieldLabel>
         </Col>
         <Col span={24}>
