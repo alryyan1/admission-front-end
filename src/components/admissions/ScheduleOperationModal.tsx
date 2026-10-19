@@ -111,6 +111,16 @@ export function ScheduleOperationModal({
               setPrice(value?.base_price != null ? Number(value.base_price) : null)
               if (value) setTimeout(() => surgeonInputRef.current?.focus(), 0)
             }}
+            renderOption={(props, p) => (
+              <Box component="li" {...props} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1 }}>
+                <span>{p.name_ar}</span>
+                {p.base_price != null && (
+                  <Box component="span" sx={{ color: 'text.secondary' }}>
+                    {Number(p.base_price).toLocaleString()}
+                  </Box>
+                )}
+              </Box>
+            )}
             renderInput={(params) => <TextField {...params} label="الإجراء المطلوب" required />}
           />
 

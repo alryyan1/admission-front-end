@@ -68,6 +68,12 @@ export function DashboardPage() {
               <p className="text-lg font-semibold">{formatNumber(admissionsQuery.data?.active_admissions ?? 0)}</p>
             </div>
             <div className="text-center">
+              <p className="text-xs text-muted-foreground">إجمالي المرضى المخرجين خلال الفترة المحددة</p>
+              <p className="text-lg font-semibold">
+                {formatNumber(admissionsQuery.data?.status_counts?.discharged ?? 0)}
+              </p>
+            </div>
+            <div className="text-center">
               <p className="text-xs text-muted-foreground">متوسط مدة الإقامة (أيام)</p>
               <p className="text-lg font-semibold">
                 {admissionsQuery.data?.average_length_of_stay_hours != null
