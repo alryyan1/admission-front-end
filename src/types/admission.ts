@@ -184,7 +184,12 @@ export interface Operation {
   /** Price of the operation (decimal string, e.g. "75000.00"). */
   price: string | null
   payment_method_id: number | null
+  /** Whether the operation's price has been paid in full (false while partially paid). */
   is_paid: boolean
+  /** Sum of every deposit linked to this operation. */
+  amount_paid: number
+  /** Outstanding balance on the price, floored at 0; null when price isn't set yet. */
+  remaining_amount: number | null
   entitlements_approved: boolean
   entitlements_approved_at: string | null
   entitlements_approved_by: number | null
@@ -196,6 +201,8 @@ export interface Operation {
   supplies?: OperationSupply[]
   procedure?: Procedure
   payment_method?: PaymentMethod | null
+  /** Individual payments recorded against this operation's price. */
+  deposits?: AdmissionDeposit[]
 }
 
 export interface OperationListResponse {

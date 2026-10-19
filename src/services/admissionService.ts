@@ -295,17 +295,12 @@ export async function deleteOperation(operationId: number): Promise<void> {
   await apiClient.delete(`/operations/${operationId}`)
 }
 
-/** Marks an operation paid and records the matching deposit in one atomic step (see cancelOperationPayment). */
-export async function payOperation(operationId: number, paymentMethodId?: number | null): Promise<Operation> {
-  const { data } = await apiClient.post<Operation>(`/operations/${operationId}/pay`, {
-    payment_method_id: paymentMethodId,
-  })
-  return data
-}
-
-/** Reverts payOperation(): deletes the deposit it created and clears the paid flag. */
-export async function cancelOperationPayment(operationId: number): Promise<Operation> {
-  const { data } = await apiClient.delete<Operation>(`/operations/${operationId}/pay`)
+/** Records a (possibly partial) payment toward an operation's price; remove one via removeDeposit(). */
+export async function payOperation(
+  operationId: number,
+  payload: { amount: number; payment_method_id?: number | null },
+): Promise<Operation> {
+  const { data } = await apiClient.post<Operation>(`/operations/${operationId}/pay`, payload)
   return data
 }
 

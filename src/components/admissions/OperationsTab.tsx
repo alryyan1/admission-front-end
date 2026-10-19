@@ -12,19 +12,18 @@ import {
   IconButton,
   Paper,
   Divider,
-  TextField,
-  MenuItem,
   Tooltip,
   Typography,
 } from '@mui/material'
-import { DollarOutlined, CheckCircleFilled, CloseCircleOutlined, WhatsAppOutlined } from '@ant-design/icons'
-import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
+import { DollarOutlined, CheckCircleFilled, CloseCircleOutlined, ExclamationCircleFilled, WhatsAppOutlined } from '@ant-design/icons'
 import { getPaymentMethods } from '@/services/paymentMethodService'
 import { sendOperationInvoicePdfWhatsApp } from '@/services/whatsappService'
 import { ScheduleOperationModal, type OperationFormPayload } from '@/components/admissions/ScheduleOperationModal'
 import { OperationPriceCell } from '@/components/admissions/OperationPriceCell'
 import { OperationActionsMenu } from '@/components/admissions/OperationActionsMenu'
 import { OperationTeamModal } from '@/components/admissions/OperationTeamModal'
+import { OperationPaymentDialog } from '@/components/admissions/OperationPaymentDialog'
+import { formatNumber } from '@/lib/utils'
 import type { Operation } from '@/types/admission'
 
 interface OperationsTabProps {
@@ -34,16 +33,14 @@ interface OperationsTabProps {
   onUpdate: (operationId: number, payload: Partial<OperationFormPayload>) => Promise<unknown>
   onDelete: (operationId: number) => void
   onTeamChanged?: () => void
-  /** Sets the "intended" payment method before/without actually paying (see the per-row select). */
-  onUpdatePaymentMethod: (operationId: number, paymentMethodId: number | null) => void
-  /** Marks an operation paid and records its linked deposit (see the "سداد" button). */
-  onPayOperation: (operationId: number, paymentMethodId?: number | null) => void
-  /** Reverts onPayOperation: deletes its deposit and clears the paid flag (see "إلغاء السداد"). */
-  onCancelPayment: (operationId: number) => void
+  /** Records a (possibly partial) payment toward an operation's price (see the payments dialog). */
+  onPayOperation: (operationId: number, payload: { amount: number; payment_method_id?: number | null }) => void
+  /** Deletes a single payment from an operation's history (see the payments dialog). */
+  onRemoveDeposit: (depositId: number) => void
   isSubmitting: boolean
   isDeleting?: boolean
   isPayingOperation?: boolean
-  isCancellingPayment?: boolean
+  isRemovingDeposit?: boolean
   /** When true, operations can't be scheduled or edited, and team members can't be changed (the admission is discharged or cancelled). */
   readOnly?: boolean
 }
@@ -96,24 +93,25 @@ export function OperationsTab({
   onUpdate,
   onDelete,
   onTeamChanged,
-  onUpdatePaymentMethod,
   onPayOperation,
-  onCancelPayment,
+  onRemoveDeposit,
   isSubmitting,
   isDeleting,
   isPayingOperation = false,
-  isCancellingPayment = false,
+  isRemovingDeposit = false,
   readOnly = false,
 }: OperationsTabProps) {
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [editingOperation, setEditingOperation] = useState<Operation | null>(null)
   const [teamOperationId, setTeamOperationId] = useState<number | null>(null)
+  const [paymentOperationId, setPaymentOperationId] = useState<number | null>(null)
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
   const preferredPaymentMethodId = (paymentMethodsQuery.data ?? []).find(
     (pm) => pm.is_active && pm.name === 'بنكك',
   )?.id
 
   const teamOperation = teamOperationId != null ? operations.find((op) => op.id === teamOperationId) ?? null : null
+  const paymentOperation = paymentOperationId != null ? operations.find((op) => op.id === paymentOperationId) ?? null : null
 
   return (
     <Card>
@@ -150,9 +148,19 @@ export function OperationsTab({
                     {op.surgeon?.name ?? '—'}
                   </Typography>
                 </Stack>
-                <Tooltip title={op.is_paid ? 'مدفوعة' : 'غير مدفوعة'}>
+                <Tooltip
+                  title={
+                    op.is_paid
+                      ? 'مدفوعة'
+                      : op.amount_paid > 0
+                        ? `دفعة جزئية — المتبقي ${formatNumber(op.remaining_amount ?? 0)}`
+                        : 'غير مدفوعة'
+                  }
+                >
                   {op.is_paid ? (
                     <CheckCircleFilled style={{ color: '#52c41a', fontSize: 18 }} />
+                  ) : op.amount_paid > 0 ? (
+                    <ExclamationCircleFilled style={{ color: '#faad14', fontSize: 18 }} />
                   ) : (
                     <CloseCircleOutlined style={{ color: '#bfbfbf', fontSize: 18 }} />
                   )}
@@ -181,64 +189,31 @@ export function OperationsTab({
                     </Typography>
                     <OperationPriceCell
                       operation={op}
-                      disabled={readOnly || op.is_paid}
+                      disabled={readOnly || op.amount_paid > 0}
                       onCommit={(price) => onUpdate(op.id, { price })}
                     />
-                  </Stack>
-
-                  <Stack spacing={0.5}>
-                    <Typography variant="caption" color="text.secondary">
-                      طريقة الدفع
-                    </Typography>
-                    <TextField
-                      select
-                      size="small"
-                      disabled={readOnly}
-                      value={op.payment_method_id ?? preferredPaymentMethodId ?? ''}
-                      onChange={(e) =>
-                        onUpdatePaymentMethod(op.id, e.target.value === '' ? null : Number(e.target.value))
-                      }
-                      sx={{ width: 140 }}
-                      slotProps={{ select: { displayEmpty: true } }}
-                    >
-                      <MenuItem value="">
-                        <em>بدون تحديد</em>
-                      </MenuItem>
-                      {(paymentMethodsQuery.data ?? []).map((pm) => (
-                        <MenuItem key={pm.id} value={pm.id}>
-                          {pm.name}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    {op.amount_paid > 0 && (
+                      <Typography variant="caption" color="text.secondary">
+                        مدفوع {formatNumber(op.amount_paid)} / متبقي {formatNumber(op.remaining_amount ?? 0)}
+                      </Typography>
+                    )}
                   </Stack>
                 </Stack>
 
                 <Stack direction="row" spacing={1} alignItems="center">
-                  {op.is_paid ? (
-                    <ConfirmRemoveButton
-                      label="إلغاء السداد"
-                      confirmLabel="إلغاء السداد"
-                      description="إلغاء حالة السداد لهذه العملية؟ سيتم حذف الدفعة المرتبطة بها."
-                      iconOnly
-                      loading={isCancellingPayment}
-                      disabled={readOnly}
-                      onConfirm={() => onCancelPayment(op.id)}
-                    />
-                  ) : (
-                    <Tooltip title="تسجيل دفعة بقيمة هذه العملية">
-                      <span>
-                        <Button
-                          size="small"
-                          color="success"
-                          startIcon={<DollarOutlined />}
-                          disabled={readOnly || isPayingOperation || op.price == null}
-                          onClick={() => onPayOperation(op.id, op.payment_method_id ?? preferredPaymentMethodId ?? null)}
-                        >
-                          سداد
-                        </Button>
-                      </span>
-                    </Tooltip>
-                  )}
+                  <Tooltip title={op.price == null ? 'حدّد سعر العملية أولاً' : 'عرض وتسجيل الدفعات'}>
+                    <span>
+                      <Button
+                        size="small"
+                        color={op.is_paid ? 'success' : op.amount_paid > 0 ? 'warning' : 'primary'}
+                        startIcon={<DollarOutlined />}
+                        disabled={op.price == null}
+                        onClick={() => setPaymentOperationId(op.id)}
+                      >
+                        الدفعات
+                      </Button>
+                    </span>
+                  </Tooltip>
                   <OperationActionsMenu
                     operation={op}
                     readOnly={readOnly}
@@ -285,6 +260,19 @@ export function OperationsTab({
           entitlementsApproved={teamOperation.entitlements_approved}
         />
       )}
+
+      <OperationPaymentDialog
+        open={!!paymentOperation}
+        operation={paymentOperation}
+        onClose={() => setPaymentOperationId(null)}
+        paymentMethods={paymentMethodsQuery.data ?? []}
+        preferredPaymentMethodId={preferredPaymentMethodId}
+        onPay={onPayOperation}
+        onRemoveDeposit={onRemoveDeposit}
+        isPaying={isPayingOperation}
+        isRemovingDeposit={isRemovingDeposit}
+        readOnly={readOnly}
+      />
     </Card>
   )
 }

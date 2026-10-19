@@ -15,7 +15,6 @@ import {
   addOperation,
   addRequestedService,
   calculateAccommodationFee,
-  cancelOperationPayment,
   cancelRequestedServicePayment,
   deleteOperation,
   getAdmission,
@@ -163,26 +162,14 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
     onSuccess: invalidateAfterChange,
   })
 
-  const updateOperationPaymentMethodMutation = useMutation({
-    mutationFn: ({ operationId, paymentMethodId }: { operationId: number; paymentMethodId: number | null }) =>
-      updateOperation(operationId, { payment_method_id: paymentMethodId }),
-    onSuccess: invalidateAfterChange,
-  })
-
   const payOperationMutation = useMutation({
-    mutationFn: ({ operationId, paymentMethodId }: { operationId: number; paymentMethodId?: number | null }) =>
-      payOperation(operationId, paymentMethodId),
+    mutationFn: ({
+      operationId,
+      ...payload
+    }: { operationId: number } & Parameters<typeof payOperation>[1]) => payOperation(operationId, payload),
     onSuccess: () => {
-      toast.success('تم تسجيل سداد العملية')
+      toast.success('تم تسجيل الدفعة')
       playPaymentSuccessSound()
-      invalidateAfterChange()
-    },
-  })
-
-  const cancelOperationPaymentMutation = useMutation({
-    mutationFn: (operationId: number) => cancelOperationPayment(operationId),
-    onSuccess: () => {
-      toast.success('تم إلغاء السداد')
       invalidateAfterChange()
     },
   })
@@ -279,15 +266,12 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
             onUpdate={(operationId, payload) => updateOperationMutation.mutateAsync({ operationId, ...payload })}
             onDelete={(operationId) => deleteOperationMutation.mutate(operationId)}
             onTeamChanged={invalidateAfterChange}
-            onUpdatePaymentMethod={(operationId, paymentMethodId) =>
-              updateOperationPaymentMethodMutation.mutate({ operationId, paymentMethodId })
-            }
-            onPayOperation={(operationId, paymentMethodId) => payOperationMutation.mutate({ operationId, paymentMethodId })}
-            onCancelPayment={(operationId) => cancelOperationPaymentMutation.mutate(operationId)}
+            onPayOperation={(operationId, payload) => payOperationMutation.mutate({ operationId, ...payload })}
+            onRemoveDeposit={(depositId) => removeDepositMutation.mutate(depositId)}
             isSubmitting={operationMutation.isPending || updateOperationMutation.isPending}
             isDeleting={deleteOperationMutation.isPending}
             isPayingOperation={payOperationMutation.isPending}
-            isCancellingPayment={cancelOperationPaymentMutation.isPending}
+            isRemovingDeposit={removeDepositMutation.isPending}
             readOnly={isReadOnly}
           />
         )}
