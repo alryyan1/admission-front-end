@@ -1,3 +1,5 @@
+import type { AdmissionStatus } from '@/types/admission'
+
 export interface RevenueCalculatorRow {
   label: string
   amounts: Record<string, number>
@@ -131,7 +133,7 @@ export interface DoctorRevenueAdmissionRow {
   patient_name: string | null
   admission_date: string | null
   discharge_date: string | null
-  status: string
+  status: AdmissionStatus
   room_type_code: string | null
   room_type_name: string | null
   room_number: string | null

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { ConfigProvider, Card, DatePicker, Select, Table, Typography, Flex, Statistic, Empty } from 'antd'
+import { ConfigProvider, Card, DatePicker, Select, Table, Tag, Typography, Flex, Statistic, Empty } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs, { type Dayjs } from 'dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
@@ -8,14 +8,28 @@ import { getDoctorRevenueReport } from '@/services/reportService'
 import { getDoctors } from '@/services/patientService'
 import { formatDate, formatNumber } from '@/lib/utils'
 import type { DoctorRevenueAdmissionRow } from '@/types/report'
+import type { AdmissionStatus } from '@/types/admission'
 
 const { Title, Text } = Typography
 const { RangePicker } = DatePicker
+
+const STATUS_LABEL: Record<AdmissionStatus, string> = {
+  admitted: 'نشطة',
+  discharged: 'مخرّجة',
+  cancelled: 'ملغاة',
+}
+
+const STATUS_COLOR: Record<AdmissionStatus, string> = {
+  admitted: 'success',
+  discharged: 'blue',
+  cancelled: 'error',
+}
 
 interface PatientRevenueRow {
   patient_id: number
   patient_name: string | null
   admission_dates: Set<string>
+  statuses: Set<AdmissionStatus>
   stay_days: number
   room_numbers: Set<string>
   room_type_names: Set<string>
@@ -33,6 +47,7 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
     if (existing) {
       existing.stay_days += row.stay_days
       if (row.admission_date) existing.admission_dates.add(formatDate(row.admission_date))
+      existing.statuses.add(row.status)
       if (row.room_number) existing.room_numbers.add(row.room_number)
       if (row.room_type_name) existing.room_type_names.add(row.room_type_name)
       existing.room_revenue += row.room_revenue
@@ -45,6 +60,7 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
       patient_id: row.patient_id,
       patient_name: row.patient_name,
       admission_dates: new Set(row.admission_date ? [formatDate(row.admission_date)] : []),
+      statuses: new Set([row.status]),
       stay_days: row.stay_days,
       room_numbers: new Set(row.room_number ? [row.room_number] : []),
       room_type_names: new Set(row.room_type_name ? [row.room_type_name] : []),
@@ -86,6 +102,17 @@ export function ReferringDoctorRevenueReportPage() {
       key: 'admission_dates',
       align: 'center',
       render: (_, row) => (row.admission_dates.size > 0 ? [...row.admission_dates].join('، ') : '—'),
+    },
+    {
+      title: 'الحالة',
+      key: 'statuses',
+      align: 'center',
+      render: (_, row) =>
+        [...row.statuses].map((status) => (
+          <Tag key={status} color={STATUS_COLOR[status]}>
+            {STATUS_LABEL[status]}
+          </Tag>
+        )),
     },
     {
       title: 'عدد أيام الإقامة',
@@ -175,7 +202,6 @@ export function ReferringDoctorRevenueReportPage() {
             <Card size="small" style={{ minWidth: 150 }}>
               <Statistic title="عدد المرضى" value={report.summary.patients_count} />
             </Card>
-         
             <Card size="small" style={{ minWidth: 150 }}>
               <Statistic title="إيراد الإقامة" value={formatNumber(report.summary.room_revenue)} />
             </Card>
@@ -205,23 +231,23 @@ export function ReferringDoctorRevenueReportPage() {
               summary={() => (
                 <Table.Summary fixed>
                   <Table.Summary.Row>
-                    <Table.Summary.Cell index={0} colSpan={2}>
+                    <Table.Summary.Cell index={0} colSpan={3}>
                       <Text strong>الإجمالي</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} align="center">
+                    <Table.Summary.Cell index={3} align="center">
                       <Text strong>{formatNumber(report.summary.stay_days_count)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={3} colSpan={2} />
-                    <Table.Summary.Cell index={5} align="end">
+                    <Table.Summary.Cell index={4} colSpan={2} />
+                    <Table.Summary.Cell index={6} align="end">
                       <Text strong>{formatNumber(report.summary.room_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={6} align="end">
+                    <Table.Summary.Cell index={7} align="end">
                       <Text strong>{formatNumber(report.summary.services_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={7} align="end">
+                    <Table.Summary.Cell index={8} align="end">
                       <Text strong>{formatNumber(report.summary.operations_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={8} align="end">
+                    <Table.Summary.Cell index={9} align="end">
                       <Text strong>{formatNumber(report.summary.total_revenue)}</Text>
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
