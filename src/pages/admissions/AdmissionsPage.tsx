@@ -94,7 +94,7 @@ export function AdmissionsPage() {
   const [admissionIdFilter, setAdmissionIdFilter] = useState<number | undefined>(undefined)
   const [balanceDueOnly, setBalanceDueOnly] = useState(false)
   const [unapprovedOperationsOnly, setUnapprovedOperationsOnly] = useState(false)
-  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all' | 'unassigned'>('admitted')
+  const [statusFilter, setStatusFilter] = useState<AdmissionStatus | 'all' | 'unassigned'>('all')
   const pdf = usePdfPreview()
 
   useEffect(() => {
