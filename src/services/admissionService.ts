@@ -24,6 +24,7 @@ export const admissionPdfPaths = {
   finalInvoice: (invoiceId: number) => `/invoices/${invoiceId}/invoice.pdf`,
   accountStatement: (admissionId: number) => `/admissions/${admissionId}/account-statement.pdf`,
   admissionSummary: (admissionId: number) => `/admissions/${admissionId}/summary.pdf`,
+  dischargeForm: (admissionId: number) => `/admissions/${admissionId}/discharge-form.pdf`,
   operationInvoice: (operationId: number) => `/operations/${operationId}/invoice.pdf`,
   operationTeam: (operationId: number) => `/operations/${operationId}/team.pdf`,
   admissionsPaymentsReport: (filters: {

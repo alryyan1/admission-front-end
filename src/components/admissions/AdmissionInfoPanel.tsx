@@ -331,6 +331,16 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
             >
               ملف التنويم
             </Button>
+            <Button
+            icon={<PrinterOutlined />}
+              type="default"
+              loading={summaryPdf.isLoading('discharge-form')}
+              onClick={() =>
+                summaryPdf.open(admissionPdfPaths.dischargeForm(admission.id), 'معاينة استمارة الخروج', 'discharge-form')
+              }
+            >
+              استمارة خروج
+            </Button>
         </Flex>
       </Card>
 

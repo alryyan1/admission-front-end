@@ -149,7 +149,7 @@ export function ReferringDoctorRevenueReportPage() {
               <Statistic title="عدد المرضى" value={report.summary.patients_count} />
             </Card>
             <Card size="small" style={{ minWidth: 150 }}>
-              <Statistic title="عدد التنويمات" value={report.summary.admissions_count} />
+              <Statistic title="عدد أيام الإقامة" value={report.summary.stay_days_count} />
             </Card>
             <Card size="small" style={{ minWidth: 150 }}>
               <Statistic title="إيراد الإقامة" value={formatNumber(report.summary.room_revenue)} />

@@ -134,6 +134,7 @@ export interface DoctorRevenueAdmissionRow {
   status: string
   room_type_code: string | null
   room_type_name: string | null
+  stay_days: number
   room_revenue: number
   services_revenue: number
   operations_revenue: number
@@ -153,6 +154,7 @@ export interface DoctorRevenueReport {
   summary: {
     patients_count: number
     admissions_count: number
+    stay_days_count: number
     room_revenue: number
     services_revenue: number
     operations_revenue: number
