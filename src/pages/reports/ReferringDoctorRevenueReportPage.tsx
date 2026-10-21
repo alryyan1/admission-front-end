@@ -6,7 +6,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { useAntTheme } from '@/lib/antdTheme'
 import { getDoctorRevenueReport } from '@/services/reportService'
 import { getDoctors } from '@/services/patientService'
-import { formatNumber } from '@/lib/utils'
+import { formatDate, formatNumber } from '@/lib/utils'
 import type { DoctorRevenueAdmissionRow } from '@/types/report'
 
 const { Title, Text } = Typography
@@ -15,7 +15,7 @@ const { RangePicker } = DatePicker
 interface PatientRevenueRow {
   patient_id: number
   patient_name: string | null
-  admissions_count: number
+  admission_dates: Set<string>
   stay_days: number
   room_numbers: Set<string>
   room_type_names: Set<string>
@@ -31,8 +31,8 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
   for (const row of admissions) {
     const existing = byPatient.get(row.patient_id)
     if (existing) {
-      existing.admissions_count += 1
       existing.stay_days += row.stay_days
+      if (row.admission_date) existing.admission_dates.add(formatDate(row.admission_date))
       if (row.room_number) existing.room_numbers.add(row.room_number)
       if (row.room_type_name) existing.room_type_names.add(row.room_type_name)
       existing.room_revenue += row.room_revenue
@@ -44,7 +44,7 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
     byPatient.set(row.patient_id, {
       patient_id: row.patient_id,
       patient_name: row.patient_name,
-      admissions_count: 1,
+      admission_dates: new Set(row.admission_date ? [formatDate(row.admission_date)] : []),
       stay_days: row.stay_days,
       room_numbers: new Set(row.room_number ? [row.room_number] : []),
       room_type_names: new Set(row.room_type_name ? [row.room_type_name] : []),
@@ -82,10 +82,10 @@ export function ReferringDoctorRevenueReportPage() {
   const columns: ColumnsType<PatientRevenueRow> = [
     { title: 'المريض', dataIndex: 'patient_name', key: 'patient_name', render: (v) => v ?? '—' },
     {
-      title: 'عدد التنويمات',
-      key: 'admissions_count',
+      title: 'تاريخ الدخول',
+      key: 'admission_dates',
       align: 'center',
-      render: (_, row) => formatNumber(row.admissions_count),
+      render: (_, row) => (row.admission_dates.size > 0 ? [...row.admission_dates].join('، ') : '—'),
     },
     {
       title: 'عدد أيام الإقامة',
