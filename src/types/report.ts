@@ -134,6 +134,7 @@ export interface DoctorRevenueAdmissionRow {
   status: string
   room_type_code: string | null
   room_type_name: string | null
+  room_number: string | null
   stay_days: number
   room_revenue: number
   services_revenue: number

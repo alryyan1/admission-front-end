@@ -17,6 +17,8 @@ interface PatientRevenueRow {
   patient_name: string | null
   admissions_count: number
   stay_days: number
+  room_numbers: Set<string>
+  room_type_names: Set<string>
   room_revenue: number
   services_revenue: number
   operations_revenue: number
@@ -31,6 +33,8 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
     if (existing) {
       existing.admissions_count += 1
       existing.stay_days += row.stay_days
+      if (row.room_number) existing.room_numbers.add(row.room_number)
+      if (row.room_type_name) existing.room_type_names.add(row.room_type_name)
       existing.room_revenue += row.room_revenue
       existing.services_revenue += row.services_revenue
       existing.operations_revenue += row.operations_revenue
@@ -42,6 +46,8 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
       patient_name: row.patient_name,
       admissions_count: 1,
       stay_days: row.stay_days,
+      room_numbers: new Set(row.room_number ? [row.room_number] : []),
+      room_type_names: new Set(row.room_type_name ? [row.room_type_name] : []),
       room_revenue: row.room_revenue,
       services_revenue: row.services_revenue,
       operations_revenue: row.operations_revenue,
@@ -86,6 +92,18 @@ export function ReferringDoctorRevenueReportPage() {
       key: 'stay_days',
       align: 'center',
       render: (_, row) => formatNumber(row.stay_days),
+    },
+    {
+      title: 'الغرفة',
+      key: 'room_numbers',
+      align: 'center',
+      render: (_, row) => (row.room_numbers.size > 0 ? [...row.room_numbers].join('، ') : '—'),
+    },
+    {
+      title: 'نوع الغرفة',
+      key: 'room_type_names',
+      align: 'center',
+      render: (_, row) => (row.room_type_names.size > 0 ? [...row.room_type_names].join('، ') : '—'),
     },
     {
       title: 'إيراد الإقامة',
@@ -195,16 +213,17 @@ export function ReferringDoctorRevenueReportPage() {
                     <Table.Summary.Cell index={2} align="center">
                       <Text strong>{formatNumber(report.summary.stay_days_count)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={3} align="end">
+                    <Table.Summary.Cell index={3} colSpan={2} />
+                    <Table.Summary.Cell index={5} align="end">
                       <Text strong>{formatNumber(report.summary.room_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={4} align="end">
+                    <Table.Summary.Cell index={6} align="end">
                       <Text strong>{formatNumber(report.summary.services_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={5} align="end">
+                    <Table.Summary.Cell index={7} align="end">
                       <Text strong>{formatNumber(report.summary.operations_revenue)}</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={6} align="end">
+                    <Table.Summary.Cell index={8} align="end">
                       <Text strong>{formatNumber(report.summary.total_revenue)}</Text>
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
