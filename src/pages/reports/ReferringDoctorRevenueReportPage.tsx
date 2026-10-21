@@ -16,6 +16,7 @@ interface PatientRevenueRow {
   patient_id: number
   patient_name: string | null
   admissions_count: number
+  stay_days: number
   room_revenue: number
   services_revenue: number
   operations_revenue: number
@@ -29,6 +30,7 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
     const existing = byPatient.get(row.patient_id)
     if (existing) {
       existing.admissions_count += 1
+      existing.stay_days += row.stay_days
       existing.room_revenue += row.room_revenue
       existing.services_revenue += row.services_revenue
       existing.operations_revenue += row.operations_revenue
@@ -39,6 +41,7 @@ function groupByPatient(admissions: DoctorRevenueAdmissionRow[]): PatientRevenue
       patient_id: row.patient_id,
       patient_name: row.patient_name,
       admissions_count: 1,
+      stay_days: row.stay_days,
       room_revenue: row.room_revenue,
       services_revenue: row.services_revenue,
       operations_revenue: row.operations_revenue,
@@ -77,6 +80,12 @@ export function ReferringDoctorRevenueReportPage() {
       key: 'admissions_count',
       align: 'center',
       render: (_, row) => formatNumber(row.admissions_count),
+    },
+    {
+      title: 'عدد أيام الإقامة',
+      key: 'stay_days',
+      align: 'center',
+      render: (_, row) => formatNumber(row.stay_days),
     },
     {
       title: 'إيراد الإقامة',
@@ -149,7 +158,7 @@ export function ReferringDoctorRevenueReportPage() {
               <Statistic title="عدد المرضى" value={report.summary.patients_count} />
             </Card>
             <Card size="small" style={{ minWidth: 150 }}>
-              <Statistic title="عدد أيام الإقامة" value={report.summary.stay_days_count} />
+              <Statistic title="عدد التنويمات" value={report.summary.admissions_count} />
             </Card>
             <Card size="small" style={{ minWidth: 150 }}>
               <Statistic title="إيراد الإقامة" value={formatNumber(report.summary.room_revenue)} />
@@ -183,16 +192,19 @@ export function ReferringDoctorRevenueReportPage() {
                     <Table.Summary.Cell index={0} colSpan={2}>
                       <Text strong>الإجمالي</Text>
                     </Table.Summary.Cell>
-                    <Table.Summary.Cell index={2} align="end">
-                      <Text strong>{formatNumber(report.summary.room_revenue)}</Text>
+                    <Table.Summary.Cell index={2} align="center">
+                      <Text strong>{formatNumber(report.summary.stay_days_count)}</Text>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={3} align="end">
-                      <Text strong>{formatNumber(report.summary.services_revenue)}</Text>
+                      <Text strong>{formatNumber(report.summary.room_revenue)}</Text>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={4} align="end">
-                      <Text strong>{formatNumber(report.summary.operations_revenue)}</Text>
+                      <Text strong>{formatNumber(report.summary.services_revenue)}</Text>
                     </Table.Summary.Cell>
                     <Table.Summary.Cell index={5} align="end">
+                      <Text strong>{formatNumber(report.summary.operations_revenue)}</Text>
+                    </Table.Summary.Cell>
+                    <Table.Summary.Cell index={6} align="end">
                       <Text strong>{formatNumber(report.summary.total_revenue)}</Text>
                     </Table.Summary.Cell>
                   </Table.Summary.Row>
