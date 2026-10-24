@@ -1,6 +1,5 @@
 import axios from 'axios'
 import { toast } from 'sonner'
-import { notifyUnauthenticated } from '@/services/authEvents'
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL as string
 export const BACKEND_URL = API_BASE_URL.replace(/\/api$/, '')
@@ -24,26 +23,6 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// A single 401 can be a transient blip rather than proof the token is dead —
-// e.g. one of several requests fired in parallel. Before tearing down the
-// session we re-check with a dedicated call, shared across concurrent 401s
-// so a burst of failures only triggers one verification instead of one per
-// request.
-let sessionRecheck: Promise<boolean> | null = null
-
-function isSessionStillValid(): Promise<boolean> {
-  if (!sessionRecheck) {
-    sessionRecheck = apiClient
-      .get('/user', { skipAuthHandler: true, suppressToast: true })
-      .then(() => true)
-      .catch(() => false)
-      .finally(() => {
-        sessionRecheck = null
-      })
-  }
-  return sessionRecheck
-}
-
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -53,14 +32,10 @@ apiClient.interceptors.response.use(
     const isUnauthenticated =
       error.response?.status === 401 || error.response?.data?.message === 'Unauthenticated.'
 
+    // Auto-logout-on-401 disabled per request: a 401 no longer forces the
+    // user back to the login page (see src/services/authEvents.ts for the
+    // handler this used to call).
     if (isUnauthenticated && !isAuthEndpoint) {
-      // Let AuthContext clear the session and let the router redirect via <Navigate>.
-      // The caller can opt out (e.g. the boot-time token check) with skipAuthHandler.
-      if (!error.config?.skipAuthHandler) {
-        void isSessionStillValid().then((stillValid) => {
-          if (!stillValid) notifyUnauthenticated()
-        })
-      }
       return Promise.reject(error)
     }
 
