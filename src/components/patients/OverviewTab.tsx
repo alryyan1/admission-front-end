@@ -182,7 +182,7 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
             },
             {
               key: 'referred_by_doctor',
-              label: 'الطبيب المرجعي',
+              label: 'الطبيب المحول',
               value: (
                 <DoctorField
                   doctor={patient.referred_by_doctor}

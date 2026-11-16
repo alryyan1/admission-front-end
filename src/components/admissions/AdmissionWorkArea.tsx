@@ -2,18 +2,21 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { Tabs, Tab, Alert, Typography } from '@mui/material'
-import { Badge, Button, Flex } from 'antd'
-import { WalletOutlined } from '@ant-design/icons'
+import { Badge, Button, Flex, Tooltip } from 'antd'
+import { WalletOutlined, PrinterOutlined, CloudUploadOutlined, ExportOutlined } from '@ant-design/icons'
 import { AdmissionServicesCard } from '@/components/admissions/AdmissionServicesCard'
 import { AdmissionDepositsDialog } from '@/components/admissions/AdmissionDepositsDialog'
 import { OperationsTab } from '@/components/admissions/OperationsTab'
 import { formatDateTime } from '@/lib/utils'
 import { playPaymentSuccessSound } from '@/lib/sound'
 import { useAuth } from '@/contexts/AuthContext'
+import { usePdfPreview } from '@/hooks/usePdfPreview'
+import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import {
   addDeposit,
   addOperation,
   addRequestedService,
+  admissionPdfPaths,
   calculateAccommodationFee,
   cancelRequestedServicePayment,
   deleteOperation,
@@ -25,6 +28,7 @@ import {
   updateOperation,
   updateRequestedService,
 } from '@/services/admissionService'
+import { linkPatientToJawdaMedical } from '@/services/patientService'
 import { getChartOpeningServiceSetting } from '@/services/serviceService'
 import type { Admission } from '@/types/admission'
 
@@ -38,6 +42,7 @@ interface AdmissionWorkAreaProps {
 export function AdmissionWorkArea({ admission, focusOperationsToken }: AdmissionWorkAreaProps) {
   const queryClient = useQueryClient()
   const { user } = useAuth()
+  const summaryPdf = usePdfPreview()
   const [paymentsOpen, setPaymentsOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<'services' | 'operations'>('services')
 
@@ -174,45 +179,89 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
     },
   })
 
-  function handleAddFileOpeningFee() {
-    const service = chartOpeningQuery.data?.service
-    if (!service) {
-      toast.error('لم يتم إعداد خدمة رسوم فتح الملف من الإعدادات')
-      return
-    }
-    serviceMutation.mutate({ name: service.name_ar, quantity: 1, unit_price: Number(service.price) })
-  }
+  const linkJawdaMutation = useMutation({
+    mutationFn: () => linkPatientToJawdaMedical(admission.patient_id),
+    onSuccess: () => {
+      toast.success('تم إنشاء المريض وربطه في نظام جوده')
+      invalidateAfterChange()
+    },
+    onError: (error: unknown) => {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ??
+        'تعذر ربط المريض بنظام جوده'
+      toast.error(message)
+    },
+  })
 
   return (
     <>
       <div className="animate-in fade-in duration-300">
-        <Flex gap={8} justify="space-between" align="center" style={{ marginBottom: 12 }}>
-          <Flex gap={8}>
-            <Button
-              onClick={handleAddFileOpeningFee}
-              disabled={
-                isReadOnly ||
-                serviceMutation.isPending ||
-                chartOpeningQuery.isLoading ||
-                !chartOpeningQuery.data?.service ||
-                isFileOpeningFeeAdded
-              }
-            >
-              رسوم فتح الملف
-            </Button>
-            <Button
-              onClick={() => accommodationFeeMutation.mutate()}
-              disabled={isReadOnly}
-              loading={accommodationFeeMutation.isPending}
-            >
-              رسوم الإقامة
-            </Button>
-          </Flex>
+        <Flex justify="flex-end" style={{ marginBottom: 12 }}>
           <Badge count={admissionQuery.data?.deposits?.length ?? 0} size="small" offset={[-4, 2]}>
             <Button icon={<WalletOutlined />} onClick={() => setPaymentsOpen(true)}>
               المدفوعات
             </Button>
           </Badge>
+        </Flex>
+
+        <Flex gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
+          <Button
+            icon={<PrinterOutlined />}
+            type="default"
+            loading={summaryPdf.isLoading('statement')}
+            onClick={() =>
+              summaryPdf.open(admissionPdfPaths.accountStatement(admission.id), 'معاينة كشف الحساب', 'statement')
+            }
+          >
+            كشف الحساب
+          </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            type="default"
+            loading={summaryPdf.isLoading('summary')}
+            onClick={() =>
+              summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملف التنويم', 'summary')
+            }
+          >
+            ملف التنويم
+          </Button>
+          <Button
+            icon={<PrinterOutlined />}
+            type="default"
+            loading={summaryPdf.isLoading('discharge-form')}
+            onClick={() =>
+              summaryPdf.open(admissionPdfPaths.dischargeForm(admission.id), 'معاينة استمارة الخروج', 'discharge-form')
+            }
+          >
+            استمارة خروج
+          </Button>
+          {admission.patient?.jawda_patient_id == null && (
+            <Tooltip title="نسخ بيانات المريض وإنشاء مريض مطابق في نظام جوده الطبي">
+              <Button
+                icon={<CloudUploadOutlined />}
+                type="default"
+                loading={linkJawdaMutation.isPending}
+                onClick={() => linkJawdaMutation.mutate()}
+              >
+                ربط بنظام جوده
+              </Button>
+            </Tooltip>
+          )}
+          {admission.patient?.jawda_patient_id != null && (
+            <Tooltip title="فتح ملف المريض في البوابة الطبية لنظام جوده">
+              <Button
+                icon={<ExportOutlined />}
+                type="default"
+                onClick={() => {
+                  const base = import.meta.env.VITE_JAWDA_FRONTEND_URL as string
+                  const url = `${base}/doctor-portal?from_admission=true&patient_id=${admission.patient!.jawda_patient_id}`
+                  window.open(url, '_blank', 'noopener,noreferrer')
+                }}
+              >
+                فتح في جوده
+              </Button>
+            </Tooltip>
+          )}
         </Flex>
 
         <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)} sx={{ mb: 2 }}>
@@ -253,7 +302,7 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
             isPayingService={payServiceMutation.isPending}
             isCancellingPayment={cancelPaymentMutation.isPending}
             hasPayments={(admissionQuery.data?.deposits?.length ?? 0) > 0}
-            showQuickActions={false}
+            isFileOpeningFeeAdded={isFileOpeningFeeAdded}
             readOnly={isReadOnly}
           />
         )}
@@ -302,6 +351,8 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
         isSubmittingDeposit={depositMutation.isPending}
         isRemovingDeposit={removeDepositMutation.isPending}
       />
+
+      <PdfPreviewModal url={summaryPdf.url} title={summaryPdf.title} onClose={summaryPdf.close} />
     </>
   )
 }

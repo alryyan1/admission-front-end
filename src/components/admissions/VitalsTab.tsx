@@ -29,6 +29,8 @@ export function VitalsTab({ vitals, onAdd, isSubmitting }: VitalsTabProps) {
   const [respirationRate, setRespirationRate] = useState<number | null>(null)
   const [bloodPressure, setBloodPressure] = useState('')
   const [oxygenSaturation, setOxygenSaturation] = useState<number | null>(null)
+  const [mop, setMop] = useState('')
+  const [rbg, setRbg] = useState<number | null>(null)
 
   function handleSubmit() {
     onAdd({
@@ -37,12 +39,16 @@ export function VitalsTab({ vitals, onAdd, isSubmitting }: VitalsTabProps) {
       respiration_rate: respirationRate ?? undefined,
       blood_pressure: bloodPressure || undefined,
       oxygen_saturation: oxygenSaturation ?? undefined,
+      mop: mop || undefined,
+      rbg: rbg ?? undefined,
     })
     setTemperature('')
     setPulse(null)
     setRespirationRate(null)
     setBloodPressure('')
     setOxygenSaturation(null)
+    setMop('')
+    setRbg(null)
   }
 
   const columns: ColumnsType<VitalSign> = [
@@ -52,6 +58,8 @@ export function VitalsTab({ vitals, onAdd, isSubmitting }: VitalsTabProps) {
     { title: 'التنفس', dataIndex: 'respiration_rate', key: 'respiration_rate', render: (v) => v ?? '—' },
     { title: 'ضغط الدم', dataIndex: 'blood_pressure', key: 'blood_pressure', render: (v) => v ?? '—' },
     { title: 'الأكسجين', dataIndex: 'oxygen_saturation', key: 'oxygen_saturation', render: (v) => v ?? '—' },
+    { title: 'MOP', dataIndex: 'mop', key: 'mop', render: (v) => v ?? '—' },
+    { title: 'RBG', dataIndex: 'rbg', key: 'rbg', render: (v) => v ?? '—' },
   ]
 
   return (
@@ -81,6 +89,12 @@ export function VitalsTab({ vitals, onAdd, isSubmitting }: VitalsTabProps) {
           </FieldLabel>
           <FieldLabel label="تشبع الأكسجين %">
             <InputNumber style={{ width: 112 }} value={oxygenSaturation} onChange={(v) => setOxygenSaturation(v)} />
+          </FieldLabel>
+          <FieldLabel label="MOP">
+            <Input style={{ width: 112 }} value={mop} onChange={(e) => setMop(e.target.value)} />
+          </FieldLabel>
+          <FieldLabel label="RBG">
+            <InputNumber style={{ width: 96 }} value={rbg} onChange={(v) => setRbg(v)} />
           </FieldLabel>
           <Button type="primary" onClick={handleSubmit} loading={isSubmitting}>
             إضافة

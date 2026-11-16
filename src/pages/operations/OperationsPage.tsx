@@ -39,8 +39,6 @@ export function OperationsPage() {
   const [dateTo, setDateTo] = useState(dayjs().endOf('month').format('YYYY-MM-DD'))
   const [search, setSearch] = useState('')
   const [procedureId, setProcedureId] = useState<number | undefined>(undefined)
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
   const [excelLoading, setExcelLoading] = useState(false)
   const pdf = usePdfPreview()
 
@@ -78,7 +76,7 @@ export function OperationsPage() {
   }
 
   const operationsQuery = useQuery({
-    queryKey: ['operations', date, dateFrom, dateTo, search, procedureId, page, perPage],
+    queryKey: ['operations', date, dateFrom, dateTo, search, procedureId],
     queryFn: () =>
       getAllOperations({
         date: date || undefined,
@@ -86,8 +84,6 @@ export function OperationsPage() {
         date_to: dateTo || undefined,
         search: search || undefined,
         procedure_id: procedureId,
-        page,
-        per_page: perPage,
       }),
   })
 
@@ -146,7 +142,7 @@ export function OperationsPage() {
     <ConfigProvider direction="rtl" theme={antTheme}>
       <Flex justify="space-between" align="center" wrap="wrap" gap={12} style={{ marginBottom: 16 }}>
         <Title level={3} style={{ margin: 0 }}>
-          قائمه العمليات {operationsQuery.data?.total ?? 0}
+          قائمه العمليات {operationsQuery.data?.data.length ?? 0}
         </Title>
         <Space>
           <Button
@@ -171,7 +167,6 @@ export function OperationsPage() {
               value={date}
               onChange={(e) => {
                 setDate(e.target.value)
-                setPage(1)
               }}
             />
           </FieldLabel>
@@ -182,7 +177,6 @@ export function OperationsPage() {
               value={dateFrom}
               onChange={(e) => {
                 setDateFrom(e.target.value)
-                setPage(1)
               }}
             />
           </FieldLabel>
@@ -193,7 +187,6 @@ export function OperationsPage() {
               value={dateTo}
               onChange={(e) => {
                 setDateTo(e.target.value)
-                setPage(1)
               }}
             />
           </FieldLabel>
@@ -204,7 +197,6 @@ export function OperationsPage() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value)
-                setPage(1)
               }}
             />
           </FieldLabel>
@@ -219,7 +211,6 @@ export function OperationsPage() {
               value={procedureId}
               onChange={(v) => {
                 setProcedureId(v ?? undefined)
-                setPage(1)
               }}
               options={(proceduresQuery.data ?? []).map((p) => ({ label: p.name_ar, value: p.id }))}
             />
@@ -234,16 +225,7 @@ export function OperationsPage() {
           loading={operationsQuery.isLoading}
           columns={columns}
           dataSource={[...(operationsQuery.data?.data ?? [])].sort((a, b) => b.id - a.id)}
-          pagination={{
-            current: operationsQuery.data?.current_page ?? page,
-            pageSize: operationsQuery.data?.per_page ?? perPage,
-            total: operationsQuery.data?.total ?? 0,
-            showSizeChanger: true,
-            onChange: (p, ps) => {
-              setPage(p)
-              setPerPage(ps)
-            },
-          }}
+          pagination={false}
           onRow={(op) => ({
             className: 'cursor-pointer',
             onClick: () => navigate(`/admissions?admission_id=${op.admission_id}`),

@@ -16,6 +16,7 @@ import {
   TableRow,
   TableCell,
   Typography,
+  Stack,
 } from '@mui/material'
 import { FileTextOutlined, LockOutlined, UnlockOutlined } from '@ant-design/icons'
 import { MessageCircle } from 'lucide-react'
@@ -314,7 +315,8 @@ export function OperationTeamModal({
               العملية: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{operationName}</Box>
             </Typography>
           )}
-          {price != null && (
+          <Stack direction="column">
+               {price != null && (
             <Typography variant="body2" color="text.secondary">
               السعر: <Box component="span" sx={{ color: 'text.primary', fontWeight: 600 }}>{formatNumber(price)}</Box>
             </Typography>
@@ -335,6 +337,8 @@ export function OperationTeamModal({
               </Box>
             </Typography>
           )}
+          </Stack>
+       
         </Box>
         <Table size="small" sx={{ mt: 0.5 }}>
           <TableHead>

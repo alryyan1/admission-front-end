@@ -37,6 +37,11 @@ export async function importJawdaPatient(patient: JawdaPatientResult): Promise<P
   return data
 }
 
+export async function linkPatientToJawdaMedical(id: number): Promise<Patient> {
+  const { data } = await apiClient.post<Patient>(`/patients/${id}/link-jawda-medical`)
+  return data
+}
+
 export async function createLocalPatient(payload: {
   name: string
   phone?: string

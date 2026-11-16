@@ -1,25 +1,17 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { Card, Button, Tag, Flex, Typography, Descriptions, Divider, Input, Statistic, Tooltip, theme as antdThemeApi } from 'antd'
+import { Card, Button, Tag, Flex, Typography, Descriptions, Divider, Input, Statistic, theme as antdThemeApi } from 'antd'
 import {
   EditOutlined,
   LogoutOutlined,
   CloseCircleOutlined,
-  FileTextOutlined,
-  FileDoneOutlined,
-  AccountBookOutlined,
-  ProfileOutlined,
   HeartFilled,
-  PrinterOutlined,
 } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
-import { usePdfPreview } from '@/hooks/usePdfPreview'
-import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { PatientLocationButton } from '@/components/admissions/PatientLocationButton'
 import { PatientEditDialog } from '@/components/patients/PatientEditDialog'
-import { admissionPdfPaths, cancelAdmission, dischargeAdmission, getInvoice } from '@/services/admissionService'
+import { cancelAdmission, dischargeAdmission, getInvoice } from '@/services/admissionService'
 import type { Admission, AdmissionStatus } from '@/types/admission'
 import dayjs from 'dayjs'
 
@@ -46,10 +38,8 @@ interface AdmissionInfoPanelProps {
 
 /** Left-column read-only summary and discharge/cancel actions for the active admission on {@link AdmissionsPage}. */
 export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelProps) {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { token } = antdThemeApi.useToken()
-  const summaryPdf = usePdfPreview()
 
   const cardBackground =
     admission.status === 'cancelled'
@@ -289,59 +279,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
             )}
           </>
         )}
-
-        <Divider style={{ margin: '12px 0' }} />
-
-        <Flex gap={8} wrap="wrap">
-          {/* <Tooltip title="عرض التفاصيل الكاملة">
-            <Button
-              type="primary"
-              icon={<FileTextOutlined />}
-              onClick={() => navigate(`/admissions/${admission.id}`)}
-            />
-          </Tooltip> */}
-          {/* <Tooltip title="طباعة الفاتورة المبدئية">
-            <Button
-              icon={<FileDoneOutlined />}
-              loading={summaryPdf.isLoading('preliminary')}
-              onClick={() =>
-                summaryPdf.open(admissionPdfPaths.preliminaryInvoice(admission.id), 'معاينة الفاتورة المبدئية', 'preliminary')
-              }
-            />
-          </Tooltip> */}
-          {/* <Tooltip title="طباعة كشف الحساب"> */}
-            <Button
-            icon={<PrinterOutlined />}
-              type="default"
-              loading={summaryPdf.isLoading('statement')}
-              onClick={() =>
-                summaryPdf.open(admissionPdfPaths.accountStatement(admission.id), 'معاينة كشف الحساب', 'statement')
-              }
-            >
-              كشف الحساب
-              </Button>
-          {/* </Tooltip> */}
-            <Button
-            icon={<PrinterOutlined />}
-              type="default"
-              loading={summaryPdf.isLoading('summary')}
-              onClick={() =>
-                summaryPdf.open(admissionPdfPaths.admissionSummary(admission.id), 'معاينة ملف التنويم', 'summary')
-              }
-            >
-              ملف التنويم
-            </Button>
-            <Button
-            icon={<PrinterOutlined />}
-              type="default"
-              loading={summaryPdf.isLoading('discharge-form')}
-              onClick={() =>
-                summaryPdf.open(admissionPdfPaths.dischargeForm(admission.id), 'معاينة استمارة الخروج', 'discharge-form')
-              }
-            >
-              استمارة خروج
-            </Button>
-        </Flex>
       </Card>
 
       <PatientEditDialog
@@ -349,7 +286,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
         onClose={() => setEditPatientOpen(false)}
         admission={admission}
       />
-      <PdfPreviewModal url={summaryPdf.url} title={summaryPdf.title} onClose={summaryPdf.close} />
     </>
   )
 }

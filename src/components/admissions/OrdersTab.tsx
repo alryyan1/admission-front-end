@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Card, Input, Button, Listy, Tag, Typography, Flex, Space } from 'antd'
+import { Card, Input, Button, Table, Tag, Typography, Flex, Space } from 'antd'
+import type { ColumnsType } from 'antd/es/table'
 import type { DoctorOrder } from '@/types/admission'
 
 const { Text } = Typography
@@ -35,6 +36,29 @@ export function OrdersTab({ orders, onAddOrder, onAddDose, isSubmittingOrder }: 
     setRoute('')
   }
 
+  const columns: ColumnsType<DoctorOrder> = [
+    { title: 'الأمر / الدواء', dataIndex: 'order_text', key: 'order_text' },
+    {
+      title: 'التكرار / الطريقة',
+      key: 'frequency',
+      render: (_, order) => [order.frequency, order.route].filter(Boolean).join(' · ') || '—',
+    },
+    {
+      title: 'الجرعات',
+      key: 'doses',
+      render: (_, order) => (order.doses && order.doses.length > 0 ? <Tag>{order.doses.length} جرعة مسجّلة</Tag> : '—'),
+    },
+    {
+      title: '',
+      key: 'action',
+      render: (_, order) => (
+        <Button size="small" onClick={() => onAddDose(order.id, { status: 'given' })}>
+          تسجيل جرعة
+        </Button>
+      ),
+    },
+  ]
+
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <Card title="أمر طبي جديد">
@@ -55,40 +79,14 @@ export function OrdersTab({ orders, onAddOrder, onAddDose, isSubmittingOrder }: 
       </Card>
 
       <Card>
-        {orders.length === 0 ? (
-          <Text type="secondary">لا توجد أوامر طبية بعد</Text>
-        ) : (
-          <Listy
-            items={orders}
-            rowKey="id"
-            itemRender={(order, index) => (
-              <Flex
-                justify="space-between"
-                align="center"
-                gap={16}
-                style={{
-                  padding: '12px 0',
-                  borderTop: index > 0 ? '1px solid rgba(0,0,0,0.06)' : undefined,
-                }}
-              >
-                <div>
-                  <Text>{order.order_text}</Text>
-                  <div>
-                    <Space size={8}>
-                      <Text type="secondary" style={{ fontSize: 13 }}>
-                        {[order.frequency, order.route].filter(Boolean).join(' · ')}
-                      </Text>
-                      {order.doses && order.doses.length > 0 && <Tag>{order.doses.length} جرعة مسجّلة</Tag>}
-                    </Space>
-                  </div>
-                </div>
-                <Button size="small" onClick={() => onAddDose(order.id, { status: 'given' })}>
-                  تسجيل جرعة
-                </Button>
-              </Flex>
-            )}
-          />
-        )}
+        <Table
+          size="small"
+          rowKey="id"
+          columns={columns}
+          dataSource={orders}
+          pagination={false}
+          locale={{ emptyText: 'لا توجد أوامر طبية بعد' }}
+        />
       </Card>
     </Space>
   )

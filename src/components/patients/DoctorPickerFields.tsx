@@ -194,7 +194,9 @@ export function DoctorPickerFields({
           referralInputRef.current?.focus()
         }}
         renderInput={(params) => (
-          <TextField
+          <TextField  
+          required
+          
             {...params}
             label="الطبيب المعالج"
             slotProps={{

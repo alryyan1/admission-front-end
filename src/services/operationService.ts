@@ -8,8 +8,6 @@ export interface OperationFilters {
   date_from?: string
   date_to?: string
   search?: string
-  page?: number
-  per_page?: number
 }
 
 export async function getAllOperations(filters: OperationFilters = {}): Promise<OperationListResponse> {

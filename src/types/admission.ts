@@ -239,11 +239,7 @@ export interface Operation {
 
 export interface OperationListResponse {
   data: Operation[]
-  current_page: number
-  last_page: number
-  total: number
-  per_page: number
-  /** Sum of `price` across every operation matching the current filters (not just the current page). */
+  /** Sum of `price` across every operation matching the current filters. */
   price_total: number
   /** Sum of `price - team entitlements` across every operation matching the current filters. */
   net_total: number

@@ -56,6 +56,8 @@ interface AdmissionServicesCardProps {
   hasPayments?: boolean
   /** Set to false when the host page renders its own "رسوم فتح الملف"/"رسوم الإقامة" quick-add buttons elsewhere (e.g. next to a payments button). Defaults to true. */
   showQuickActions?: boolean
+  /** Disables the "رسوم فتح الملف" quick action once that fee is already among this admission's services, so it can't be added twice. */
+  isFileOpeningFeeAdded?: boolean
   /** When true, services can't be added, edited or removed (the admission is discharged or cancelled). */
   readOnly?: boolean
 }
@@ -129,6 +131,7 @@ export function AdmissionServicesCard({
   isCancellingPayment = false,
   hasPayments = false,
   showQuickActions = true,
+  isFileOpeningFeeAdded = false,
   readOnly = false,
 }: AdmissionServicesCardProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
@@ -202,7 +205,12 @@ export function AdmissionServicesCard({
               size="small"
               variant="outlined"
               onClick={handleAddFileOpeningFee}
-              disabled={isSubmittingService || chartOpeningQuery.isLoading || !chartOpeningQuery.data?.service}
+              disabled={
+                isSubmittingService ||
+                chartOpeningQuery.isLoading ||
+                !chartOpeningQuery.data?.service ||
+                isFileOpeningFeeAdded
+              }
             >
               رسوم فتح الملف
             </Button>
