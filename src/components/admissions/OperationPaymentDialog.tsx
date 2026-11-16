@@ -52,7 +52,7 @@ export function OperationPaymentDialog({
   useEffect(() => {
     if (!open || !operation) return
     setAmount(operation.remaining_amount)
-    setPaymentMethodId(preferredPaymentMethodId ?? operation.payment_method_id ?? paymentMethods[0]?.id ?? '')
+    setPaymentMethodId(preferredPaymentMethodId ?? paymentMethods[0]?.id ?? '')
   }, [open, operation, preferredPaymentMethodId, paymentMethods])
 
   if (!operation) return null

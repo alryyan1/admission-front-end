@@ -181,15 +181,6 @@ export interface OperationTeamMember {
   operation?: Operation
 }
 
-export interface OperationSupply {
-  id: number
-  operation_id: number
-  name: string
-  quantity: number
-  unit: string | null
-  notes: string | null
-}
-
 export interface ProcedureCategory {
   id: number
   name: string
@@ -215,7 +206,6 @@ export interface Operation {
   procedure_id: number
   /** Price of the operation (decimal string, e.g. "75000.00"). */
   price: string | null
-  payment_method_id: number | null
   /** Whether the operation's price has been paid in full (false while partially paid). */
   is_paid: boolean
   /** Sum of every deposit linked to this operation. */
@@ -230,9 +220,7 @@ export interface Operation {
   surgeon?: Doctor
   admission?: Admission
   team_members?: OperationTeamMember[]
-  supplies?: OperationSupply[]
   procedure?: Procedure
-  payment_method?: PaymentMethod | null
   /** Individual payments recorded against this operation's price. */
   deposits?: AdmissionDeposit[]
 }

@@ -9,7 +9,6 @@ import type {
   DoctorOrder,
   IntakeOutputRecord,
   Operation,
-  OperationSupply,
   OperationTeamMember,
   RequestedService,
   ShortStayAssessment,
@@ -341,14 +340,3 @@ export async function unapproveOperationEntitlements(operationId: number): Promi
   return data
 }
 
-export async function addOperationSupply(
-  operationId: number,
-  payload: { name: string; quantity?: number; unit?: string; notes?: string },
-): Promise<OperationSupply> {
-  const { data } = await apiClient.post<OperationSupply>(`/operations/${operationId}/supplies`, payload)
-  return data
-}
-
-export async function removeOperationSupply(operationId: number, supplyId: number): Promise<void> {
-  await apiClient.delete(`/operations/${operationId}/supplies/${supplyId}`)
-}
