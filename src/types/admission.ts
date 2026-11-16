@@ -36,9 +36,10 @@ export interface Admission {
   admitted_by?: { id: number; name: string } | null
   vital_signs?: VitalSign[]
   doctor_orders?: DoctorOrder[]
+  intake_output_records?: IntakeOutputRecord[]
+  short_stay_assessment?: ShortStayAssessment | null
   deposits?: AdmissionDeposit[]
   requested_services?: RequestedService[]
-  invoices?: Invoice[]
   operations?: Operation[]
   operations_count?: number
   /** Live services + priced operations total, as computed by the admissions index endpoint. */
@@ -60,7 +61,38 @@ export interface VitalSign {
   respiration_rate: number | null
   blood_pressure: string | null
   oxygen_saturation: number | null
+  mop: string | null
+  rbg: number | null
   notes: string | null
+}
+
+export interface IntakeOutputRecord {
+  id: number
+  admission_id: number
+  recorded_at: string
+  feeding: string | null
+  iv_fluid: string | null
+  maintenance: string | null
+  urine_output: string | null
+  insensible_losses: string | null
+  total_intake: string | null
+  total_output: string | null
+  balance: string | null
+  notes: string | null
+}
+
+export interface ShortStayAssessment {
+  id: number
+  admission_id: number
+  blood_pressure: string | null
+  oxygen_saturation: number | null
+  pulse: number | null
+  respiration_rate: number | null
+  pmh: string | null
+  chief_complaint: string | null
+  plan: string | null
+  signed_at: string | null
+  assessed_by?: { id: number; name: string } | null
 }
 
 export interface DoctorOrder {
@@ -215,31 +247,6 @@ export interface OperationListResponse {
   price_total: number
   /** Sum of `price - team entitlements` across every operation matching the current filters. */
   net_total: number
-}
-
-export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'cancelled'
-
-export interface InvoiceItem {
-  id: number
-  invoice_id: number
-  description: string
-  quantity: string
-  unit_price: string
-  total: string
-}
-
-export interface Invoice {
-  id: number
-  admission_id: number
-  invoice_number: string
-  subtotal: string
-  discount: string
-  total: string
-  status: InvoiceStatus
-  issued_at: string | null
-  paid_at: string | null
-  items?: InvoiceItem[]
-  created_by?: { id: number; name: string } | null
 }
 
 /** A billable line on the invoice preview — a requested service or a priced operation. */

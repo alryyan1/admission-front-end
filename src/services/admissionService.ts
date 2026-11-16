@@ -7,11 +7,12 @@ import type {
   AdmissionStatus,
   DepositSetting,
   DoctorOrder,
-  Invoice,
+  IntakeOutputRecord,
   Operation,
   OperationSupply,
   OperationTeamMember,
   RequestedService,
+  ShortStayAssessment,
   TreatmentDose,
   VitalSign,
 } from '@/types/admission'
@@ -21,10 +22,10 @@ export const admissionPdfPaths = {
   depositReceipt: (admissionId: number, depositId: number) =>
     `/admissions/${admissionId}/deposits/${depositId}/receipt.pdf`,
   preliminaryInvoice: (admissionId: number) => `/admissions/${admissionId}/invoice.pdf`,
-  finalInvoice: (invoiceId: number) => `/invoices/${invoiceId}/invoice.pdf`,
   accountStatement: (admissionId: number) => `/admissions/${admissionId}/account-statement.pdf`,
   admissionSummary: (admissionId: number) => `/admissions/${admissionId}/summary.pdf`,
   dischargeForm: (admissionId: number) => `/admissions/${admissionId}/discharge-form.pdf`,
+  shortStayChart: (admissionId: number) => `/admissions/${admissionId}/short-stay-chart.pdf`,
   operationInvoice: (operationId: number) => `/operations/${operationId}/invoice.pdf`,
   operationTeam: (operationId: number) => `/operations/${operationId}/team.pdf`,
   admissionsPaymentsReport: (filters: {
@@ -155,6 +156,32 @@ export async function addDose(
   return data
 }
 
+export async function getIntakeOutputRecords(admissionId: number): Promise<IntakeOutputRecord[]> {
+  const { data } = await apiClient.get<IntakeOutputRecord[]>(`/admissions/${admissionId}/intake-output`)
+  return data
+}
+
+export async function addIntakeOutputRecord(
+  admissionId: number,
+  payload: Partial<IntakeOutputRecord>,
+): Promise<IntakeOutputRecord> {
+  const { data } = await apiClient.post<IntakeOutputRecord>(`/admissions/${admissionId}/intake-output`, payload)
+  return data
+}
+
+export async function getShortStayAssessment(admissionId: number): Promise<ShortStayAssessment | null> {
+  const { data } = await apiClient.get<ShortStayAssessment | null>(`/admissions/${admissionId}/short-stay-assessment`)
+  return data
+}
+
+export async function saveShortStayAssessment(
+  admissionId: number,
+  payload: Partial<ShortStayAssessment>,
+): Promise<ShortStayAssessment> {
+  const { data } = await apiClient.post<ShortStayAssessment>(`/admissions/${admissionId}/short-stay-assessment`, payload)
+  return data
+}
+
 export async function addDeposit(
   admissionId: number,
   payload: { amount: number; payment_method_id?: number; comment?: string },
@@ -242,21 +269,6 @@ export async function cancelRequestedServicePayment(
 
 export async function getInvoice(admissionId: number): Promise<AdmissionInvoice> {
   const { data } = await apiClient.get<AdmissionInvoice>(`/admissions/${admissionId}/invoice`)
-  return data
-}
-
-export async function getInvoices(admissionId: number): Promise<Invoice[]> {
-  const { data } = await apiClient.get<Invoice[]>(`/admissions/${admissionId}/invoices`)
-  return data
-}
-
-export async function generateInvoice(admissionId: number): Promise<Invoice> {
-  const { data } = await apiClient.post<Invoice>(`/admissions/${admissionId}/invoices`)
-  return data
-}
-
-export async function markInvoicePaid(invoiceId: number): Promise<Invoice> {
-  const { data } = await apiClient.patch<Invoice>(`/invoices/${invoiceId}/pay`)
   return data
 }
 

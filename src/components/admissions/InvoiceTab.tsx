@@ -1,29 +1,18 @@
-import { Card, Table, Tag, Button, Typography, Divider, Space, Flex, Spin } from 'antd'
-import { FileDown, Printer } from 'lucide-react'
+import { Card, Table, Typography, Divider, Space, Flex, Spin, Button } from 'antd'
+import { FileDown } from 'lucide-react'
 import type { ColumnsType } from 'antd/es/table'
-import { formatDate, formatNumber } from '@/lib/utils'
+import { formatNumber } from '@/lib/utils'
 import { amountToArabicWords } from '@/lib/numberToArabicWords'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import { admissionPdfPaths } from '@/services/admissionService'
-import type { AdmissionInvoice, AdmissionInvoiceLineItem, Invoice, InvoiceStatus } from '@/types/admission'
+import type { AdmissionInvoice, AdmissionInvoiceLineItem } from '@/types/admission'
 
 const { Title, Text } = Typography
 
 interface InvoiceTabProps {
   invoice: AdmissionInvoice | undefined
   isLoading: boolean
-  persistedInvoices: Invoice[]
-  onGenerateInvoice: () => void
-  onMarkPaid: (invoiceId: number) => void
-  isGenerating: boolean
-}
-
-const statusLabels: Record<InvoiceStatus, string> = {
-  draft: 'مسودة',
-  issued: 'صادرة',
-  paid: 'محصّلة',
-  cancelled: 'ملغاة',
 }
 
 function SummaryRow({
@@ -49,14 +38,7 @@ function SummaryRow({
   )
 }
 
-export function InvoiceTab({
-  invoice,
-  isLoading,
-  persistedInvoices,
-  onGenerateInvoice,
-  onMarkPaid,
-  isGenerating,
-}: InvoiceTabProps) {
+export function InvoiceTab({ invoice, isLoading }: InvoiceTabProps) {
   const pdf = usePdfPreview()
 
   if (isLoading || !invoice) {
@@ -73,40 +55,6 @@ export function InvoiceTab({
     { title: 'الإجمالي', key: 'total', align: 'end', render: (_, s) => formatNumber(s.total_price) },
   ]
 
-  const invoiceColumns: ColumnsType<Invoice> = [
-    { title: 'رقم الفاتورة', dataIndex: 'invoice_number', key: 'invoice_number' },
-    { title: 'التاريخ', key: 'issued_at', render: (_, i) => (i.issued_at ? formatDate(i.issued_at) : '—') },
-    { title: 'الإجمالي', key: 'total', render: (_, i) => formatNumber(i.total) },
-    {
-      title: 'الحالة',
-      key: 'status',
-      render: (_, i) => <Tag color={i.status === 'paid' ? 'success' : 'default'}>{statusLabels[i.status]}</Tag>,
-    },
-    {
-      title: '',
-      key: 'actions',
-      render: (_, i) => (
-        <Space size={4}>
-          <Button
-            size="small"
-            icon={<Printer className="h-4 w-4" />}
-            loading={pdf.isLoading(`final-${i.id}`)}
-            onClick={() =>
-              pdf.open(admissionPdfPaths.finalInvoice(i.id), 'معاينة الفاتورة النهائية', `final-${i.id}`)
-            }
-          >
-            طباعة
-          </Button>
-          {i.status === 'issued' && (
-            <Button size="small" onClick={() => onMarkPaid(i.id)}>
-              تحصيل
-            </Button>
-          )}
-        </Space>
-      ),
-    },
-  ]
-
   return (
     <>
       <Space direction="vertical" size={16} style={{ maxWidth: 576, width: '100%' }}>
@@ -115,24 +63,19 @@ export function InvoiceTab({
             <Title level={4} style={{ margin: 0 }}>
               فاتورة التنويم — {invoice.patient.name}
             </Title>
-            <Space>
-              <Button
-                icon={<FileDown className="h-4 w-4" />}
-                loading={pdf.isLoading('preliminary')}
-                onClick={() =>
-                  pdf.open(
-                    admissionPdfPaths.preliminaryInvoice(invoice.admission_id),
-                    'معاينة الفاتورة المبدئية',
-                    'preliminary',
-                  )
-                }
-              >
-                فاتورة مبدئية
-              </Button>
-              <Button type="primary" onClick={onGenerateInvoice} loading={isGenerating}>
-                إصدار فاتورة
-              </Button>
-            </Space>
+            <Button
+              icon={<FileDown className="h-4 w-4" />}
+              loading={pdf.isLoading('preliminary')}
+              onClick={() =>
+                pdf.open(
+                  admissionPdfPaths.preliminaryInvoice(invoice.admission_id),
+                  'معاينة الفاتورة المبدئية',
+                  'preliminary',
+                )
+              }
+            >
+              فاتورة مبدئية
+            </Button>
           </Flex>
 
           <Title level={5} style={{ marginBottom: 8 }}>
@@ -178,12 +121,6 @@ export function InvoiceTab({
             المبلغ كتابة: {amountToArabicWords(invoice.total)}
           </Text>
         </Card>
-
-        {persistedInvoices.length > 0 && (
-          <Card title="الفواتير الصادرة">
-            <Table rowKey="id" columns={invoiceColumns} dataSource={persistedInvoices} pagination={false} size="small" />
-          </Card>
-        )}
       </Space>
 
       <PdfPreviewModal url={pdf.url} title={pdf.title} onClose={pdf.close} />

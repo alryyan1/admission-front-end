@@ -46,7 +46,6 @@ export interface DailyRevenue {
 
 export interface FinancialStatistics {
   range: DateRange
-  paid_total: number
   outstanding_total: number
   deposits_total: number
   entitlements_total: number

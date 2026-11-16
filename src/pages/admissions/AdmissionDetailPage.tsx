@@ -17,6 +17,8 @@ import {
   addVitalSign,
   addDoctorOrder,
   addDose,
+  addIntakeOutputRecord,
+  saveShortStayAssessment,
   addDeposit,
   removeDeposit,
   addRequestedService,
@@ -26,9 +28,6 @@ import {
   cancelRequestedServicePayment,
   calculateAccommodationFee,
   getInvoice,
-  getInvoices,
-  generateInvoice,
-  markInvoicePaid,
   addOperation,
   updateOperation,
   deleteOperation,
@@ -38,6 +37,8 @@ import {
 import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
 import { OrdersTab } from '@/components/admissions/OrdersTab'
+import { IOChartTab } from '@/components/admissions/IOChartTab'
+import { ShortStayAssessmentTab } from '@/components/admissions/ShortStayAssessmentTab'
 import { BillingTab } from '@/components/admissions/BillingTab'
 import { AccountStatementTab } from '@/components/admissions/AccountStatementTab'
 import { InvoiceTab } from '@/components/admissions/InvoiceTab'
@@ -57,8 +58,10 @@ const STATUS_LABEL: Record<AdmissionStatus, string> = {
 const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى' }
 
 const TAB_ITEMS = [
-  // { key: 'vitals', label: 'العلامات الحيوية' },
-  // { key: 'orders', label: 'أوامر الأطباء' },
+  { key: 'vitals', label: 'العلامات الحيوية' },
+  { key: 'orders', label: 'أوامر الأطباء' },
+  { key: 'io', label: 'جدول السوائل' },
+  { key: 'short-stay', label: 'ملف الإقامة القصيرة' },
   { key: 'billing', label: 'الفوترة' },
   { key: 'statement', label: 'كشف الحساب' },
   { key: 'operations', label: 'العمليات' },
@@ -97,16 +100,9 @@ export function AdmissionDetailPage() {
     enabled: !!id && isInvoiceModalOpen,
   })
 
-  const invoicesQuery = useQuery({
-    queryKey: ['admissions', id, 'invoices'],
-    queryFn: () => getInvoices(id),
-    enabled: !!id && isInvoiceModalOpen,
-  })
-
   function invalidateAdmission() {
     queryClient.invalidateQueries({ queryKey: ['admissions', id] })
     queryClient.invalidateQueries({ queryKey: ['admissions', id, 'invoice'] })
-    queryClient.invalidateQueries({ queryKey: ['admissions', id, 'invoices'] })
   }
 
   const dischargeMutation = useMutation({
@@ -127,22 +123,6 @@ export function AdmissionDetailPage() {
     },
   })
 
-  const generateInvoiceMutation = useMutation({
-    mutationFn: () => generateInvoice(id),
-    onSuccess: () => {
-      toast.success('تم إصدار الفاتورة')
-      invalidateAdmission()
-    },
-  })
-
-  const markPaidMutation = useMutation({
-    mutationFn: (invoiceId: number) => markInvoicePaid(invoiceId),
-    onSuccess: () => {
-      toast.success('تم تسجيل التحصيل')
-      invalidateAdmission()
-    },
-  })
-
   const vitalMutation = useMutation({
     mutationFn: (payload: Parameters<typeof addVitalSign>[1]) => addVitalSign(id, payload),
     onSuccess: invalidateAdmission,
@@ -156,6 +136,16 @@ export function AdmissionDetailPage() {
   const doseMutation = useMutation({
     mutationFn: ({ orderId, ...payload }: { orderId: number } & Parameters<typeof addDose>[1]) =>
       addDose(orderId, payload),
+    onSuccess: invalidateAdmission,
+  })
+
+  const ioMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof addIntakeOutputRecord>[1]) => addIntakeOutputRecord(id, payload),
+    onSuccess: invalidateAdmission,
+  })
+
+  const assessmentMutation = useMutation({
+    mutationFn: (payload: Parameters<typeof saveShortStayAssessment>[1]) => saveShortStayAssessment(id, payload),
     onSuccess: invalidateAdmission,
   })
 
@@ -420,6 +410,23 @@ export function AdmissionDetailPage() {
         />
       )}
 
+      {tab === 'io' && (
+        <IOChartTab
+          records={admission.intake_output_records ?? []}
+          onAdd={(payload) => ioMutation.mutate(payload)}
+          isSubmitting={ioMutation.isPending}
+        />
+      )}
+
+      {tab === 'short-stay' && (
+        <ShortStayAssessmentTab
+          admissionId={admission.id}
+          assessment={admission.short_stay_assessment ?? null}
+          onSave={(payload) => assessmentMutation.mutate(payload)}
+          isSubmitting={assessmentMutation.isPending}
+        />
+      )}
+
       {tab === 'billing' && (
         <BillingTab
           services={admission.requested_services ?? []}
@@ -531,14 +538,7 @@ export function AdmissionDetailPage() {
         destroyOnHidden
         footer={null}
       >
-        <InvoiceTab
-          invoice={invoiceQuery.data}
-          isLoading={invoiceQuery.isLoading}
-          persistedInvoices={invoicesQuery.data ?? []}
-          onGenerateInvoice={() => generateInvoiceMutation.mutate()}
-          onMarkPaid={(invoiceId) => markPaidMutation.mutate(invoiceId)}
-          isGenerating={generateInvoiceMutation.isPending}
-        />
+        <InvoiceTab invoice={invoiceQuery.data} isLoading={invoiceQuery.isLoading} />
       </Modal>
 
       <PdfPreviewModal url={summaryPdf.url} title={summaryPdf.title} onClose={summaryPdf.close} />

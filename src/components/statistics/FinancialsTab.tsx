@@ -46,7 +46,6 @@ export function FinancialsTab({ data, from, to, onFromChange, onToChange }: Fina
       <DateRangeFilter from={from} to={to} onFromChange={onFromChange} onToChange={onToChange} />
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <StatTile label="إجمالي المحصّل" value={formatNumber(data.paid_total)} />
         <StatTile label="فواتير غير مسددة" value={formatNumber(data.outstanding_total)} />
         <StatTile label="إجمالي الودائع" value={formatNumber(data.deposits_total)} />
         <StatTile label="إجمالي الرسوم" value={formatNumber(data.charges_total)} />
