@@ -17,7 +17,6 @@ import { FloorFormDialog } from '@/components/settings/FloorFormDialog'
 import { WardFormDialog } from '@/components/settings/WardFormDialog'
 import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { BedFormDialog } from '@/components/settings/BedFormDialog'
-import { ChartOpeningServiceSettingsTab } from '@/components/settings/ChartOpeningServiceSettingsTab'
 import { DepositSettingsTab } from '@/components/settings/DepositSettingsTab'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
@@ -378,11 +377,6 @@ export function FacilitySettingsPage() {
                     </StructureColumn>
                   </div>
                 ),
-            },
-            {
-              key: 'chart-opening-service',
-              label: 'خدمة فتح الملف',
-              children: <ChartOpeningServiceSettingsTab />,
             },
             {
               key: 'deposit',

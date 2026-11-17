@@ -18,7 +18,6 @@ const SUBJECT_LABELS: Record<string, string> = {
   Patient: 'مريض',
   Service: 'خدمة',
   ServiceCategory: 'تصنيف خدمة',
-  ChartOpeningServiceSetting: 'إعداد فتح الملف',
   User: 'مستخدم',
   Bed: 'سرير',
   Ward: 'جناح',

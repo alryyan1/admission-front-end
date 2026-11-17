@@ -12,10 +12,3 @@ export interface Service {
   is_active: boolean
   category?: ServiceCategory | null
 }
-
-export interface ChartOpeningServiceSetting {
-  id: number
-  service_id: number | null
-  auto_add: boolean
-  service?: Service | null
-}

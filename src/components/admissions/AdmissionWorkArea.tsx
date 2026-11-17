@@ -29,7 +29,6 @@ import {
   updateRequestedService,
 } from '@/services/admissionService'
 import { linkPatientToJawdaMedical } from '@/services/patientService'
-import { getChartOpeningServiceSetting } from '@/services/serviceService'
 import type { Admission } from '@/types/admission'
 
 interface AdmissionWorkAreaProps {
@@ -58,19 +57,11 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
     queryFn: () => getAdmission(admission.id),
   })
 
-  const chartOpeningQuery = useQuery({
-    queryKey: ['chart-opening-service-setting'],
-    queryFn: getChartOpeningServiceSetting,
-  })
-
   const currentAdmission = admissionQuery.data ?? admission
   /** Matches the backend's assertMutable(): only admins may change a discharged or cancelled admission. */
   const isReadOnly = currentAdmission.status !== 'admitted' && user?.role !== 'admin'
   const servicesCount = admissionQuery.data?.requested_services?.length ?? 0
   const operationsCount = admissionQuery.data?.operations?.length ?? 0
-  const isFileOpeningFeeAdded = (admissionQuery.data?.requested_services ?? []).some(
-    (service) => service.name === chartOpeningQuery.data?.service?.name_ar,
-  )
 
   const totalServices = (admissionQuery.data?.requested_services ?? []).reduce(
     (sum, s) => sum + Number(s.total_price),
@@ -302,7 +293,6 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
             isPayingService={payServiceMutation.isPending}
             isCancellingPayment={cancelPaymentMutation.isPending}
             hasPayments={(admissionQuery.data?.deposits?.length ?? 0) > 0}
-            isFileOpeningFeeAdded={isFileOpeningFeeAdded}
             readOnly={isReadOnly}
           />
         )}

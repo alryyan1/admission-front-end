@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { toast } from 'sonner'
 import {
   Card,
   CardHeader,
@@ -27,7 +26,7 @@ import {
 import { ThunderboltFilled, DollarOutlined, CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
-import { getChartOpeningServiceSetting, getServices } from '@/services/serviceService'
+import { getServices } from '@/services/serviceService'
 import { getPaymentMethods } from '@/services/paymentMethodService'
 import type { RequestedService } from '@/types/admission'
 import type { Service } from '@/types/service'
@@ -54,10 +53,8 @@ interface AdmissionServicesCardProps {
   isCancellingPayment?: boolean
   /** When true, services can't be removed (the admission already has payments). */
   hasPayments?: boolean
-  /** Set to false when the host page renders its own "رسوم فتح الملف"/"رسوم الإقامة" quick-add buttons elsewhere (e.g. next to a payments button). Defaults to true. */
+  /** Set to false when the host page renders its own "رسوم الإقامة" quick-add button elsewhere (e.g. next to a payments button). Defaults to true. */
   showQuickActions?: boolean
-  /** Disables the "رسوم فتح الملف" quick action once that fee is already among this admission's services, so it can't be added twice. */
-  isFileOpeningFeeAdded?: boolean
   /** When true, services can't be added, edited or removed (the admission is discharged or cancelled). */
   readOnly?: boolean
 }
@@ -131,15 +128,9 @@ export function AdmissionServicesCard({
   isCancellingPayment = false,
   hasPayments = false,
   showQuickActions = true,
-  isFileOpeningFeeAdded = false,
   readOnly = false,
 }: AdmissionServicesCardProps) {
   const catalogQuery = useQuery({ queryKey: ['services', 'active'], queryFn: () => getServices({ active_only: true }) })
-  const chartOpeningQuery = useQuery({
-    queryKey: ['chart-opening-service-setting'],
-    queryFn: getChartOpeningServiceSetting,
-    enabled: showQuickActions,
-  })
   const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
   const preferredPaymentMethodId = (paymentMethodsQuery.data ?? []).find(
     (pm) => pm.is_active && pm.name === 'بنكك',
@@ -180,15 +171,6 @@ export function AdmissionServicesCard({
 
   const servicesTotal = services.reduce((sum, s) => sum + Number(s.total_price), 0)
 
-  function handleAddFileOpeningFee() {
-    const service = chartOpeningQuery.data?.service
-    if (!service) {
-      toast.error('لم يتم إعداد خدمة رسوم فتح الملف من الإعدادات')
-      return
-    }
-    onAddService({ name: service.name_ar, quantity: 1, unit_price: Number(service.price) })
-  }
-
   return (
     <Card>
       <CardHeader action={
@@ -201,19 +183,6 @@ export function AdmissionServicesCard({
       <CardContent>
         {showQuickActions && !readOnly && (
           <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 2 }}>
-            <Button
-              size="small"
-              variant="outlined"
-              onClick={handleAddFileOpeningFee}
-              disabled={
-                isSubmittingService ||
-                chartOpeningQuery.isLoading ||
-                !chartOpeningQuery.data?.service ||
-                isFileOpeningFeeAdded
-              }
-            >
-              رسوم فتح الملف
-            </Button>
             <Button
               size="small"
               variant="outlined"

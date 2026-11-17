@@ -1,5 +1,5 @@
 import apiClient from '@/services/api'
-import type { ChartOpeningServiceSetting, Service, ServiceCategory } from '@/types/service'
+import type { Service, ServiceCategory } from '@/types/service'
 
 export async function getServiceCategories(): Promise<ServiceCategory[]> {
   const { data } = await apiClient.get<ServiceCategory[]>('/service-categories')
@@ -56,17 +56,4 @@ export async function updateService(
 
 export async function deleteService(id: number): Promise<void> {
   await apiClient.delete(`/services/${id}`)
-}
-
-export async function getChartOpeningServiceSetting(): Promise<ChartOpeningServiceSetting> {
-  const { data } = await apiClient.get<ChartOpeningServiceSetting>('/settings/chart-opening-service')
-  return data
-}
-
-export async function updateChartOpeningServiceSetting(payload: {
-  service_id: number | null
-  auto_add: boolean
-}): Promise<ChartOpeningServiceSetting> {
-  const { data } = await apiClient.put<ChartOpeningServiceSetting>('/settings/chart-opening-service', payload)
-  return data
 }
