@@ -137,7 +137,6 @@ export interface RequestedService {
   quantity: number
   unit_price: string
   total_price: number
-  is_auto_added: boolean
   is_paid: boolean
   payment_method_id: number | null
   payment_method?: PaymentMethod | null
@@ -240,7 +239,6 @@ export interface AdmissionInvoiceLineItem {
   quantity: number
   unit_price: number
   total_price: number
-  is_auto_added: boolean
   is_operation: boolean
   created_at: string
 }

@@ -23,7 +23,7 @@ import {
   Skeleton,
   MenuItem,
 } from '@mui/material'
-import { ThunderboltFilled, DollarOutlined, CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons'
+import { DollarOutlined, CheckCircleFilled, CloseCircleOutlined } from '@ant-design/icons'
 import { formatNumber } from '@/lib/utils'
 import { ConfirmRemoveButton } from '@/components/common/ConfirmRemoveButton'
 import { getServices } from '@/services/serviceService'
@@ -242,16 +242,7 @@ export function AdmissionServicesCard({
             )}
             {!isLoading && services.map((s) => (
               <TableRow key={s.id}>
-                <TableCell>
-                  <Stack direction="row" spacing={0.75} alignItems="center">
-                    <span>{s.name}</span>
-                    {s.is_auto_added && (
-                      <Tooltip title="تمت إضافتها تلقائياً">
-                        <ThunderboltFilled style={{ color: '#faad14' }} />
-                      </Tooltip>
-                    )}
-                  </Stack>
-                </TableCell>
+                <TableCell>{s.name}</TableCell>
                 <TableCell>
                   <EditableNumberCell
                     value={s.quantity}
