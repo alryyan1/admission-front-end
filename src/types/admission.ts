@@ -125,11 +125,6 @@ export interface AdmissionDeposit {
   paid_by_name?: string | null
 }
 
-export interface DepositSetting {
-  id: number
-  require_balance_for_deposit: boolean
-}
-
 export interface RequestedService {
   id: number
   admission_id: number

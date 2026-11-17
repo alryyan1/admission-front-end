@@ -1,15 +1,10 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Card, InputNumber, Input, Select, Table, Button, Typography, Flex, Space, Popconfirm } from 'antd'
+import { Card, Table, Button, Typography, Space, Popconfirm } from 'antd'
 import { PrinterOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { formatDate, formatNumber } from '@/lib/utils'
-import { getPaymentMethods } from '@/services/paymentMethodService'
-import { admissionPdfPaths, getDepositSetting } from '@/services/admissionService'
+import { admissionPdfPaths } from '@/services/admissionService'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
-import { useAuth } from '@/contexts/AuthContext'
-import { hasPermission, PERMISSION_ADD_DIRECT_DEPOSIT } from '@/lib/permissions'
 import type { AdmissionDeposit } from '@/types/admission'
 
 const { Text } = Typography
@@ -17,71 +12,19 @@ const { Text } = Typography
 interface AdmissionDepositsCardProps {
   deposits: AdmissionDeposit[]
   admissionId: number
-  /** Outstanding balance (services + operations − deposits); pre-fills the amount field. */
-  patientBalance?: number
-  onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
   onRemoveDeposit: (depositId: number) => void
-  isSubmittingDeposit: boolean
   isRemovingDeposit: boolean
 }
 
-function FieldLabel({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <Space direction="vertical" size={4}>
-      <Text style={{ fontSize: 12 }} type="secondary">
-        {label}
-      </Text>
-      {children}
-    </Space>
-  )
-}
-
-/** Deposits management card, shared by {@link BillingTab} and the admissions payments dialog. */
+/** Deposits list, shared by {@link BillingTab} and the admissions payments dialog. Deposits are recorded only against a specific service/operation (see their own "pay" actions) — this card is read-only plus removal. */
 export function AdmissionDepositsCard({
   deposits,
   admissionId,
-  patientBalance,
-  onAddDeposit,
   onRemoveDeposit,
-  isSubmittingDeposit,
   isRemovingDeposit,
 }: AdmissionDepositsCardProps) {
-  const { user } = useAuth()
-  const canAddDeposit = hasPermission(user, PERMISSION_ADD_DIRECT_DEPOSIT)
-  const paymentMethodsQuery = useQuery({ queryKey: ['payment-methods'], queryFn: getPaymentMethods })
-  const depositSettingQuery = useQuery({ queryKey: ['deposit-setting'], queryFn: getDepositSetting })
   const receiptPdf = usePdfPreview()
-  const activePaymentMethods = (paymentMethodsQuery.data ?? []).filter((pm) => pm.is_active)
-  const requiresBalance = depositSettingQuery.data?.require_balance_for_deposit ?? false
-  const blockedByBalance = requiresBalance && (patientBalance ?? 0) <= 0
-
-  const [depositAmount, setDepositAmount] = useState<number | null>(null)
-  const [depositMethodId, setDepositMethodId] = useState<number | undefined>(undefined)
-  const [depositComment, setDepositComment] = useState('')
-
-  useEffect(() => {
-    if (depositMethodId === undefined && activePaymentMethods.length > 0) {
-      const preferred = activePaymentMethods.find((pm) => pm.name === 'بنكك')
-      setDepositMethodId((preferred ?? activePaymentMethods[0]).id)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activePaymentMethods.length])
-
-  useEffect(() => {
-    if (depositAmount === null && patientBalance != null && patientBalance > 0) {
-      setDepositAmount(patientBalance)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientBalance])
-
   const depositsTotal = deposits.reduce((sum, d) => sum + Number(d.amount), 0)
-
-  function handleAddDeposit() {
-    if (depositAmount === null || blockedByBalance) return
-    onAddDeposit({ amount: depositAmount, payment_method_id: depositMethodId, comment: depositComment.trim() || undefined })
-    setDepositAmount(null)
-    setDepositComment('')
-  }
 
   const depositColumns: ColumnsType<AdmissionDeposit> = [
     { title: 'الكود', key: 'id', render: (_, d) => `#${d.id}` },
@@ -127,55 +70,6 @@ export function AdmissionDepositsCard({
   return (
     <>
       <Card title="الدفعات">
-        {canAddDeposit ? (
-          <Flex wrap="wrap" align="flex-end" gap={8} style={{ marginBottom: 12 }}>
-            <FieldLabel label="المبلغ">
-              <InputNumber
-                className="amount-input"
-                style={{ width: 150 }}
-                min={0}
-                value={depositAmount}
-                onChange={(v) => setDepositAmount(v)}
-                onPressEnter={handleAddDeposit}
-              />
-            </FieldLabel>
-            <FieldLabel label="طريقة الدفع">
-              <Select
-                style={{ width: 144 }}
-                placeholder="اختر طريقة الدفع"
-                loading={paymentMethodsQuery.isLoading}
-                value={depositMethodId}
-                onChange={setDepositMethodId}
-                options={activePaymentMethods.map((pm) => ({ label: pm.name, value: pm.id }))}
-              />
-            </FieldLabel>
-            <FieldLabel label="ملاحظة">
-              <Input
-                style={{ width: 180 }}
-                placeholder="ملاحظة (اختياري)"
-                value={depositComment}
-                onChange={(e) => setDepositComment(e.target.value)}
-              />
-            </FieldLabel>
-            <Button
-              type="primary"
-              onClick={handleAddDeposit}
-              loading={isSubmittingDeposit}
-              disabled={depositAmount === null || !depositMethodId || blockedByBalance}
-            >
-              إضافة
-            </Button>
-          </Flex>
-        ) : (
-          <Text style={{ fontSize: 12, display: 'block', marginBottom: 12 }} type="secondary">
-            لا تملك صلاحية إضافة دفعة مباشرة. يرجى التواصل مع مسؤول النظام.
-          </Text>
-        )}
-        {canAddDeposit && blockedByBalance && (
-          <Text style={{ fontSize: 12, display: 'block', marginBottom: 12 }} type="danger">
-            لا يمكن إضافة دفعة لأنه لا يوجد رصيد مستحق على المريض حالياً.
-          </Text>
-        )}
         <Table
           rowKey="id"
           columns={depositColumns}

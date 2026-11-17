@@ -2,10 +2,8 @@ import apiClient from '@/services/api'
 import type {
   Admission,
   AdmissionEntryType,
-  AdmissionDeposit,
   AdmissionInvoice,
   AdmissionStatus,
-  DepositSetting,
   DoctorOrder,
   IntakeOutputRecord,
   Operation,
@@ -181,31 +179,8 @@ export async function saveShortStayAssessment(
   return data
 }
 
-export async function addDeposit(
-  admissionId: number,
-  payload: { amount: number; payment_method_id?: number; comment?: string },
-): Promise<AdmissionDeposit> {
-  const { data } = await apiClient.post<AdmissionDeposit>(
-    `/admissions/${admissionId}/deposits`,
-    payload,
-  )
-  return data
-}
-
 export async function removeDeposit(admissionId: number, depositId: number): Promise<void> {
   await apiClient.delete(`/admissions/${admissionId}/deposits/${depositId}`)
-}
-
-export async function getDepositSetting(): Promise<DepositSetting> {
-  const { data } = await apiClient.get<DepositSetting>('/settings/deposit')
-  return data
-}
-
-export async function updateDepositSetting(payload: {
-  require_balance_for_deposit: boolean
-}): Promise<DepositSetting> {
-  const { data } = await apiClient.put<DepositSetting>('/settings/deposit', payload)
-  return data
 }
 
 export async function addRequestedService(

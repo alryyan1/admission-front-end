@@ -17,7 +17,6 @@ import { FloorFormDialog } from '@/components/settings/FloorFormDialog'
 import { WardFormDialog } from '@/components/settings/WardFormDialog'
 import { RoomFormDialog } from '@/components/settings/RoomFormDialog'
 import { BedFormDialog } from '@/components/settings/BedFormDialog'
-import { DepositSettingsTab } from '@/components/settings/DepositSettingsTab'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
@@ -377,11 +376,6 @@ export function FacilitySettingsPage() {
                     </StructureColumn>
                   </div>
                 ),
-            },
-            {
-              key: 'deposit',
-              label: 'الدفعات',
-              children: <DepositSettingsTab />,
             },
             {
               key: 'facility-info',

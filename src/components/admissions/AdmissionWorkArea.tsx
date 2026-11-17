@@ -13,7 +13,6 @@ import { useAuth } from '@/contexts/AuthContext'
 import { usePdfPreview } from '@/hooks/usePdfPreview'
 import { PdfPreviewModal } from '@/components/common/PdfPreviewModal'
 import {
-  addDeposit,
   addOperation,
   addRequestedService,
   admissionPdfPaths,
@@ -62,17 +61,6 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
   const isReadOnly = currentAdmission.status !== 'admitted' && user?.role !== 'admin'
   const servicesCount = admissionQuery.data?.requested_services?.length ?? 0
   const operationsCount = admissionQuery.data?.operations?.length ?? 0
-
-  const totalServices = (admissionQuery.data?.requested_services ?? []).reduce(
-    (sum, s) => sum + Number(s.total_price),
-    0,
-  )
-  const totalOperations = (admissionQuery.data?.operations ?? []).reduce(
-    (sum, op) => sum + (op.price != null ? Number(op.price) : 0),
-    0,
-  )
-  const totalDeposits = (admissionQuery.data?.deposits ?? []).reduce((sum, d) => sum + Number(d.amount), 0)
-  const dueBalance = totalServices + totalOperations - totalDeposits
 
   function invalidateAfterChange() {
     queryClient.invalidateQueries({ queryKey: ['admissions'] })
@@ -124,15 +112,6 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
     mutationFn: () => calculateAccommodationFee(admission.id),
     onSuccess: () => {
       toast.success('تم احتساب رسوم الإقامة')
-      invalidateAfterChange()
-    },
-  })
-
-  const depositMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof addDeposit>[1]) => addDeposit(admission.id, payload),
-    onSuccess: () => {
-      toast.success('تم تسجيل الدفعة')
-      playPaymentSuccessSound()
       invalidateAfterChange()
     },
   })
@@ -335,10 +314,7 @@ export function AdmissionWorkArea({ admission, focusOperationsToken }: Admission
         onClose={() => setPaymentsOpen(false)}
         deposits={admissionQuery.data?.deposits ?? []}
         admissionId={admission.id}
-        patientBalance={dueBalance}
-        onAddDeposit={(payload) => depositMutation.mutate(payload)}
         onRemoveDeposit={(depositId) => removeDepositMutation.mutate(depositId)}
-        isSubmittingDeposit={depositMutation.isPending}
         isRemovingDeposit={removeDepositMutation.isPending}
       />
 

@@ -19,7 +19,6 @@ import {
   addDose,
   addIntakeOutputRecord,
   saveShortStayAssessment,
-  addDeposit,
   removeDeposit,
   addRequestedService,
   updateRequestedService,
@@ -146,11 +145,6 @@ export function AdmissionDetailPage() {
 
   const assessmentMutation = useMutation({
     mutationFn: (payload: Parameters<typeof saveShortStayAssessment>[1]) => saveShortStayAssessment(id, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const depositMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof addDeposit>[1]) => addDeposit(id, payload),
     onSuccess: invalidateAdmission,
   })
 
@@ -432,9 +426,7 @@ export function AdmissionDetailPage() {
           services={admission.requested_services ?? []}
           deposits={admission.deposits ?? []}
           admissionId={admission.id}
-          patientBalance={dueBalance}
           onAddService={(payload) => serviceMutation.mutateAsync(payload)}
-          onAddDeposit={(payload) => depositMutation.mutate(payload)}
           onUpdateService={(serviceId, payload) => updateServiceMutation.mutate({ serviceId, ...payload })}
           onRemoveService={(serviceId) => removeServiceMutation.mutate(serviceId)}
           onRemoveDeposit={(depositId) => removeDepositMutation.mutate(depositId)}
@@ -442,7 +434,6 @@ export function AdmissionDetailPage() {
           onPayService={(serviceId, paymentMethodId) => payServiceMutation.mutate({ serviceId, paymentMethodId })}
           onCancelPayment={(serviceId) => cancelPaymentMutation.mutate(serviceId)}
           isSubmittingService={serviceMutation.isPending}
-          isSubmittingDeposit={depositMutation.isPending}
           isUpdatingService={updateServiceMutation.isPending}
           isRemovingService={removeServiceMutation.isPending}
           isRemovingDeposit={removeDepositMutation.isPending}

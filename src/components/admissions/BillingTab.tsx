@@ -7,9 +7,7 @@ interface BillingTabProps {
   services: RequestedService[]
   deposits: AdmissionDeposit[]
   admissionId: number
-  patientBalance?: number
   onAddService: (payload: { name: string; quantity?: number; unit_price: number }) => Promise<unknown>
-  onAddDeposit: (payload: { amount: number; payment_method_id?: number; comment?: string }) => void
   onUpdateService: (
     serviceId: number,
     payload: { quantity?: number; unit_price?: number; payment_method_id?: number | null },
@@ -20,7 +18,6 @@ interface BillingTabProps {
   onPayService: (serviceId: number, paymentMethodId?: number | null) => void
   onCancelPayment: (serviceId: number) => void
   isSubmittingService: boolean
-  isSubmittingDeposit: boolean
   isUpdatingService: boolean
   isRemovingService: boolean
   isRemovingDeposit: boolean
@@ -33,9 +30,7 @@ export function BillingTab({
   services,
   deposits,
   admissionId,
-  patientBalance,
   onAddService,
-  onAddDeposit,
   onUpdateService,
   onRemoveService,
   onRemoveDeposit,
@@ -43,7 +38,6 @@ export function BillingTab({
   onPayService,
   onCancelPayment,
   isSubmittingService,
-  isSubmittingDeposit,
   isUpdatingService,
   isRemovingService,
   isRemovingDeposit,
@@ -76,10 +70,7 @@ export function BillingTab({
         <AdmissionDepositsCard
           deposits={deposits}
           admissionId={admissionId}
-          patientBalance={patientBalance}
-          onAddDeposit={onAddDeposit}
           onRemoveDeposit={onRemoveDeposit}
-          isSubmittingDeposit={isSubmittingDeposit}
           isRemovingDeposit={isRemovingDeposit}
         />
       </Col>
