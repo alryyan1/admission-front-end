@@ -125,6 +125,18 @@ export interface InsuranceCompany {
   coverage_percentage: string | null
 }
 
+/** A sub-company / sponsoring employer tied to a patient's insurance coverage. */
+export interface Company {
+  id: number
+  name: string
+}
+
+/** The patient's relationship to the insurance policyholder (e.g. father, mother). */
+export interface GuardianRelationship {
+  id: number
+  name: string
+}
+
 export interface OperationTeamMember {
   id: number
   operation_id: number

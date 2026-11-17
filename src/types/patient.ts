@@ -1,6 +1,4 @@
-import type { InsuranceCompany, Specialist, TeamRole } from '@/types/admission'
-
-export type BloodType = 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-'
+import type { Company, GuardianRelationship, InsuranceCompany, Specialist, TeamRole } from '@/types/admission'
 
 export interface Patient {
   id: number
@@ -15,6 +13,10 @@ export interface Patient {
   insurance_company_id: number | null
   insurance_card_number: string | null
   insurance_company?: InsuranceCompany | null
+  company_id: number | null
+  company?: Company | null
+  guardian_relationship_id: number | null
+  guardian_relationship?: GuardianRelationship | null
   admitting_doctor_id: number | null
   referred_by_doctor_id: number | null
   admitting_doctor?: Doctor | null
@@ -24,13 +26,6 @@ export interface Patient {
   emergency_contact_relationship: string | null
   emergency_contact_phone: string | null
   emergency_contact_address: string | null
-  blood_type: BloodType | null
-  allergies: string | null
-  chronic_diseases: string | null
-  current_medications: string | null
-  past_surgeries: string | null
-  medical_history: string | null
-  medical_notes: string | null
 }
 
 export interface UpdatePatientPayload {
@@ -43,19 +38,14 @@ export interface UpdatePatientPayload {
   address?: string | null
   insurance_company_id?: number | null
   insurance_card_number?: string | null
+  company_id?: number | null
+  guardian_relationship_id?: number | null
   admitting_doctor_id?: number | null
   referred_by_doctor_id?: number | null
   emergency_contact_name?: string | null
   emergency_contact_relationship?: string | null
   emergency_contact_phone?: string | null
   emergency_contact_address?: string | null
-  blood_type?: BloodType | null
-  allergies?: string | null
-  chronic_diseases?: string | null
-  current_medications?: string | null
-  past_surgeries?: string | null
-  medical_history?: string | null
-  medical_notes?: string | null
 }
 
 export interface JawdaPatientResult {

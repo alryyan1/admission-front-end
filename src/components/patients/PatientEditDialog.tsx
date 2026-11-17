@@ -13,13 +13,19 @@ import {
   Tabs,
   Typography,
 } from '@mui/material'
-import { CloseOutlined, ContactsOutlined, MedicineBoxOutlined, SolutionOutlined, UserOutlined } from '@ant-design/icons'
+import {
+  CloseOutlined,
+  ContactsOutlined,
+  SafetyCertificateOutlined,
+  SolutionOutlined,
+  UserOutlined,
+} from '@ant-design/icons'
 import { getPatient } from '@/services/patientService'
 import { useAuth } from '@/contexts/AuthContext'
 import { PageLoader } from '@/components/common/PageLoader'
 import { OverviewTab } from '@/components/patients/OverviewTab'
+import { InsuranceInfoTab } from '@/components/patients/InsuranceInfoTab'
 import { EmergencyContactTab } from '@/components/patients/EmergencyContactTab'
-import { MedicalInfoTab } from '@/components/patients/MedicalInfoTab'
 import { AdmissionDetailsTab } from '@/components/admissions/AdmissionDetailsTab'
 import type { Admission } from '@/types/admission'
 
@@ -30,9 +36,9 @@ interface PatientEditDialogProps {
   admission?: Admission | null
 }
 
-type SectionKey = 'admission' | 'overview' | 'emergency' | 'medical'
+type SectionKey = 'admission' | 'overview' | 'insurance' | 'emergency'
 
-/** Modal wrapper around the patient's editable overview/emergency/medical tabs, plus the current admission's details when given one. */
+/** Modal wrapper around the patient's editable overview/insurance/emergency tabs, plus the current admission's details when given one. */
 export function PatientEditDialog({ patientId, onClose, admission }: PatientEditDialogProps) {
   const { user } = useAuth()
   const canEdit = user?.role === 'admin' || user?.role === 'admission_clerk'
@@ -103,16 +109,16 @@ export function PatientEditDialog({ patientId, onClose, admission }: PatientEdit
             sx={{ minHeight: 46, py: 1.5 }}
           />
           <Tab
-            value="emergency"
-            label="جهة الطوارئ"
-            icon={<ContactsOutlined />}
+            value="insurance"
+            label="بيانات التأمين"
+            icon={<SafetyCertificateOutlined />}
             iconPosition="start"
             sx={{ minHeight: 46, py: 1.5 }}
           />
           <Tab
-            value="medical"
-            label="البيانات الطبية"
-            icon={<MedicineBoxOutlined />}
+            value="emergency"
+            label="جهة الطوارئ"
+            icon={<ContactsOutlined />}
             iconPosition="start"
             sx={{ minHeight: 46, py: 1.5 }}
           />
@@ -125,8 +131,8 @@ export function PatientEditDialog({ patientId, onClose, admission }: PatientEdit
               <AdmissionDetailsTab admission={admission} editable={canEditAdmission} />
             )}
             {section === 'overview' && <OverviewTab patient={patient} editable={canEdit} />}
+            {section === 'insurance' && <InsuranceInfoTab patient={patient} editable={canEdit} />}
             {section === 'emergency' && <EmergencyContactTab patient={patient} editable={canEdit} />}
-            {section === 'medical' && <MedicalInfoTab patient={patient} editable={canEdit} />}
           </Box>
         ) : (
           <PageLoader />

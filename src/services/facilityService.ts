@@ -193,6 +193,7 @@ export async function updateFacilitySettings(payload: {
   useLogo?: boolean
   useStamp?: boolean
   useWatermark?: boolean
+  showPatientRelativeFields?: boolean
 }): Promise<FacilitySettings> {
   const formData = new FormData()
   if (payload.name !== undefined) formData.append('name', payload.name ?? '')
@@ -208,6 +209,9 @@ export async function updateFacilitySettings(payload: {
   if (payload.useLogo !== undefined) formData.append('use_logo', payload.useLogo ? '1' : '0')
   if (payload.useStamp !== undefined) formData.append('use_stamp', payload.useStamp ? '1' : '0')
   if (payload.useWatermark !== undefined) formData.append('use_watermark', payload.useWatermark ? '1' : '0')
+  if (payload.showPatientRelativeFields !== undefined) {
+    formData.append('show_patient_relative_fields', payload.showPatientRelativeFields ? '1' : '0')
+  }
 
   const { data } = await apiClient.post<FacilitySettings>('/settings/facility', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

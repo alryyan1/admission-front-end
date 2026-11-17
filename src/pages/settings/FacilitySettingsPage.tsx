@@ -20,6 +20,7 @@ import { BedFormDialog } from '@/components/settings/BedFormDialog'
 import { LogoStampSettingsTab } from '@/components/settings/LogoStampSettingsTab'
 import { FacilityInfoSettingsTab } from '@/components/settings/FacilityInfoSettingsTab'
 import { PaymentMethodsSettingsTab } from '@/components/settings/PaymentMethodsSettingsTab'
+import { PatientFormSettingsTab } from '@/components/settings/PatientFormSettingsTab'
 import { RoomTypesSettingsTab } from '@/components/settings/RoomTypesSettingsTab'
 import { getFloors, getFloor, deleteFloor, deleteWard, deleteRoom, deleteBed } from '@/services/facilityService'
 import { getRoomTypes } from '@/services/roomTypeService'
@@ -391,6 +392,11 @@ export function FacilitySettingsPage() {
               key: 'payment-methods',
               label: 'طرق الدفع',
               children: <PaymentMethodsSettingsTab />,
+            },
+            {
+              key: 'patient-form',
+              label: 'نموذج تسجيل المريض',
+              children: <PatientFormSettingsTab />,
             },
             {
               key: 'room-types',

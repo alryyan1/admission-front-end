@@ -15,9 +15,6 @@ import {
   dischargeAdmission,
   cancelAdmission,
   addVitalSign,
-  addDoctorOrder,
-  addDose,
-  addIntakeOutputRecord,
   saveShortStayAssessment,
   removeDeposit,
   addRequestedService,
@@ -35,8 +32,6 @@ import {
 } from '@/services/admissionService'
 import { OverviewTab } from '@/components/admissions/OverviewTab'
 import { VitalsTab } from '@/components/admissions/VitalsTab'
-import { OrdersTab } from '@/components/admissions/OrdersTab'
-import { IOChartTab } from '@/components/admissions/IOChartTab'
 import { ShortStayAssessmentTab } from '@/components/admissions/ShortStayAssessmentTab'
 import { BillingTab } from '@/components/admissions/BillingTab'
 import { AccountStatementTab } from '@/components/admissions/AccountStatementTab'
@@ -58,8 +53,6 @@ const GENDER_LABEL: Record<string, string> = { male: 'ذكر', female: 'أنثى
 
 const TAB_ITEMS = [
   { key: 'vitals', label: 'العلامات الحيوية' },
-  { key: 'orders', label: 'أوامر الأطباء' },
-  { key: 'io', label: 'جدول السوائل' },
   { key: 'short-stay', label: 'ملف الإقامة القصيرة' },
   { key: 'billing', label: 'الفوترة' },
   { key: 'statement', label: 'كشف الحساب' },
@@ -124,22 +117,6 @@ export function AdmissionDetailPage() {
 
   const vitalMutation = useMutation({
     mutationFn: (payload: Parameters<typeof addVitalSign>[1]) => addVitalSign(id, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const orderMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof addDoctorOrder>[1]) => addDoctorOrder(id, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const doseMutation = useMutation({
-    mutationFn: ({ orderId, ...payload }: { orderId: number } & Parameters<typeof addDose>[1]) =>
-      addDose(orderId, payload),
-    onSuccess: invalidateAdmission,
-  })
-
-  const ioMutation = useMutation({
-    mutationFn: (payload: Parameters<typeof addIntakeOutputRecord>[1]) => addIntakeOutputRecord(id, payload),
     onSuccess: invalidateAdmission,
   })
 
@@ -313,9 +290,6 @@ export function AdmissionDetailPage() {
                   <Tag style={{ marginInlineEnd: 0 }}>{GENDER_LABEL[admission.patient.gender] ?? admission.patient.gender}</Tag>
                 )}
                 {admission.patient?.age_year != null && <Tag style={{ marginInlineEnd: 0 }}>{admission.patient.age_year} سنة</Tag>}
-                {admission.patient?.blood_type && (
-                  <Tag color="red" style={{ marginInlineEnd: 0 }}>{admission.patient.blood_type}</Tag>
-                )}
               </Flex>
             </Flex>
           </Flex>
@@ -392,23 +366,6 @@ export function AdmissionDetailPage() {
           vitals={admission.vital_signs ?? []}
           onAdd={(payload) => vitalMutation.mutate(payload)}
           isSubmitting={vitalMutation.isPending}
-        />
-      )}
-
-      {tab === 'orders' && (
-        <OrdersTab
-          orders={admission.doctor_orders ?? []}
-          onAddOrder={(payload) => orderMutation.mutate(payload)}
-          onAddDose={(orderId, payload) => doseMutation.mutate({ orderId, ...payload })}
-          isSubmittingOrder={orderMutation.isPending}
-        />
-      )}
-
-      {tab === 'io' && (
-        <IOChartTab
-          records={admission.intake_output_records ?? []}
-          onAdd={(payload) => ioMutation.mutate(payload)}
-          isSubmitting={ioMutation.isPending}
         />
       )}
 

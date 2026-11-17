@@ -40,9 +40,6 @@ const styles = StyleSheet.create({
   gridItem: { width: '33.33%', paddingVertical: 4, paddingHorizontal: 4 },
   gridLabel: { fontSize: 8, color: '#6b7280', direction: 'rtl', textAlign: 'right' },
   gridValue: { fontSize: 10, direction: 'rtl', textAlign: 'right', marginTop: 2 },
-  noteBox: { padding: 8, backgroundColor: '#f9fafb', borderRadius: 3, marginBottom: 4 },
-  noteLabel: { fontSize: 9, fontWeight: 'bold', direction: 'rtl', textAlign: 'right', marginBottom: 3 },
-  noteText: { fontSize: 10, direction: 'rtl', textAlign: 'right', lineHeight: 1.4 },
   tableHeader: { flexDirection: 'row-reverse', paddingVertical: 5, paddingHorizontal: 5, backgroundColor: '#f3f4f6' },
   row: {
     flexDirection: 'row-reverse',
@@ -120,15 +117,6 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
       ? `${patient.age_year} سنة${patient.age_month ? ` و${patient.age_month} شهر` : ''}`
       : '—'
 
-  const hasMedicalBackground = !!(
-    patient.allergies ||
-    patient.chronic_diseases ||
-    patient.current_medications ||
-    patient.past_surgeries ||
-    patient.medical_history ||
-    patient.medical_notes
-  )
-
   return (
     <Document>
       <Page size="A4" style={styles.page} wrap>
@@ -148,7 +136,6 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
           <GridItem label="الاسم" value={patient.name} />
           <GridItem label="النوع" value={patient.gender ? (GENDER_LABEL[patient.gender] ?? patient.gender) : '—'} />
           <GridItem label="العمر" value={ageValue} />
-          <GridItem label="فصيلة الدم" value={patient.blood_type ?? '—'} />
           <GridItem label="الهاتف" value={patient.phone ?? '—'} />
           <GridItem label="العنوان" value={patient.address ?? '—'} />
         </View>
@@ -160,48 +147,6 @@ export function PatientSummaryPdfDocument({ assets, patient, admissions }: Patie
           <GridItem label="الهاتف" value={patient.emergency_contact_phone ?? '—'} />
           <GridItem label="العنوان" value={patient.emergency_contact_address ?? '—'} />
         </View>
-
-        {hasMedicalBackground && (
-          <>
-            <Text style={styles.sectionTitle}>{ar('الخلفية الطبية')}</Text>
-            {patient.allergies && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('الحساسية')}</Text>
-                <Text style={styles.noteText}>{ar(patient.allergies)}</Text>
-              </View>
-            )}
-            {patient.chronic_diseases && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('الأمراض المزمنة')}</Text>
-                <Text style={styles.noteText}>{ar(patient.chronic_diseases)}</Text>
-              </View>
-            )}
-            {patient.current_medications && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('الأدوية الحالية')}</Text>
-                <Text style={styles.noteText}>{ar(patient.current_medications)}</Text>
-              </View>
-            )}
-            {patient.past_surgeries && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('عمليات جراحية سابقة')}</Text>
-                <Text style={styles.noteText}>{ar(patient.past_surgeries)}</Text>
-              </View>
-            )}
-            {patient.medical_history && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('التاريخ المرضي')}</Text>
-                <Text style={styles.noteText}>{ar(patient.medical_history)}</Text>
-              </View>
-            )}
-            {patient.medical_notes && (
-              <View style={styles.noteBox}>
-                <Text style={styles.noteLabel}>{ar('ملاحظات طبية')}</Text>
-                <Text style={styles.noteText}>{ar(patient.medical_notes)}</Text>
-              </View>
-            )}
-          </>
-        )}
 
         <Text style={styles.sectionTitle}>{ar('سجل التنويمات')}</Text>
         <PdfTable<Admission>

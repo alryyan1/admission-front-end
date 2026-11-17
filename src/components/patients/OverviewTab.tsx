@@ -5,7 +5,6 @@ import type { Doctor, Patient } from '@/types/patient'
 import { DetailGrid } from '@/components/patients/DetailGrid'
 import { InlineEditableField } from '@/components/patients/InlineEditableField'
 import { usePatientFieldUpdate } from '@/hooks/usePatientFieldUpdate'
-import { getInsuranceCompanies } from '@/services/insuranceCompanyService'
 import { getDoctors } from '@/services/patientService'
 
 interface OverviewTabProps {
@@ -52,11 +51,6 @@ function DoctorField({
 
 export function OverviewTab({ patient, editable }: OverviewTabProps) {
   const saveField = usePatientFieldUpdate(patient.id)
-  const insuranceCompaniesQuery = useQuery({ queryKey: ['insurance-companies'], queryFn: getInsuranceCompanies, staleTime: Infinity })
-  const insuranceOptions = [
-    { label: 'بدون تأمين', value: '' },
-    ...(insuranceCompaniesQuery.data ?? []).map((company) => ({ label: company.name, value: String(company.id) })),
-  ]
 
   const ageParts = [
     patient.age_year ? `${patient.age_year} سنة` : null,
@@ -140,35 +134,6 @@ export function OverviewTab({ patient, editable }: OverviewTabProps) {
                 />
               ),
             },
-            {
-              key: 'insurance',
-              label: 'شركة التأمين',
-              value: (
-                <InlineEditableField
-                  editable={editable}
-                  type="select"
-                  options={insuranceOptions}
-                  value={patient.insurance_company_id ? String(patient.insurance_company_id) : null}
-                  displayValue={patient.insurance_company?.name ?? 'بدون تأمين'}
-                  onSave={(v) => saveField('insurance_company_id', v ? Number(v) : null)}
-                />
-              ),
-            },
-            ...(patient.insurance_company_id
-              ? [
-                  {
-                    key: 'insurance_card_number',
-                    label: 'رقم البطاقة',
-                    value: (
-                      <InlineEditableField
-                        editable={editable}
-                        value={patient.insurance_card_number}
-                        onSave={(v) => saveField('insurance_card_number', v as string | null)}
-                      />
-                    ),
-                  },
-                ]
-              : []),
             {
               key: 'admitting_doctor',
               label: 'الطبيب المعالج',

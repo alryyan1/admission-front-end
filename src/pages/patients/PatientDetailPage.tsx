@@ -15,7 +15,6 @@ import { useFacilityPdfAssets } from '@/hooks/useFacilityPdfAssets'
 import { PatientSummaryPdfDocument } from '@/components/patients/PatientSummaryPdfDocument'
 import { OverviewTab } from '@/components/patients/OverviewTab'
 import { EmergencyContactTab } from '@/components/patients/EmergencyContactTab'
-import { MedicalInfoTab } from '@/components/patients/MedicalInfoTab'
 import { AdmissionHistoryTab } from '@/components/patients/AdmissionHistoryTab'
 
 const { Title, Text } = Typography
@@ -118,8 +117,6 @@ export function PatientDetailPage() {
             <EmergencyContactTab patient={patient} editable={canEdit} />
           </Col>
         </Row>
-
-        <MedicalInfoTab patient={patient} editable={canEdit} />
 
         <AdmissionHistoryTab
           patientId={id}
