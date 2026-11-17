@@ -35,8 +35,6 @@ export interface Admission {
   /** User who registered/admitted this admission. */
   admitted_by?: { id: number; name: string } | null
   vital_signs?: VitalSign[]
-  doctor_orders?: DoctorOrder[]
-  intake_output_records?: IntakeOutputRecord[]
   short_stay_assessment?: ShortStayAssessment | null
   deposits?: AdmissionDeposit[]
   requested_services?: RequestedService[]
@@ -66,21 +64,6 @@ export interface VitalSign {
   notes: string | null
 }
 
-export interface IntakeOutputRecord {
-  id: number
-  admission_id: number
-  recorded_at: string
-  feeding: string | null
-  iv_fluid: string | null
-  maintenance: string | null
-  urine_output: string | null
-  insensible_losses: string | null
-  total_intake: string | null
-  total_output: string | null
-  balance: string | null
-  notes: string | null
-}
-
 export interface ShortStayAssessment {
   id: number
   admission_id: number
@@ -93,24 +76,6 @@ export interface ShortStayAssessment {
   plan: string | null
   signed_at: string | null
   assessed_by?: { id: number; name: string } | null
-}
-
-export interface DoctorOrder {
-  id: number
-  admission_id: number
-  order_text: string
-  frequency: string | null
-  route: string | null
-  status: 'active' | 'discontinued'
-  doses?: TreatmentDose[]
-}
-
-export interface TreatmentDose {
-  id: number
-  doctor_order_id: number
-  administered_at: string
-  status: 'given' | 'missed' | 'refused'
-  notes: string | null
 }
 
 export interface AdmissionDeposit {

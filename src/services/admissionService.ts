@@ -4,13 +4,10 @@ import type {
   AdmissionEntryType,
   AdmissionInvoice,
   AdmissionStatus,
-  DoctorOrder,
-  IntakeOutputRecord,
   Operation,
   OperationTeamMember,
   RequestedService,
   ShortStayAssessment,
-  TreatmentDose,
   VitalSign,
 } from '@/types/admission'
 
@@ -134,35 +131,6 @@ export async function addVitalSign(
   payload: Partial<VitalSign>,
 ): Promise<VitalSign> {
   const { data } = await apiClient.post<VitalSign>(`/admissions/${admissionId}/vitals`, payload)
-  return data
-}
-
-export async function addDoctorOrder(
-  admissionId: number,
-  payload: { order_text: string; frequency?: string; route?: string },
-): Promise<DoctorOrder> {
-  const { data } = await apiClient.post<DoctorOrder>(`/admissions/${admissionId}/orders`, payload)
-  return data
-}
-
-export async function addDose(
-  orderId: number,
-  payload: { status?: 'given' | 'missed' | 'refused'; notes?: string },
-): Promise<TreatmentDose> {
-  const { data } = await apiClient.post<TreatmentDose>(`/orders/${orderId}/doses`, payload)
-  return data
-}
-
-export async function getIntakeOutputRecords(admissionId: number): Promise<IntakeOutputRecord[]> {
-  const { data } = await apiClient.get<IntakeOutputRecord[]>(`/admissions/${admissionId}/intake-output`)
-  return data
-}
-
-export async function addIntakeOutputRecord(
-  admissionId: number,
-  payload: Partial<IntakeOutputRecord>,
-): Promise<IntakeOutputRecord> {
-  const { data } = await apiClient.post<IntakeOutputRecord>(`/admissions/${admissionId}/intake-output`, payload)
   return data
 }
 
