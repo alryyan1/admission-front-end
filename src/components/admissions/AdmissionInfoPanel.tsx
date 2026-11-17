@@ -279,7 +279,6 @@ export function AdmissionInfoPanel({ admission, onClear }: AdmissionInfoPanelPro
       <PatientEditDialog
         patientId={editPatientOpen ? admission.patient_id : null}
         onClose={() => setEditPatientOpen(false)}
-        admission={admission}
       />
     </>
   )

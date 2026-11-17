@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   Avatar,
@@ -13,46 +13,31 @@ import {
   Tabs,
   Typography,
 } from '@mui/material'
-import {
-  CloseOutlined,
-  ContactsOutlined,
-  SafetyCertificateOutlined,
-  SolutionOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
+import { CloseOutlined, ContactsOutlined, SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { getPatient } from '@/services/patientService'
 import { useAuth } from '@/contexts/AuthContext'
 import { PageLoader } from '@/components/common/PageLoader'
 import { OverviewTab } from '@/components/patients/OverviewTab'
 import { InsuranceInfoTab } from '@/components/patients/InsuranceInfoTab'
 import { EmergencyContactTab } from '@/components/patients/EmergencyContactTab'
-import { AdmissionDetailsTab } from '@/components/admissions/AdmissionDetailsTab'
-import type { Admission } from '@/types/admission'
 
 interface PatientEditDialogProps {
   patientId: number | null
   onClose: () => void
-  /** When provided, also shows/edits the admitting/referring doctor, diagnosis, and admission notes for this admission. */
-  admission?: Admission | null
 }
 
-type SectionKey = 'admission' | 'overview' | 'insurance' | 'emergency'
+type SectionKey = 'overview' | 'insurance' | 'emergency'
 
-/** Modal wrapper around the patient's editable overview/insurance/emergency tabs, plus the current admission's details when given one. */
-export function PatientEditDialog({ patientId, onClose, admission }: PatientEditDialogProps) {
+/** Modal wrapper around the patient's editable overview/insurance/emergency tabs. */
+export function PatientEditDialog({ patientId, onClose }: PatientEditDialogProps) {
   const { user } = useAuth()
   const canEdit = user?.role === 'admin' || user?.role === 'admission_clerk'
-  const canEditAdmission = canEdit || user?.role === 'doctor'
 
-  const [section, setSection] = useState<SectionKey>(admission ? 'admission' : 'overview')
+  const [section, setSection] = useState<SectionKey>('overview')
 
-  // Reset the active tab only when the dialog opens for a (possibly different) patient — not on
-  // every `admission` refetch, since saving any field invalidates the admissions query and would
-  // otherwise yank focus back to the default tab mid-edit.
-  const admissionRef = useRef(admission)
-  admissionRef.current = admission
+  // Reset the active tab only when the dialog opens for a (possibly different) patient.
   useEffect(() => {
-    if (patientId) setSection(admissionRef.current ? 'admission' : 'overview')
+    if (patientId) setSection('overview')
   }, [patientId])
 
   const patientQuery = useQuery({
@@ -92,15 +77,6 @@ export function PatientEditDialog({ patientId, onClose, admission }: PatientEdit
           scrollButtons="auto"
           sx={{ px: 2, minHeight: 46 }}
         >
-          {admission && (
-            <Tab
-              value="admission"
-              label="بيانات التنويم"
-              icon={<SolutionOutlined />}
-              iconPosition="start"
-              sx={{ minHeight: 46, py: 1.5 }}
-            />
-          )}
           <Tab
             value="overview"
             label="البيانات الأساسية"
@@ -127,9 +103,6 @@ export function PatientEditDialog({ patientId, onClose, admission }: PatientEdit
       <DialogContent sx={{ bgcolor: 'grey.50', pt: 3 ,mb:1,mt:2}}>
         {patient ? (
           <Box>
-            {section === 'admission' && admission && (
-              <AdmissionDetailsTab admission={admission} editable={canEditAdmission} />
-            )}
             {section === 'overview' && <OverviewTab patient={patient} editable={canEdit} />}
             {section === 'insurance' && <InsuranceInfoTab patient={patient} editable={canEdit} />}
             {section === 'emergency' && <EmergencyContactTab patient={patient} editable={canEdit} />}
