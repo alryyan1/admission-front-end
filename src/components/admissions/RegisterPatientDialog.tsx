@@ -84,6 +84,7 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
     enabled: open,
   })
   const showRelativeFields = facilitySettingsQuery.data?.show_patient_relative_fields ?? false
+  const showInsuranceFields = facilitySettingsQuery.data?.show_insurance_fields ?? true
 
   const createCompanyMutation = useMutation({
     mutationFn: createCompany,
@@ -114,11 +115,14 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
         phone: phone.trim() || undefined,
         gender: gender || undefined,
         age_year: ageYear ? Number(ageYear) : undefined,
-        insurance_company_id: insuranceCompanyId ? Number(insuranceCompanyId) : undefined,
+        insurance_company_id: showInsuranceFields && insuranceCompanyId ? Number(insuranceCompanyId) : undefined,
         insurance_card_number:
-          insuranceCompanyId && insuranceCardNumber.trim() ? insuranceCardNumber.trim() : undefined,
-        company_id: companyId ? Number(companyId) : undefined,
-        guardian_relationship_id: guardianRelationshipId ? Number(guardianRelationshipId) : undefined,
+          showInsuranceFields && insuranceCompanyId && insuranceCardNumber.trim()
+            ? insuranceCardNumber.trim()
+            : undefined,
+        company_id: showInsuranceFields && companyId ? Number(companyId) : undefined,
+        guardian_relationship_id:
+          showInsuranceFields && guardianRelationshipId ? Number(guardianRelationshipId) : undefined,
         admitting_doctor_id: admittingDoctor?.id,
         referred_by_doctor_id: referralDoctor?.id,
         emergency_contact_name: showRelativeFields && relativeName.trim() ? relativeName.trim() : undefined,
@@ -152,7 +156,7 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
     }
   }
 
-  const columnCount = 2 + (showRelativeFields ? 1 : 0)
+  const columnCount = 1 + (showInsuranceFields ? 1 : 0) + (showRelativeFields ? 1 : 0)
   const dialogMaxWidth = columnCount >= 3 ? 'md' : 'sm'
 
   const companies = companiesQuery.data ?? []
@@ -260,159 +264,161 @@ export function RegisterPatientDialog({ open, onClose }: { open: boolean; onClos
             />
           </Stack>
 
-          <Stack spacing={2.5}>
-            <Typography variant="subtitle2" color="text.secondary">
-              بيانات التأمين
-            </Typography>
-            <Autocomplete
-              options={insuranceCompaniesQuery.data ?? []}
-              getOptionLabel={(company) => company.name}
-              isOptionEqualToValue={(option, value) => option.id === value.id}
-              loading={insuranceCompaniesQuery.isLoading}
-              noOptionsText="لا توجد شركات تأمين"
-              value={
-                (insuranceCompaniesQuery.data ?? []).find((company) => String(company.id) === insuranceCompanyId) ?? null
-              }
-              onChange={(_, company) => {
-                setInsuranceCompanyId(company ? String(company.id) : '')
-                if (!company) setInsuranceCardNumber('')
-              }}
-              renderInput={(params) => <TextField {...params} label="شركة التأمين" size="small" />}
-            />
-            {insuranceCompanyId && (
-              <TextField
-                label="رقم البطاقة"
-                fullWidth
-                size="small"
-                value={insuranceCardNumber}
-                onChange={(event) => setInsuranceCardNumber(event.target.value)}
+          {showInsuranceFields && (
+            <Stack spacing={2.5}>
+              <Typography variant="subtitle2" color="text.secondary">
+                بيانات التأمين
+              </Typography>
+              <Autocomplete
+                options={insuranceCompaniesQuery.data ?? []}
+                getOptionLabel={(company) => company.name}
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                loading={insuranceCompaniesQuery.isLoading}
+                noOptionsText="لا توجد شركات تأمين"
+                value={
+                  (insuranceCompaniesQuery.data ?? []).find((company) => String(company.id) === insuranceCompanyId) ?? null
+                }
+                onChange={(_, company) => {
+                  setInsuranceCompanyId(company ? String(company.id) : '')
+                  if (!company) setInsuranceCardNumber('')
+                }}
+                renderInput={(params) => <TextField {...params} label="شركة التأمين" size="small" />}
               />
-            )}
-            <Autocomplete
-              options={companyOptions}
-              filterOptions={(options) => options}
-              loading={companiesQuery.isFetching || createCompanyMutation.isPending}
-              getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.company.name)}
-              isOptionEqualToValue={(option, value) =>
-                option.kind === 'company' && value.kind === 'company' && option.company.id === value.company.id
-              }
-              renderOption={(props, option) => {
-                const { key, ...optionProps } = props
-                if (option.kind === 'create') {
-                  return (
-                    <li key={key} {...optionProps}>
-                      <ListItemText primary={`+ إضافة "${option.name}" كشركة فرعية`} />
-                    </li>
-                  )
-                }
-                return (
-                  <li key={key} {...optionProps}>
-                    <ListItemText primary={option.company.name} />
-                  </li>
-                )
-              }}
-              value={selectedCompany ? { kind: 'company' as const, company: selectedCompany } : null}
-              inputValue={companySearch}
-              onInputChange={(_, value) => setCompanySearch(value)}
-              onChange={(_, option) => {
-                if (!option) {
-                  setCompanyId('')
-                  return
-                }
-                if (option.kind === 'create') {
-                  createCompanyMutation.mutate(option.name)
-                  return
-                }
-                setCompanyId(String(option.company.id))
-              }}
-              renderInput={(params) => (
+              {insuranceCompanyId && (
                 <TextField
-                  {...params}
-                  label="الشركة الفرعية"
+                  label="رقم البطاقة"
+                  fullWidth
                   size="small"
-                  slotProps={{
-                    ...params.slotProps,
-                    input: {
-                      ...params.slotProps.input,
-                      endAdornment: (
-                        <>
-                          {companiesQuery.isFetching || createCompanyMutation.isPending ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.slotProps.input.endAdornment}
-                        </>
-                      ),
-                    },
-                  }}
+                  value={insuranceCardNumber}
+                  onChange={(event) => setInsuranceCardNumber(event.target.value)}
                 />
               )}
-            />
-            <Autocomplete
-              options={guardianRelationshipOptions}
-              filterOptions={(options) => options}
-              loading={guardianRelationshipsQuery.isFetching || createGuardianRelationshipMutation.isPending}
-              getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.relationship.name)}
-              isOptionEqualToValue={(option, value) =>
-                option.kind === 'relationship' &&
-                value.kind === 'relationship' &&
-                option.relationship.id === value.relationship.id
-              }
-              renderOption={(props, option) => {
-                const { key, ...optionProps } = props
-                if (option.kind === 'create') {
+              <Autocomplete
+                options={companyOptions}
+                filterOptions={(options) => options}
+                loading={companiesQuery.isFetching || createCompanyMutation.isPending}
+                getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.company.name)}
+                isOptionEqualToValue={(option, value) =>
+                  option.kind === 'company' && value.kind === 'company' && option.company.id === value.company.id
+                }
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props
+                  if (option.kind === 'create') {
+                    return (
+                      <li key={key} {...optionProps}>
+                        <ListItemText primary={`+ إضافة "${option.name}" كشركة فرعية`} />
+                      </li>
+                    )
+                  }
                   return (
                     <li key={key} {...optionProps}>
-                      <ListItemText primary={`+ إضافة "${option.name}" كصلة قرابة`} />
+                      <ListItemText primary={option.company.name} />
                     </li>
                   )
+                }}
+                value={selectedCompany ? { kind: 'company' as const, company: selectedCompany } : null}
+                inputValue={companySearch}
+                onInputChange={(_, value) => setCompanySearch(value)}
+                onChange={(_, option) => {
+                  if (!option) {
+                    setCompanyId('')
+                    return
+                  }
+                  if (option.kind === 'create') {
+                    createCompanyMutation.mutate(option.name)
+                    return
+                  }
+                  setCompanyId(String(option.company.id))
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="الشركة الفرعية"
+                    size="small"
+                    slotProps={{
+                      ...params.slotProps,
+                      input: {
+                        ...params.slotProps.input,
+                        endAdornment: (
+                          <>
+                            {companiesQuery.isFetching || createCompanyMutation.isPending ? (
+                              <CircularProgress color="inherit" size={16} />
+                            ) : null}
+                            {params.slotProps.input.endAdornment}
+                          </>
+                        ),
+                      },
+                    }}
+                  />
+                )}
+              />
+              <Autocomplete
+                options={guardianRelationshipOptions}
+                filterOptions={(options) => options}
+                loading={guardianRelationshipsQuery.isFetching || createGuardianRelationshipMutation.isPending}
+                getOptionLabel={(option) => (option.kind === 'create' ? option.name : option.relationship.name)}
+                isOptionEqualToValue={(option, value) =>
+                  option.kind === 'relationship' &&
+                  value.kind === 'relationship' &&
+                  option.relationship.id === value.relationship.id
                 }
-                return (
-                  <li key={key} {...optionProps}>
-                    <ListItemText primary={option.relationship.name} />
-                  </li>
-                )
-              }}
-              value={
-                selectedGuardianRelationship
-                  ? { kind: 'relationship' as const, relationship: selectedGuardianRelationship }
-                  : null
-              }
-              inputValue={guardianRelationshipSearch}
-              onInputChange={(_, value) => setGuardianRelationshipSearch(value)}
-              onChange={(_, option) => {
-                if (!option) {
-                  setGuardianRelationshipId('')
-                  return
+                renderOption={(props, option) => {
+                  const { key, ...optionProps } = props
+                  if (option.kind === 'create') {
+                    return (
+                      <li key={key} {...optionProps}>
+                        <ListItemText primary={`+ إضافة "${option.name}" كصلة قرابة`} />
+                      </li>
+                    )
+                  }
+                  return (
+                    <li key={key} {...optionProps}>
+                      <ListItemText primary={option.relationship.name} />
+                    </li>
+                  )
+                }}
+                value={
+                  selectedGuardianRelationship
+                    ? { kind: 'relationship' as const, relationship: selectedGuardianRelationship }
+                    : null
                 }
-                if (option.kind === 'create') {
-                  createGuardianRelationshipMutation.mutate(option.name)
-                  return
-                }
-                setGuardianRelationshipId(String(option.relationship.id))
-              }}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="صلة القرابة بالعائل"
-                  size="small"
-                  slotProps={{
-                    ...params.slotProps,
-                    input: {
-                      ...params.slotProps.input,
-                      endAdornment: (
-                        <>
-                          {guardianRelationshipsQuery.isFetching || createGuardianRelationshipMutation.isPending ? (
-                            <CircularProgress color="inherit" size={16} />
-                          ) : null}
-                          {params.slotProps.input.endAdornment}
-                        </>
-                      ),
-                    },
-                  }}
-                />
-              )}
-            />
-          </Stack>
+                inputValue={guardianRelationshipSearch}
+                onInputChange={(_, value) => setGuardianRelationshipSearch(value)}
+                onChange={(_, option) => {
+                  if (!option) {
+                    setGuardianRelationshipId('')
+                    return
+                  }
+                  if (option.kind === 'create') {
+                    createGuardianRelationshipMutation.mutate(option.name)
+                    return
+                  }
+                  setGuardianRelationshipId(String(option.relationship.id))
+                }}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="صلة القرابة بالعائل"
+                    size="small"
+                    slotProps={{
+                      ...params.slotProps,
+                      input: {
+                        ...params.slotProps.input,
+                        endAdornment: (
+                          <>
+                            {guardianRelationshipsQuery.isFetching || createGuardianRelationshipMutation.isPending ? (
+                              <CircularProgress color="inherit" size={16} />
+                            ) : null}
+                            {params.slotProps.input.endAdornment}
+                          </>
+                        ),
+                      },
+                    }}
+                  />
+                )}
+              />
+            </Stack>
+          )}
 
           {showRelativeFields && (
             <Stack spacing={2.5}>

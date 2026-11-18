@@ -16,6 +16,7 @@ export interface FacilitySettings {
   use_stamp: boolean
   use_watermark: boolean
   show_patient_relative_fields: boolean
+  show_insurance_fields: boolean
 }
 
 export interface Floor {

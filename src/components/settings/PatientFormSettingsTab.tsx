@@ -38,6 +38,19 @@ export function PatientFormSettingsTab() {
             onChange={(checked) => saveMutation.mutate({ showPatientRelativeFields: checked })}
           />
         </Flex>
+        <Flex align="center" justify="space-between">
+          <div>
+            <Text style={{ display: 'block' }}>بيانات التأمين</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              إظهار حقول شركة التأمين ورقم البطاقة والشركة الفرعية وصلة القرابة بالعائل عند تسجيل مريض جديد
+            </Text>
+          </div>
+          <Switch
+            checked={settings?.show_insurance_fields ?? true}
+            loading={saveMutation.isPending}
+            onChange={(checked) => saveMutation.mutate({ showInsuranceFields: checked })}
+          />
+        </Flex>
       </Flex>
     </Card>
   )
