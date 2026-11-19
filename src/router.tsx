@@ -21,6 +21,7 @@ import { AdmissionDetailPage } from '@/pages/admissions/AdmissionDetailPage'
 import { PatientsPage } from '@/pages/patients/PatientsPage'
 import { PatientDetailPage } from '@/pages/patients/PatientDetailPage'
 import { OperationsPage } from '@/pages/operations/OperationsPage'
+import { PreliminaryInvoicePage } from '@/pages/billing/PreliminaryInvoicePage'
 import { DailyRevenueReportPage } from '@/pages/reports/DailyRevenueReportPage'
 import { DoctorEntitlementsReportPage } from '@/pages/reports/DoctorEntitlementsReportPage'
 import { ExpensesReportPage } from '@/pages/reports/ExpensesReportPage'
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
               { path: '/patients', element: <PatientsPage /> },
               { path: '/patients/:patientId', element: <PatientDetailPage /> },
               { path: '/operations', element: <OperationsPage /> },
+              { path: '/billing/preliminary-invoice', element: <PreliminaryInvoicePage /> },
               {
                 element: <RequireRole roles={['admin', 'cashier']} />,
                 children: [

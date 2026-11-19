@@ -19,6 +19,7 @@ export const navItems: NavItem[] = [
   { to: '/patients', label: 'سجل المرضى' },
   { to: '/facility-map', label: 'الغرف' },
   { to: '/operations', label: 'العمليات' },
+  { to: '/billing/preliminary-invoice', label: 'فاتورة مبدئية' },
   { to: '/expenses', label: 'المصروفات', roles: ['admin', 'cashier'] },
 ]
 
